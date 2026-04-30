@@ -117,6 +117,12 @@ class Campaign(Base):
         JSON, nullable=False, default=dict, server_default=_EMPTY_OBJ
     )
     image_style: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Per-campaign negative prompt for FLUX requests (spec §8). Prepended
+    # to the negative_prompt slot on every /generate and /edit call.
+    # Typical content: "modern objects, photographic, watermark, text
+    # artefacts, extra fingers". Nullable — campaigns can be created
+    # without one and inherit FLUX's empty default.
+    image_negative_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=_NOW)
     updated_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=_NOW)
 
