@@ -35,6 +35,37 @@ from app.config import get_settings
 log = logging.getLogger(__name__)
 
 
+# Nemotron exposes its reasoning effort via the chat-template-kwargs
+# slot. Three modes the call sites pick from:
+#
+#   "full" (default) — full reasoning trace. Tool-call accuracy depends
+#                       on it; the DM turn loop stays here.
+#   "low"            — `enable_thinking=True, low_effort=True`. The
+#                       canonical compression mode; summarisers run here.
+#   "off"            — `enable_thinking=False`. Reserved for cases where
+#                       reasoning would actively confuse the output;
+#                       no current call site uses it.
+#
+# vLLM forwards ``extra_body`` keys into the engine's request payload,
+# so OpenAI-style ``client.chat.completions.create(..., extra_body={...})``
+# is how the kwargs reach the chat template.
+ReasoningMode = Literal["full", "low", "off"]
+
+
+def _reasoning_extra_body(mode: ReasoningMode) -> dict[str, Any] | None:
+    """Render a reasoning mode into the ``extra_body`` payload vLLM
+    expects, or ``None`` when no kwargs are needed (full reasoning is
+    Nemotron's default — passing the flag explicitly is unnecessary noise
+    in the boot logs).
+    """
+
+    if mode == "full":
+        return None
+    if mode == "low":
+        return {"chat_template_kwargs": {"enable_thinking": True, "low_effort": True}}
+    return {"chat_template_kwargs": {"enable_thinking": False}}
+
+
 class RunawayTokenError(RuntimeError):
     """Raised when the qwen3_coder parser falls into its repeating-token
     failure mode. The orchestrator should abort the request and surface
@@ -129,6 +160,7 @@ class DmClient:
         response_format: dict[str, Any] | None = None,
         max_tokens: int = 2048,
         temperature: float = 0.3,
+        reasoning_mode: ReasoningMode = "full",
     ) -> str:
         """Non-streaming convenience for archival / structured calls.
 
@@ -146,6 +178,11 @@ class DmClient:
         blocks defensively because the parser sometimes wraps even with
         ``json_object`` set.
 
+        ``reasoning_mode`` selects Nemotron's chat-template effort knob;
+        see :data:`ReasoningMode`. Default ``"full"`` so an unaware caller
+        gets the safe behaviour. Compression-style work (summarisers,
+        fact extractor) overrides to ``"low"``.
+
         Reuses the same ``self._client``; no separate transport.
         """
 
@@ -158,6 +195,9 @@ class DmClient:
         }
         if response_format is not None:
             kwargs["response_format"] = response_format
+        extra_body = _reasoning_extra_body(reasoning_mode)
+        if extra_body is not None:
+            kwargs["extra_body"] = extra_body
 
         try:
             response = await self._client.chat.completions.create(**kwargs)
@@ -166,6 +206,18 @@ class DmClient:
 
         if not response.choices:
             raise DmClientError("chat.completions.create returned no choices")
+        # Surface usage at debug level — the per-call-site reasoning_mode
+        # tuning only pays off if the savings are visible. Field is
+        # optional in the OpenAI response shape; guard accordingly.
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            log.debug(
+                "complete: reasoning_mode=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
+                reasoning_mode,
+                getattr(usage, "prompt_tokens", "?"),
+                getattr(usage, "completion_tokens", "?"),
+                getattr(usage, "total_tokens", "?"),
+            )
         content = response.choices[0].message.content
         return content or ""
 
@@ -177,12 +229,18 @@ class DmClient:
         tool_choice: Literal["auto", "none", "required"] | None = None,
         temperature: float = 0.85,
         max_tokens: int = 1024,
+        reasoning_mode: ReasoningMode = "full",
     ) -> AsyncIterator[ChatCompletionChunk]:
         """Stream a DM response. Wraps the runaway-token detector.
 
         Yields raw OpenAI chunks; the orchestrator is responsible for
         accumulating ``delta.content`` and ``delta.tool_calls`` into the
         final message.
+
+        ``reasoning_mode`` defaults to ``"full"`` — the DM turn loop's
+        tool-call accuracy depends on the full reasoning trace and is the
+        canonical caller. No current call site overrides this; future
+        Phase 8 module extractor stays at ``"full"`` for the same reason.
         """
 
         kwargs: dict[str, Any] = {
@@ -196,6 +254,9 @@ class DmClient:
             kwargs["tools"] = tools
             if tool_choice is not None:
                 kwargs["tool_choice"] = tool_choice
+        extra_body = _reasoning_extra_body(reasoning_mode)
+        if extra_body is not None:
+            kwargs["extra_body"] = extra_body
 
         try:
             stream = await self._client.chat.completions.create(**kwargs)
@@ -272,6 +333,7 @@ async def reset_for_tests() -> None:
 __all__ = [
     "DmClient",
     "DmClientError",
+    "ReasoningMode",
     "RunawayTokenError",
     "get_dm_client",
     "reset_for_tests",

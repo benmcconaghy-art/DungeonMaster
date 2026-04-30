@@ -9,10 +9,16 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.llm.client import RunawayTokenError, _watch_for_runaways
+from app.llm.client import (
+    DmClient,
+    RunawayTokenError,
+    _reasoning_extra_body,
+    _watch_for_runaways,
+)
 
 
 def _make_chunk(content: str | None) -> Any:
@@ -106,3 +112,105 @@ async def test_detector_ignores_empty_chunks() -> None:
     async for chunk in _watch_for_runaways(_stream_from(chunks)):
         out.append(chunk)
     assert len(out) == 4
+
+
+# ---------------------------------------------------------------------------
+# reasoning_mode plumbing — Phase 5 prep #2
+# ---------------------------------------------------------------------------
+
+
+def test_reasoning_extra_body_full_returns_none() -> None:
+    """``"full"`` is Nemotron's default; we don't pass kwargs for it
+    so the boot logs stay quiet about the no-op."""
+
+    assert _reasoning_extra_body("full") is None
+
+
+def test_reasoning_extra_body_low_emits_low_effort_kwargs() -> None:
+    """``"low"`` maps to ``enable_thinking=True, low_effort=True`` — the
+    canonical compression mode summarisers + fact extractor use."""
+
+    assert _reasoning_extra_body("low") == {
+        "chat_template_kwargs": {"enable_thinking": True, "low_effort": True}
+    }
+
+
+def test_reasoning_extra_body_off_disables_thinking() -> None:
+    """``"off"`` maps to ``enable_thinking=False`` — reserved knob; no
+    current call site uses it but the schema needs to exist."""
+
+    assert _reasoning_extra_body("off") == {"chat_template_kwargs": {"enable_thinking": False}}
+
+
+@pytest.mark.asyncio
+async def test_complete_default_full_does_not_set_extra_body() -> None:
+    """A ``complete()`` call without ``reasoning_mode`` (= full) must
+    not include ``extra_body`` in the OpenAI request — full reasoning
+    is Nemotron's default and an explicit empty kwarg dict would still
+    show up in audit logs."""
+
+    client = DmClient()
+    fake_create = AsyncMock(
+        return_value=MagicMock(
+            choices=[MagicMock(message=MagicMock(content="ok"))],
+            usage=None,
+        )
+    )
+    client._client.chat.completions.create = fake_create  # type: ignore[method-assign]
+    await client.complete([{"role": "user", "content": "hi"}])
+    args, kwargs = fake_create.call_args
+    assert "extra_body" not in kwargs
+
+
+@pytest.mark.asyncio
+async def test_complete_low_passes_chat_template_kwargs() -> None:
+    """A ``complete(..., reasoning_mode="low")`` must thread the
+    ``chat_template_kwargs`` payload into the OpenAI request's
+    ``extra_body`` slot — that's how vLLM forwards them to the chat
+    template."""
+
+    client = DmClient()
+    fake_create = AsyncMock(
+        return_value=MagicMock(
+            choices=[MagicMock(message=MagicMock(content="ok"))],
+            usage=None,
+        )
+    )
+    client._client.chat.completions.create = fake_create  # type: ignore[method-assign]
+    await client.complete([{"role": "user", "content": "hi"}], reasoning_mode="low")
+    args, kwargs = fake_create.call_args
+    assert kwargs["extra_body"] == {
+        "chat_template_kwargs": {"enable_thinking": True, "low_effort": True}
+    }
+
+
+@pytest.mark.asyncio
+async def test_stream_dm_default_full_does_not_set_extra_body() -> None:
+    """``stream_dm()`` defaults to full reasoning; mirrors the
+    ``complete()`` contract so the DM turn loop's payload stays
+    minimal."""
+
+    client = DmClient()
+    fake_create = AsyncMock(return_value=_stream_from([]))
+    client._client.chat.completions.create = fake_create  # type: ignore[method-assign]
+    await client.stream_dm([{"role": "user", "content": "hi"}])
+    args, kwargs = fake_create.call_args
+    assert "extra_body" not in kwargs
+    assert kwargs["stream"] is True
+
+
+@pytest.mark.asyncio
+async def test_stream_dm_low_passes_chat_template_kwargs() -> None:
+    """``stream_dm(..., reasoning_mode="low")`` threads the kwargs
+    through identically. No current call site uses this; it's wired
+    for symmetry so a future caller doesn't have to special-case the
+    streaming entry point."""
+
+    client = DmClient()
+    fake_create = AsyncMock(return_value=_stream_from([]))
+    client._client.chat.completions.create = fake_create  # type: ignore[method-assign]
+    await client.stream_dm([{"role": "user", "content": "hi"}], reasoning_mode="low")
+    args, kwargs = fake_create.call_args
+    assert kwargs["extra_body"] == {
+        "chat_template_kwargs": {"enable_thinking": True, "low_effort": True}
+    }

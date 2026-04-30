@@ -327,13 +327,26 @@ def _format_play_log(messages: list[SessionMessage]) -> str:
 
 
 async def _summarise(client: DmClient, *, system_text: str, user_text: str) -> str:
-    """Single non-streaming LLM call returning the response content."""
+    """Single non-streaming LLM call returning the response content.
+
+    Runs at ``reasoning_mode="low"`` — compression is the canonical
+    use case for Nemotron's ``low_effort`` template kwarg. Saves a few
+    seconds per call and a meaningful chunk of completion tokens; the
+    summary's *content* doesn't change perceptibly because the work is
+    archival, not creative or structurally-strict. Both session and
+    campaign summarisers reuse this helper, so they inherit the choice.
+    """
 
     messages = [
         {"role": "system", "content": system_text},
         {"role": "user", "content": user_text},
     ]
-    return await client.complete(messages, max_tokens=2048, temperature=0.3)
+    return await client.complete(
+        messages,
+        max_tokens=2048,
+        temperature=0.3,
+        reasoning_mode="low",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -680,11 +693,21 @@ async def extract_and_persist_facts(
         # commonly run 1500-1800 tokens, with the previous 1024 cap
         # truncating mid-array and breaking the parse. 2048 leaves
         # headroom; the summarisers run at the same ceiling.
+        #
+        # reasoning_mode="low" — Phase 5 prep tuned this empirically.
+        # The structural prompt below is explicit enough about JSON
+        # shape that low-effort reasoning still produces parseable
+        # {facts: [...]} payloads; ``_strip_json_envelope`` is the
+        # tripwire — if Nemotron's structure breaks under low_effort,
+        # parse failures spike in the logs and we escalate this back
+        # to "full". Future Phase 8 module extractor stays at "full"
+        # because its output is much richer and structurally fragile.
         raw = await client.complete(
             messages,
             response_format={"type": "json_object"},
             max_tokens=2048,
             temperature=0.2,
+            reasoning_mode="low",
         )
     except DmClientError:
         log.exception("fact extractor: LLM call failed; skipping turn")

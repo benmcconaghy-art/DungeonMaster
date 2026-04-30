@@ -329,6 +329,10 @@ async def take_turn(
     while iteration < _MAX_TOOL_ITERATIONS:
         iteration += 1
         try:
+            # reasoning_mode="full" (the default) — the DM's tool-call
+            # accuracy is load-bearing on the full reasoning trace. The
+            # Phase 5 prep tuned summarisers + fact extractor down to
+            # "low"; this call site stays at "full" deliberately.
             stream = await client.stream_dm(messages, tools=tools, tool_choice="auto")
         except Exception as exc:
             log.exception("dm.py: stream_dm() failed before first chunk")
