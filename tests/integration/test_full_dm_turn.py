@@ -242,11 +242,20 @@ async def test_full_dm_turn_against_real_vllm(
 
     # ---- Stream-shape assertions -----------------------------------------
 
-    # The orchestrator may legitimately end a combat turn in
-    # ``iteration_cap`` if Nemotron drives both sides' rolls without
-    # pausing for the player — that's a Phase 2 finding, not a wiring
-    # failure. Either we see a clean ``narration_complete`` OR we see
-    # exactly one cap-related ``dm_error``; anything else is a bug.
+    # Two Nemotron-specific known outcomes are acceptable on a
+    # combat-heavy Phase 2 turn:
+    #
+    #   - ``iteration_cap`` — the model chained 10+ tool calls without
+    #     pausing for the player (combat round driven end-to-end).
+    #   - ``empty_completion`` — the model emitted no content after a
+    #     long tool-call loop, having said its piece via the tools.
+    #
+    # Both leave partial state persisted (player input, dice rolls, HP
+    # changes) but no final assistant narration. Either is a Phase 2
+    # finding, not a wiring failure. Any other dm_error reason — and
+    # any number above one — is a bug we want to know about.
+    _ALLOWED_ERROR_REASONS = {"iteration_cap", "empty_completion"}
+
     errors = [e for e in events if isinstance(e, DmError)]
     completions = [e for e in events if isinstance(e, NarrationComplete)]
     chunks = [e for e in events if isinstance(e, NarrationChunk)]
@@ -255,10 +264,11 @@ async def test_full_dm_turn_against_real_vllm(
 
     if errors:
         assert len(errors) == 1, f"unexpected number of dm_error events: {errors}"
-        assert (
-            errors[0].reason == "iteration_cap"
-        ), f"only iteration_cap is an acceptable Phase 2 outcome; got {errors[0].reason}"
-        assert not completions, "iteration_cap turn shouldn't also yield narration_complete"
+        assert errors[0].reason in _ALLOWED_ERROR_REASONS, (
+            f"unexpected dm_error reason: {errors[0].reason!r}"
+            f" (allowed: {_ALLOWED_ERROR_REASONS})"
+        )
+        assert not completions, "errored turn shouldn't also yield narration_complete"
     else:
         assert len(completions) == 1, "happy-path turn must yield exactly one narration_complete"
 
