@@ -18,6 +18,7 @@ from app.images import portrait as portrait_module
 from app.images.portrait import (
     build_portrait_prompt,
     enqueue_portrait,
+    enqueue_scene,
     get_queue_client,
     reset_for_tests,
     set_queue_client_for_tests,
@@ -192,6 +193,85 @@ async def test_enqueue_portrait_no_subject_is_allowed() -> None:
     job = ImageJob.model_validate(json.loads(fake.pushed[0][1]))
     assert job.subject_character_id is None
     assert job.subject_npc_id is None
+
+
+# ---------------------------------------------------------------------------
+# enqueue_scene
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_enqueue_scene_plain_generate_job() -> None:
+    """No reference set → plain /generate. Job carries the kind the
+    caller picked (default 'scene') and no edit fields."""
+
+    fake = _FakeRedis()
+    image_id = await enqueue_scene(
+        cast(redis_async.Redis, fake),
+        campaign_id="c",
+        prompt="a goblin warband on a forest road",
+        kind="scene",
+        session_id="sess-1",
+    )
+    job = ImageJob.model_validate(json.loads(fake.pushed[0][1]))
+    assert job.id == image_id
+    assert job.kind == "scene"
+    assert job.session_id == "sess-1"
+    assert job.reference_image_id is None
+    assert job.edit_instruction is None
+
+
+@pytest.mark.asyncio
+async def test_enqueue_scene_edit_job_carries_reference_and_instruction() -> None:
+    """Reference + instruction set → Kontext /edit. The worker
+    dispatches via flux.edit when reference_image_id is non-null;
+    the edit_instruction becomes the prompt argument to /edit."""
+
+    fake = _FakeRedis()
+    image_id = await enqueue_scene(
+        cast(redis_async.Redis, fake),
+        campaign_id="c",
+        prompt="same character, kneeling beside a fallen companion",
+        reference_image_id="canon-1",
+        edit_instruction="same character, kneeling beside a fallen companion",
+    )
+    job = ImageJob.model_validate(json.loads(fake.pushed[0][1]))
+    assert job.id == image_id
+    assert job.reference_image_id == "canon-1"
+    assert job.edit_instruction == "same character, kneeling beside a fallen companion"
+
+
+@pytest.mark.asyncio
+async def test_enqueue_scene_reference_without_instruction_rejected() -> None:
+    """Reference id without an edit instruction is malformed — the
+    worker would emit ``invalid_job``. Catch it at the enqueuer to
+    fail fast with a useful Python traceback."""
+
+    fake = _FakeRedis()
+    with pytest.raises(ValueError, match="edit_instruction"):
+        await enqueue_scene(
+            cast(redis_async.Redis, fake),
+            campaign_id="c",
+            prompt="x",
+            reference_image_id="canon-1",
+        )
+    assert fake.pushed == []
+
+
+@pytest.mark.asyncio
+async def test_enqueue_scene_instruction_without_reference_rejected() -> None:
+    """Symmetric: an edit instruction with no reference image makes
+    no sense — there's nothing to edit."""
+
+    fake = _FakeRedis()
+    with pytest.raises(ValueError, match="reference_image_id"):
+        await enqueue_scene(
+            cast(redis_async.Redis, fake),
+            campaign_id="c",
+            prompt="x",
+            edit_instruction="say something",
+        )
+    assert fake.pushed == []
 
 
 # ---------------------------------------------------------------------------

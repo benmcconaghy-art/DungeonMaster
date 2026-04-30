@@ -1,4 +1,4 @@
-"""Canonical portrait flow — prompt composition + queue-client singleton.
+"""Image-enqueue helpers used by the FastAPI side of the image flow.
 
 Spec §8 "Character & NPC consistency via Kontext" describes the
 two-stage flow: a single portrait at creation time becomes the
@@ -10,9 +10,12 @@ This module owns:
 
 - :func:`build_portrait_prompt` — turns sparse character/NPC fields
   into a portrait prompt that FLUX can run.
-- :func:`enqueue_portrait` — pushes an :class:`ImageJob` onto the
-  shared queue with the right ``subject_*`` field so the worker
-  links the resulting row back to the character / NPC.
+- :func:`enqueue_portrait` — pushes a portrait :class:`ImageJob`
+  with the right ``subject_*`` FK so the worker links the resulting
+  row back to the character / NPC.
+- :func:`enqueue_scene` — pushes a scene illustration job, either a
+  plain ``/generate`` request or a Kontext ``/edit`` job that
+  references a canonical portrait for character consistency.
 - :func:`get_queue_client` — process-wide redis client for the
   FastAPI side, mirroring :func:`app.realtime.pubsub.get_pubsub`.
   The image worker owns its own client (separate process); this
@@ -129,6 +132,63 @@ async def enqueue_portrait(
     return image_id
 
 
+async def enqueue_scene(
+    queue_client: redis.Redis,
+    *,
+    campaign_id: str,
+    prompt: str,
+    kind: str = "scene",
+    session_id: str | None = None,
+    reference_image_id: str | None = None,
+    edit_instruction: str | None = None,
+) -> str:
+    """Push a scene-illustration job onto ``images:queue``.
+
+    Two modes:
+
+    - ``reference_image_id`` unset → the worker dispatches to FLUX
+      ``/generate`` with ``prompt`` as the txt2img prompt.
+    - ``reference_image_id`` set together with ``edit_instruction`` →
+      the worker dispatches to Kontext ``/edit`` with the referenced
+      image as the source. This is the spec §8 "Contextual edits"
+      flow that preserves character identity across scenes.
+
+    Returns the pre-allocated image id. The reference / instruction
+    invariant is checked here so a misuse fails fast at the enqueuer
+    rather than 60 seconds later when the worker hits the
+    ``invalid_job`` failure path.
+    """
+
+    if reference_image_id is not None and edit_instruction is None:
+        raise ValueError(
+            "enqueue_scene: reference_image_id requires edit_instruction"
+        )
+    if edit_instruction is not None and reference_image_id is None:
+        raise ValueError(
+            "enqueue_scene: edit_instruction requires reference_image_id"
+        )
+
+    image_id = str(uuid7())
+    job = ImageJob(
+        id=image_id,
+        campaign_id=campaign_id,
+        session_id=session_id,
+        kind=kind,
+        prompt=prompt,
+        reference_image_id=reference_image_id,
+        edit_instruction=edit_instruction,
+    )
+    await push_job(queue_client, job)
+    log.info(
+        "scene enqueued: image_id=%s campaign=%s kind=%s reference=%s",
+        image_id,
+        campaign_id,
+        kind,
+        reference_image_id,
+    )
+    return image_id
+
+
 # ---------------------------------------------------------------------------
 # Process-wide queue client singleton (FastAPI side)
 # ---------------------------------------------------------------------------
@@ -175,6 +235,7 @@ async def reset_for_tests() -> None:
 __all__ = [
     "build_portrait_prompt",
     "enqueue_portrait",
+    "enqueue_scene",
     "get_queue_client",
     "reset_for_tests",
     "set_queue_client_for_tests",

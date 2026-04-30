@@ -17,6 +17,8 @@ Per-tool modules:
   - ``start_encounter`` — create an active encounter, roll initiative.
   - ``end_encounter`` — close an encounter, record the outcome.
   - ``spawn_npc`` — introduce a new NPC; optional canonical portrait.
+  - ``generate_scene_image`` — queue a scene; optional Kontext /edit
+    reference for character consistency across scenes.
 
 The dispatcher calls each handler inside its own tight transaction
 block (AGENTS.md invariant #2 — the streaming call must not happen
@@ -42,6 +44,7 @@ ToolHandler.model_rebuild()
 from app.orchestrator.handlers import (  # noqa: E402
     apply_damage,
     end_encounter,
+    generate_scene_image,
     heal,
     request_dice_roll,
     spawn_npc,
@@ -53,6 +56,7 @@ from app.orchestrator.handlers import (  # noqa: E402
 __all__ = [
     "apply_damage",
     "end_encounter",
+    "generate_scene_image",
     "heal",
     "request_dice_roll",
     "spawn_npc",

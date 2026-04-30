@@ -16,7 +16,14 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from app.db.models import Character, DiceRoll, Encounter, Npc, SessionMessage
+from app.db.models import (
+    Character,
+    DiceRoll,
+    Encounter,
+    GeneratedImage,
+    Npc,
+    SessionMessage,
+)
 from app.images.portrait import reset_for_tests as reset_queue_client
 from app.images.portrait import set_queue_client_for_tests
 from app.llm.tools import (
@@ -24,6 +31,7 @@ from app.llm.tools import (
     DiceTarget,
     EncounterMonster,
     EndEncounter,
+    GenerateSceneImage,
     Heal,
     RequestDiceRoll,
     SpawnNpc,
@@ -714,3 +722,256 @@ class TestSpawnNpc:
         rows = list((await db_session.scalars(select(Npc))).all())
         assert rows == []
         assert fake_queue.pushed == []
+
+
+# ---------------------------------------------------------------------------
+# generate_scene_image
+# ---------------------------------------------------------------------------
+
+
+async def _make_canonical_image(db_session, *, campaign_id: str) -> str:  # type: ignore[no-untyped-def]
+    """Insert a canonical image row that a character/NPC can FK to.
+    Returns the image_id."""
+
+    img = GeneratedImage(
+        campaign_id=campaign_id,
+        kind="npc",
+        prompt="canon",
+        prompt_hash="canon-hash-" + campaign_id[:8],
+        file_path="/tmp/canon.png",
+    )
+    db_session.add(img)
+    await db_session.flush()
+    return img.id
+
+
+class TestGenerateSceneImage:
+    @pytest.mark.asyncio
+    async def test_no_reference_enqueues_generate_job(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """Without any reference, the job lands as a plain /generate
+        (no reference_image_id, no edit_instruction)."""
+
+        import json
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        fake_queue = _FakeQueueClient()
+        set_queue_client_for_tests(fake_queue)
+        try:
+            handler = get_handler("generate_scene_image")
+            assert handler is not None
+            args = GenerateSceneImage(prompt="a torchlit crypt", kind="scene")
+            with with_dispatch_context(_ctx(session.id)):
+                result = await handler.fn(db_session, args)
+        finally:
+            await reset_queue_client()
+
+        assert len(fake_queue.pushed) == 1
+        payload = json.loads(fake_queue.pushed[0][1])
+        assert payload["kind"] == "scene"
+        assert payload["prompt"] == "a torchlit crypt"
+        assert payload["reference_image_id"] is None
+        assert payload["edit_instruction"] is None
+
+        assert result.side_effects["mode"] == "generate"
+        assert result.side_effects["kind"] == "image_queued"
+
+    @pytest.mark.asyncio
+    async def test_character_reference_dispatches_via_edit(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """A scene with reference_character_id and a canonical
+        portrait should dispatch through Kontext /edit — the queued
+        job carries reference_image_id pointing at the canonical
+        portrait, and edit_instruction = the prompt."""
+
+        import json
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        canon_id = await _make_canonical_image(db_session, campaign_id=campaign.id)
+        char = await make_character(
+            db_session, user_id=user.id, campaign_id=campaign.id, canonical_image_id=canon_id
+        )
+        await db_session.commit()
+
+        fake_queue = _FakeQueueClient()
+        set_queue_client_for_tests(fake_queue)
+        try:
+            handler = get_handler("generate_scene_image")
+            assert handler is not None
+            args = GenerateSceneImage(
+                prompt="same character, kneeling beside a fallen companion",
+                kind="scene",
+                reference_character_id=char.id,
+            )
+            with with_dispatch_context(_ctx(session.id)):
+                result = await handler.fn(db_session, args)
+        finally:
+            await reset_queue_client()
+
+        payload = json.loads(fake_queue.pushed[0][1])
+        assert payload["reference_image_id"] == canon_id
+        assert payload["edit_instruction"] == args.prompt
+        assert result.side_effects["mode"] == "edit"
+        assert result.side_effects["reference_kind"] == "character"
+        assert result.side_effects["reference_id"] == char.id
+
+    @pytest.mark.asyncio
+    async def test_character_reference_without_canonical_falls_back_to_generate(  # type: ignore[no-untyped-def]
+        self, db_session
+    ) -> None:
+        """If the referenced character exists but has no canonical
+        portrait yet, fall back to /generate rather than refuse —
+        a scene without identity preservation is still better than no
+        scene. A separate portrait request can fix the consistency
+        story afterwards."""
+
+        import json
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        char = await make_character(db_session, user_id=user.id, campaign_id=campaign.id)
+        # Note: no canonical_image_id set on this character.
+        await db_session.commit()
+
+        fake_queue = _FakeQueueClient()
+        set_queue_client_for_tests(fake_queue)
+        try:
+            handler = get_handler("generate_scene_image")
+            assert handler is not None
+            args = GenerateSceneImage(
+                prompt="brunhild fighting a goblin",
+                reference_character_id=char.id,
+            )
+            with with_dispatch_context(_ctx(session.id)):
+                result = await handler.fn(db_session, args)
+        finally:
+            await reset_queue_client()
+
+        payload = json.loads(fake_queue.pushed[0][1])
+        assert payload["reference_image_id"] is None
+        assert payload["edit_instruction"] is None
+        assert result.side_effects["mode"] == "generate"
+
+    @pytest.mark.asyncio
+    async def test_npc_reference_dispatches_via_edit(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """Same path as the character reference test, but for NPCs."""
+
+        import json
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        canon_id = await _make_canonical_image(db_session, campaign_id=campaign.id)
+        npc = Npc(
+            campaign_id=campaign.id,
+            name="Castellan Thorvald",
+            canonical_image_id=canon_id,
+        )
+        db_session.add(npc)
+        await db_session.commit()
+
+        fake_queue = _FakeQueueClient()
+        set_queue_client_for_tests(fake_queue)
+        try:
+            handler = get_handler("generate_scene_image")
+            assert handler is not None
+            args = GenerateSceneImage(
+                prompt="same NPC, leaning against the fortress wall",
+                reference_npc_id=npc.id,
+            )
+            with with_dispatch_context(_ctx(session.id)):
+                result = await handler.fn(db_session, args)
+        finally:
+            await reset_queue_client()
+
+        payload = json.loads(fake_queue.pushed[0][1])
+        assert payload["reference_image_id"] == canon_id
+        assert result.side_effects["reference_kind"] == "npc"
+
+    @pytest.mark.asyncio
+    async def test_unknown_reference_returns_clean_error(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """An ID the LLM invented (or one from a different campaign)
+        must produce a structured error, not enqueue a job that the
+        worker can't process. Cross-campaign reads are also rejected
+        so a campaign can't request portraits of another's PCs."""
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        fake_queue = _FakeQueueClient()
+        set_queue_client_for_tests(fake_queue)
+        try:
+            handler = get_handler("generate_scene_image")
+            assert handler is not None
+            args = GenerateSceneImage(
+                prompt="scene",
+                reference_character_id="char-that-does-not-exist",
+            )
+            with with_dispatch_context(_ctx(session.id)):
+                result = await handler.fn(db_session, args)
+        finally:
+            await reset_queue_client()
+
+        assert result.side_effects.get("kind") == "error"
+        assert result.side_effects.get("reason") == "unknown_reference"
+        assert fake_queue.pushed == []
+
+    @pytest.mark.asyncio
+    async def test_both_references_set_rejected(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """Setting both reference_character_id and reference_npc_id is
+        ambiguous — refuse rather than guess which one the LLM meant."""
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        fake_queue = _FakeQueueClient()
+        set_queue_client_for_tests(fake_queue)
+        try:
+            handler = get_handler("generate_scene_image")
+            assert handler is not None
+            args = GenerateSceneImage(
+                prompt="x",
+                reference_character_id="a",
+                reference_npc_id="b",
+            )
+            with with_dispatch_context(_ctx(session.id)):
+                result = await handler.fn(db_session, args)
+        finally:
+            await reset_queue_client()
+
+        assert result.side_effects.get("kind") == "error"
+        assert result.side_effects.get("reason") == "invalid_args"
+        assert fake_queue.pushed == []
+
+    @pytest.mark.asyncio
+    async def test_queue_failure_returns_error(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """Queue push raises → tool returns a structured queue_unavailable
+        error rather than crashing the dispatch."""
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        fake_queue = _FakeQueueClient(raise_on_push=True)
+        set_queue_client_for_tests(fake_queue)
+        try:
+            handler = get_handler("generate_scene_image")
+            assert handler is not None
+            args = GenerateSceneImage(prompt="a battle")
+            with with_dispatch_context(_ctx(session.id)):
+                result = await handler.fn(db_session, args)
+        finally:
+            await reset_queue_client()
+
+        assert result.side_effects.get("kind") == "error"
+        assert result.side_effects.get("reason") == "queue_unavailable"

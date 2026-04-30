@@ -128,8 +128,35 @@ class SpawnNpc(_ToolArgs):
 
 
 class GenerateSceneImage(_ToolArgs):
+    """Queue an illustration. ``prompt`` is either a from-scratch scene
+    description (no reference set) or a Kontext edit instruction
+    ("same character, torchlit crypt, sword drawn, blood on armour").
+
+    Reference fields are mutually exclusive:
+
+    - both unset → FLUX ``/generate`` from the prompt alone.
+    - ``reference_character_id`` set → look up that PC's
+      canonical portrait and dispatch via Kontext ``/edit`` for
+      identity-preserving scene rendering.
+    - ``reference_npc_id`` set → same for NPCs.
+    """
+
     prompt: str
     kind: Literal["scene", "npc", "item", "map"] = "scene"
+    reference_character_id: str | None = Field(
+        default=None,
+        description=(
+            "If set, treat ``prompt`` as a Kontext edit instruction"
+            " against that character's canonical portrait."
+        ),
+    )
+    reference_npc_id: str | None = Field(
+        default=None,
+        description=(
+            "If set, treat ``prompt`` as a Kontext edit instruction"
+            " against that NPC's canonical portrait."
+        ),
+    )
 
 
 class Whisper(_ToolArgs):
@@ -253,10 +280,12 @@ TOOLS: dict[str, ToolSpec] = {
         name="generate_scene_image",
         description=(
             "Queue a scene illustration. Use sparingly — major locations, climactic beats, first"
-            " appearances of significant NPCs."
+            " appearances of significant NPCs. Pass reference_character_id or reference_npc_id"
+            " when a known character should appear in the scene; the engine will use the"
+            " canonical portrait via Kontext /edit so their identity stays consistent."
         ),
         args_model=GenerateSceneImage,
-        implemented=False,
+        implemented=True,
     ),
     "whisper": ToolSpec(
         name="whisper",
