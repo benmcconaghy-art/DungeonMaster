@@ -1,16 +1,14 @@
-"""Session endpoints (Phase 2 surface).
+"""Session endpoints.
 
-Phase 2 needs:
+REST surface for session lifecycle and history. Realtime — player
+actions, narration, dice, presence — runs over the WS hub at
+``/ws/session/{session_id}`` (see ``app/api/ws.py``).
+
   - POST   /api/campaigns/{id}/sessions  — start a new session
   - POST   /api/sessions/{id}/end        — close it out
   - GET    /api/sessions/{id}/messages   — list messages (chronological,
                                             paginated by ``before`` cursor)
   - GET    /api/sessions/{id}            — current snapshot
-  - POST   /api/sessions/{id}/action     — submit a player action,
-                                            returns DM events via SSE
-                                            (added after the orchestrator
-                                            handler module lands; lives
-                                            in app/api/sse.py)
 """
 
 from __future__ import annotations

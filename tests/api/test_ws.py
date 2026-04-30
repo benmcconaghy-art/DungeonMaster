@@ -108,7 +108,6 @@ def ws_setup(
 
     fastapi_app.dependency_overrides[get_db] = _override_get_db
     monkeypatch.setattr("app.api.ws.SessionLocal", factory)
-    monkeypatch.setattr("app.api.sse.SessionLocal", factory)
     monkeypatch.setattr("app.orchestrator.dm.SessionLocal", factory)
 
     fake = FakePubsub()

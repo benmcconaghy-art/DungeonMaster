@@ -27,7 +27,6 @@ from app.api.auth import router as auth_router
 from app.api.campaigns import router as campaigns_router
 from app.api.characters import router as characters_router
 from app.api.sessions import router as sessions_router
-from app.api.sse import router as sse_router
 from app.api.ws import router as ws_router
 from app.config import get_settings
 from app.db import models
@@ -130,7 +129,6 @@ def create_app() -> FastAPI:
     app.include_router(campaigns_router)
     app.include_router(characters_router)
     app.include_router(sessions_router)
-    app.include_router(sse_router)
     app.include_router(ws_router)
 
     app.mount(

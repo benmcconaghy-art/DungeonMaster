@@ -119,7 +119,6 @@ def integration_app(
 
     fastapi_app.dependency_overrides[get_db] = _override_get_db
     monkeypatch.setattr("app.api.ws.SessionLocal", factory)
-    monkeypatch.setattr("app.api.sse.SessionLocal", factory)
     monkeypatch.setattr("app.orchestrator.dm.SessionLocal", factory)
 
     # Drop any singleton from a previous test so this run gets a fresh

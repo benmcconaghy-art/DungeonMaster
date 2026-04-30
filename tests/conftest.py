@@ -68,10 +68,8 @@ async def client(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncClient]:
     """HTTP client bound directly to the FastAPI app via ASGI transport.
 
     Overrides the ``get_db`` dependency so every handler — auth, /health,
-    future routers — sees a fresh in-memory engine, and monkey-patches
-    ``app.api.sse.SessionLocal`` so the SSE bridge (which opens its own
-    session for the orchestrator generator) also lands on the test
-    engine. ``pytest`` never touches the production SQLite file.
+    future routers — sees a fresh in-memory engine. ``pytest`` never
+    touches the production SQLite file.
     """
 
     test_engine = create_engine("sqlite+aiosqlite:///:memory:")
@@ -85,7 +83,6 @@ async def client(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncClient]:
             yield session
 
     fastapi_app.dependency_overrides[get_db] = _override_get_db
-    monkeypatch.setattr("app.api.sse.SessionLocal", test_factory)
     # The orchestrator's post-turn fact-extractor / session-summary tasks
     # open their own session via SessionLocal(); send them at the test
     # engine too so they don't create stray ``:memory-sentinel:`` files.
