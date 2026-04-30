@@ -391,3 +391,82 @@ body.table-screen {
   font-style: italic;
   line-height: 1.5;
 }
+
+/* ---- Image cards ----------------------------------------------------
+ * Phase 5: the orchestrator emits image_pending / image_ready /
+ * image_failed frames over the session WS. The card lives inline in
+ * the narration column and gets identified by data-image-id so a
+ * pending placeholder can be swapped for the rendered image (or a
+ * failure sentinel) when the worker reports back.
+ */
+.image-card {
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  /* Reserve enough vertical space that the placeholder doesn't
+   * collapse to a 1-line strip — the eventual image will be roughly
+   * landscape, so plan around that. */
+  min-height: 12rem;
+}
+
+.image-card.pending {
+  border-style: dashed;
+  border-color: rgba(176, 138, 62, 0.4);
+  padding: 1.4rem 1rem;
+  gap: 0.7rem;
+}
+
+.image-card.failed {
+  border-color: rgba(217, 122, 91, 0.4);
+  background: rgba(217, 122, 91, 0.06);
+  padding: 1.2rem 1rem;
+  min-height: auto;
+}
+
+.image-card-img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.image-card-caption {
+  font-size: 0.85rem;
+  font-style: italic;
+  opacity: 0.7;
+  text-align: center;
+  margin: 0;
+}
+
+.image-card.failed .image-card-caption {
+  color: #d97a5b;
+  opacity: 0.85;
+  font-style: normal;
+  font-family: ui-monospace, monospace;
+}
+
+.image-card-spinner {
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 2px solid rgba(176, 138, 62, 0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: image-card-spin 0.9s linear infinite;
+}
+
+@keyframes image-card-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image-card-spinner {
+    animation: none;
+    border-top-color: rgba(176, 138, 62, 0.5);
+  }
+}

@@ -359,6 +359,105 @@
         return appendMessage("system", who, content, formatNow());
       }
 
+      // ---- Image cards ------------------------------------------------------
+      // Phase 5 boundary note: image_pending / image_ready / image_failed
+      // arrive only on the live WS event stream — they're NOT in the
+      // `Snapshot.messages` payload (which restates persisted
+      // `session_messages` only). A player who reconnects mid-generation
+      // sees nothing for that scene until the worker emits image_ready;
+      // at that point the live handler appends a fresh card via the
+      // "no placeholder found" fallback in appendImageReady. Phase 6
+      // may revisit by snapshotting in-flight image_jobs.
+
+      function findImageCard(image_id) {
+        if (!image_id) return null;
+        const sel = `[data-image-id="${CSS.escape(String(image_id))}"]`;
+        return narration.querySelector(sel);
+      }
+
+      function buildImageCardShell(image_id) {
+        // Drop the empty-log placeholder if it's still there.
+        const empty = narration.querySelector(".empty-log");
+        if (empty) empty.remove();
+        const figure = document.createElement("figure");
+        figure.className = "image-card";
+        figure.dataset.imageId = String(image_id);
+        return figure;
+      }
+
+      function appendImagePending(image_id, placeholder) {
+        // If a card with this id already exists (rare — duplicate
+        // image_pending), leave it alone.
+        const existing = findImageCard(image_id);
+        if (existing) return existing;
+        const figure = buildImageCardShell(image_id);
+        figure.classList.add("pending");
+        figure.setAttribute("aria-busy", "true");
+        figure.setAttribute("aria-label", "Scene image rendering");
+        const spinner = document.createElement("div");
+        spinner.className = "image-card-spinner";
+        spinner.setAttribute("role", "presentation");
+        figure.appendChild(spinner);
+        const caption = document.createElement("figcaption");
+        caption.className = "image-card-caption";
+        caption.textContent = (placeholder && String(placeholder).trim())
+          || "rendering scene…";
+        figure.appendChild(caption);
+        narration.appendChild(figure);
+        narration.scrollTop = narration.scrollHeight;
+        return figure;
+      }
+
+      function appendImageReady(image_id, url) {
+        // If we have a placeholder, swap its contents in place to
+        // preserve scroll position relative to surrounding messages.
+        // If not (e.g. late delivery on reconnect), append a new card.
+        let figure = findImageCard(image_id);
+        const fresh = !figure;
+        if (fresh) {
+          // No placeholder was rendered; this is a late-delivery path.
+          figure = buildImageCardShell(image_id);
+          narration.appendChild(figure);
+        } else {
+          figure.replaceChildren();
+        }
+        figure.classList.remove("pending", "failed");
+        figure.classList.add("ready");
+        figure.removeAttribute("aria-busy");
+        figure.setAttribute("aria-label", "Scene image");
+        const img = document.createElement("img");
+        img.className = "image-card-img";
+        img.src = String(url);
+        img.alt = "Scene image";
+        img.loading = "lazy";
+        figure.appendChild(img);
+        if (fresh) narration.scrollTop = narration.scrollHeight;
+        return figure;
+      }
+
+      function appendImageFailed(image_id) {
+        // No raw reason in the UI — operators see the reason in the
+        // dispatcher console.debug call. Players just see the sentinel.
+        let figure = findImageCard(image_id);
+        const fresh = !figure;
+        if (fresh) {
+          figure = buildImageCardShell(image_id);
+          narration.appendChild(figure);
+        } else {
+          figure.replaceChildren();
+        }
+        figure.classList.remove("pending", "ready");
+        figure.classList.add("failed");
+        figure.removeAttribute("aria-busy");
+        figure.setAttribute("aria-label", "Scene image unavailable");
+        const caption = document.createElement("figcaption");
+        caption.className = "image-card-caption";
+        caption.textContent = "(scene image unavailable)";
+        figure.appendChild(caption);
+        if (fresh) narration.scrollTop = narration.scrollHeight;
+        return figure;
+      }
+
       function formatNow() {
         const d = new Date();
         return d.toTimeString().slice(0, 8);
@@ -511,11 +610,23 @@
             console.debug(`ws: pong rtt=${Date.now() - sentAt}ms`);
           }
         },
-        // Phase 5 wire-shape only — no body until the image worker
-        // ships. Stubs here keep onMessage from logging "unknown frame
-        // type" warnings for valid server messages.
-        image_pending(_msg) {},
-        image_ready(_msg) {},
+        // Phase 5 — image worker ships ImagePending / ImageReady /
+        // ImageFailed over the WS. Handlers render an in-stream card,
+        // identified by data-image-id so the eventual ready/failed
+        // frame can find and swap it. Implemented (was wire-shape-only
+        // in Phase 4).
+        image_pending(msg) {
+          appendImagePending(msg.image_id, msg.placeholder);
+        },
+        image_ready(msg) {
+          appendImageReady(msg.image_id, msg.url);
+        },
+        image_failed(msg) {
+          // Operator-only visibility into why generation failed; the
+          // player just sees the sentinel state.
+          console.debug("image_failed", msg.image_id, msg.reason);
+          appendImageFailed(msg.image_id);
+        },
       };
 
       // ---- Presence / turn hints --------------------------------------------
