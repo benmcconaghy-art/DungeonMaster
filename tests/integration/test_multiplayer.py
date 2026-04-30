@@ -259,9 +259,7 @@ def test_real_nemotron_via_ws_round_trips_through_valkey(
                 {
                     "type": "pc_action",
                     "character_id": char["id"],
-                    "content": (
-                        "I take in the keep's main courtyard. What stands out?"
-                    ),
+                    "content": ("I take in the keep's main courtyard. What stands out?"),
                     "kind": "other",
                 }
             )

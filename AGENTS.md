@@ -50,7 +50,28 @@ modules. Single-server deployment on AlmaLinux 10.1, trusted internal LAN.
    …). 5 false-positives on legitimate play. 10 is the calibrated value; if a
    turn legitimately needs more we're modelling combat wrong (the LLM should
    pause for the player rather than driving the round end-to-end). Constant in
-   `app/orchestrator/dm.py`.
+   `app/orchestrator/dm.py`. Phase 4 prep #1 added a PACING block to the role
+   text that strongly improves player handoffs; the cap stays at 10 because
+   real-traffic measurement showed 7 trips iteration_cap and 8 trips
+   empty_completion under run-to-run Nemotron variance — both noisier than
+   leaving the cap headroom.
+
+8. **Initiative gating is server-side, never client-trusted.** During an active
+   encounter, combat-kind `pc_action` messages must come from the player whose
+   character holds the current initiative slot; non-current actors get a
+   typed `not_your_turn` `dm_error`. The check lives in `app/api/ws.py`'s
+   `_check_initiative_gate`; clients may render a visual "your turn" hint
+   from `current_actor` in the snapshot, but bypassing the hint and sending
+   a combat action anyway still gets rejected. Non-combat kinds (talk, look,
+   other) are unconditionally accepted regardless of initiative.
+
+9. **Whisper audience filtering happens at the WS broadcast layer, not at
+   storage.** `session_messages` always stores the full whisper content with
+   `audience=[character_id]` so the DM's prompt history stays consistent
+   across turns. The filter is in the WS subscriber task and the snapshot
+   builder — both check the receiving user's character ids against the
+   audience before letting a frame land on a socket. Never redact at write
+   time; you'll lose context the DM needs for consistency on later turns.
 
 ## Tech stack
 
@@ -200,7 +221,7 @@ uv run mypy app                                 # type check
 
 ## Current build phase
 
-**Phase 3 complete; Phase 4 (multiplayer) ready to start.**
+**Phase 4 complete; Phase 5 (image generation) ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.
 
@@ -209,19 +230,6 @@ Update this line as phases complete. The phased plan is in spec §14.
 Parking lot for items deliberately deferred. Each entry is a short,
 actionable note; the trigger condition tells future-you when to pick it
 up. Promote to a real issue / phase task when its trigger fires.
-
-- **Nemotron prompt pacing** (added 2026-04-30, target Phase 4 prep).
-  Real-traffic measurement showed Nemotron drives both sides of a combat
-  round in 6-10 tool calls when it should pause for player input between
-  major beats. The iteration cap was raised 5→10 in Phase 2 to
-  accommodate; tightening the system prompt to encourage pausing would
-  let us drop the cap back down and improve player agency. Evaluate
-  against Phase 3's prompt shape (with retrieval + summaries), not
-  Phase 2's. **Trigger:** start of Phase 4 prep work, OR if iteration_cap
-  / empty_completion outcomes appear in real-player session logs.
-  **Context:** Phase 2 finding #3, Phase 3 integration test
-  `bkz1lnz4h` (logs at `/tmp/memory_integration2.log` while still on
-  this machine).
 
 - **Reasoning mode tuning** (added 2026-04-30, target Phase 5).
   Apply Nemotron's `low_effort` reasoning mode to memory subsystem
@@ -248,20 +256,6 @@ up. Promote to a real issue / phase task when its trigger fires.
   OR a Phase 6 spell-prep UI surfaces the duplication. Premature
   schema work otherwise. **Context:** Phase 2 finding #6.
 
-- **Bare-string fact-extractor coercion** (added 2026-04-30, target
-  Phase 4-5 prep). Nemotron's fact-extractor response sometimes mixes
-  proper objects with bare strings: `[{"fact": "...", ...}, "Castellan
-  Thorvald", "keep"]`. The current parser drops the bare strings with
-  a warning. Phase 3's 25-turn integration test logged ~20 dropped
-  bare entries against ~35 persisted objects — losing roughly a third
-  of memorable signal. Fix: coerce bare strings to
-  `{"fact": s, "tags": [], "importance": 5}`. Small, ~10-line change
-  to `app/llm/memory.py`'s extractor parser. **Trigger:** any
-  follow-up integration run shows >25% of extracted entries dropped,
-  OR a real session reports "the DM forgot something obvious."
-  **Context:** Phase 3 commit `64d690e`, log lines starting
-  `fact extractor: dropping malformed fact entry:`.
-
 - **Production embedding endpoint** (added 2026-04-30, target Phase 7
   hardening / production deploy). Default backend is local
   `sentence-transformers` with `BAAI/bge-large-en-v1.5` (1024-dim).
@@ -275,19 +269,79 @@ up. Promote to a real issue / phase task when its trigger fires.
   OR an operator schedules a deploy.
   **Context:** Phase 3 prep probes; commit `64d690e`.
 
-- **Cross-worker memory cache invalidation** (added 2026-04-30, target
-  Phase 4 review / Phase 7+ scale-out). The `WorldFactRetriever` cache
-  and the per-session / per-campaign summariser locks
-  (`_session_summary_locks`, `_campaign_summary_locks`) all live in
-  process memory. Spec §13's single-gunicorn-worker deployment makes
-  this correct today. Phase 4 multiplayer doesn't add workers, but
-  any future shard-out needs Redis pub/sub for cache fan-out;
-  retrieval would otherwise serve stale per-campaign matrices and
-  summary locks would race. **Trigger:** spec gets a multi-worker
-  deployment story (currently no such plans), OR Phase 7+ load
-  testing shows the single worker is the bottleneck.
-  **Context:** Phase 3 commit `64d690e` flags; spec §13 single-worker
-  rationale.
+- **Cross-worker shared state** (added 2026-04-30, expanded 2026-04-30
+  for Phase 4, target Phase 7+ scale-out). Three pieces of process-local
+  state would race under multi-worker scale-out: the `WorldFactRetriever`
+  cache, the per-session / per-campaign summariser locks
+  (`_session_summary_locks`, `_campaign_summary_locks`), and the new
+  Phase 4 surfaces — `_session_turn_locks` in `app/api/ws.py` (orchestrator
+  serialisation per session) and the `PresenceRegistry` singleton in
+  `app/realtime/presence.py`. Spec §13's single-gunicorn-worker deployment
+  makes all four correct today. Multi-worker would need: (a) Valkey-backed
+  distributed lock keyed by `session_id` for the orchestrator gate;
+  (b) Valkey pub/sub fan-out for presence so a worker advertising "alice
+  joined" reaches every other worker; (c) cache invalidation broadcast
+  for the world-fact retriever. **Trigger:** spec gets a multi-worker
+  deployment story (no such plans currently), OR Phase 7+ load testing
+  shows the single worker is the bottleneck.
+  **Context:** Phase 3 commit `64d690e`, Phase 4 commits
+  `327a9c7`/`bd9ba9c`; spec §13 single-worker rationale.
+
+- **Phase 2 SSE bridge cleanup** (added 2026-04-30 during Phase 4
+  close-out, target Phase 6 polish). `app/api/sse.py` and the
+  `/api/sessions/{id}/events` endpoint are no longer referenced by
+  the production frontend (Phase 4 swapped `table.html` to WebSocket).
+  The endpoint still exists; the corresponding Phase 2 unit tests
+  (`tests/test_sse_bridge.py`) still pass and gate the contract.
+  Removing the endpoint isn't urgent — it doesn't cost anything sitting
+  there — but Phase 6 UX polish is the natural moment to delete it,
+  prune the tests, and shrink the API surface to the WS layer alone.
+  Watch for: a third caller (e.g., a CLI client) appearing first; if
+  one shows up, the endpoint becomes load-bearing again.
+  **Context:** Phase 2 commit `40e96af` (introduced); Phase 4 commit
+  `13d9b60` (orphaned).
+
+- **Multi-tab cross-visibility for the same user** (added 2026-04-30,
+  target Phase 6). When a user opens two browser tabs of the same
+  session and submits an action from tab A, tab B doesn't see it.
+  Cause: `pc_action` frames echo back via Valkey to every connection,
+  and the JS de-dupes by `selfUserId === msg.user_id`. The fix needs
+  a per-connection identifier — easiest is to have the server filter
+  the originating socket out of the broadcast (currently the publisher
+  doesn't know which sockets it came from). Acceptable for Phase 4
+  (real multi-tab is rare and not blocking gameplay). **Trigger:**
+  a player reports it, OR Phase 6 polish surfaces it as a confused
+  user moment. **Context:** `app/templates/table.html` `pc_action`
+  dispatcher; Phase 4 commit `13d9b60`.
+
+- **Multi-client integration test** (added 2026-04-30, target Phase 7
+  hardening). `tests/integration/test_multiplayer.py` is single-client
+  because two `TestClient` instances each hold their own anyio
+  `BlockingPortal` with its own event loop, and the Pubsub singleton's
+  redis-py async client binds to whichever loop first built it.
+  Sharing the singleton across portals fires "Future attached to a
+  different loop" and breaks the test. The unit suite covers the
+  multi-client semantics deterministically with `FakePubsub`; for
+  end-to-end multi-client coverage on the real stack, spin up a real
+  uvicorn server in a thread and connect via the `websockets` library
+  from the test's main asyncio loop. **Trigger:** Phase 7 hardening,
+  OR a regression that the unit suite misses but a multi-client real
+  run would catch. **Context:** Phase 4 commit `e89bcbc`; module
+  docstring of `tests/integration/test_multiplayer.py`.
+
+- **`:memory-sentinel:` SQLite artefacts in repo root** (added 2026-04-30,
+  target whenever annoying). `tests/conftest.py` sets
+  `DB_PATH=:memory-sentinel:` so production code that reads the env
+  before fixtures override the engine writes a literal file named
+  `:memory-sentinel:` (plus `-wal` / `-shm`) into the CWD. Pre-existing
+  in Phase 2; got noticed during Phase 4. The fixtures clean up their
+  own engines but the production-default-path leak does happen. Three
+  acceptable fixes: (a) set the env override to a `tmp_path`-derived
+  per-test path; (b) gate the production engine creation behind a
+  lazy factory so tests never trigger it; (c) `.gitignore` the
+  sentinel filenames so they're invisible. Don't deserve their own
+  PR. **Trigger:** anyone cares.
+  **Context:** Phase 4 step-4 close-out.
 
 ## Working with subagents
 
