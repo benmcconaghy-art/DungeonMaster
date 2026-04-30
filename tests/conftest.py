@@ -1,19 +1,20 @@
 """Pytest fixtures shared across the suite.
 
-Phase 0 ships a single fixture (``db_session``) modelled on the sketch in
-``.claude/agents/test-writer.md``: an in-memory SQLite engine wired with
-the same WAL pragma hook the production engine uses, the schema created
-fresh for each test, and an ``AsyncSession`` yielded for the duration.
+Phase 0 / 1 ships two fixtures:
+
+* ``db_session`` — an in-memory SQLite ``AsyncSession`` for unit tests of
+  pure DB code. The schema is created fresh per test from
+  ``Base.metadata`` and the engine is disposed after.
+
+* ``client`` — an httpx ASGI client where the FastAPI ``get_db``
+  dependency is overridden to yield sessions from the same in-memory
+  engine. Auth handlers, ``/health``, and any future router that uses
+  ``get_db`` all see the test database.
 
 In-memory SQLite cannot run in actual WAL mode (the journal mode silently
 falls back to ``memory``) but the rest of the pragmas — ``foreign_keys``,
 ``busy_timeout``, etc. — apply, which is what catches the bugs unit tests
-need to catch. Migration tests will use a file-backed DB when they land.
-
-The HTTP ``client`` fixture replaces the app's ``SessionLocal`` dependency
-with one bound to the in-memory engine for the duration of a test, so
-running ``pytest`` from a clean checkout never touches the production
-``/var/lib/dungeon-master/dm.db`` path.
+need to catch. Migration tests use a file-backed temp DB.
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.db.base import Base
 from app.db.session import create_engine
+from app.deps import get_db
 from app.main import app as fastapi_app
 
 
@@ -58,12 +60,12 @@ async def db_session() -> AsyncIterator[AsyncSession]:
 
 
 @pytest.fixture
-async def client(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncClient]:
+async def client() -> AsyncIterator[AsyncClient]:
     """HTTP client bound directly to the FastAPI app via ASGI transport.
 
-    Swaps the app's production ``SessionLocal`` for a sessionmaker bound
-    to an in-memory engine, so ``pytest`` never touches the production
-    SQLite file. Avoids spinning up a real server.
+    Overrides the ``get_db`` dependency so every handler — auth, /health,
+    future routers — sees a fresh in-memory engine. ``pytest`` never
+    touches the production SQLite file. Avoids spinning up a real server.
     """
 
     test_engine = create_engine("sqlite+aiosqlite:///:memory:")
@@ -71,11 +73,17 @@ async def client(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncClient]:
         await conn.run_sync(Base.metadata.create_all)
 
     test_factory = async_sessionmaker(test_engine, expire_on_commit=False, class_=AsyncSession)
-    monkeypatch.setattr("app.main.SessionLocal", test_factory)
+
+    async def _override_get_db() -> AsyncIterator[AsyncSession]:
+        async with test_factory() as session:
+            yield session
+
+    fastapi_app.dependency_overrides[get_db] = _override_get_db
 
     transport = ASGITransport(app=fastapi_app)
     try:
         async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
             yield ac
     finally:
+        fastapi_app.dependency_overrides.pop(get_db, None)
         await test_engine.dispose()

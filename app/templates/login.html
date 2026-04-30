@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign in &mdash; Dungeon Master</title>
+    <link rel="stylesheet" href="/static/css/base.css" />
+  </head>
+  <body>
+    <main class="bootstrap">
+      <h1>Sign in</h1>
+      <form id="login-form" autocomplete="on">
+        <label>
+          Username
+          <input type="text" name="username" required autocomplete="username" />
+        </label>
+        <label>
+          Password
+          <input type="password" name="password" required autocomplete="current-password" />
+        </label>
+        <button type="submit">Sign in</button>
+        <p class="error" id="login-error" hidden></p>
+      </form>
+      <p>No account? Ask the campaign owner to create one for you, or
+      <code>POST /api/auth/register</code> directly. (Self-serve registration
+      UI lands in Phase 6.)</p>
+
+      <script>
+        // Phase 1 ships a single static form. Phase 6 (UX polish) will replace
+        // this with HTMX so the partial-update story is consistent across the
+        // app. Until then a vanilla fetch keeps the dependency surface small.
+        document.getElementById("login-form").addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const form = event.currentTarget;
+          const error = document.getElementById("login-error");
+          error.hidden = true;
+          const body = JSON.stringify({
+            username: form.username.value,
+            password: form.password.value,
+          });
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body,
+          });
+          if (response.ok) {
+            window.location.assign("/");
+          } else {
+            const detail = (await response.json().catch(() => ({}))).detail || "Sign-in failed.";
+            error.textContent = detail;
+            error.hidden = false;
+          }
+        });
+      </script>
+    </main>
+  </body>
+</html>

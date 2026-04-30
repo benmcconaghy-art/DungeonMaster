@@ -26,4 +26,5 @@ async def test_root_renders_bootstrap_page(client: AsyncClient) -> None:
     body = response.text
     assert "Dungeon Master" in body
     assert "bootstrapping" in body
-    assert "Phase 0" in body
+    # Anonymous visit shows the sign-in link rather than user info.
+    assert "Sign in" in body

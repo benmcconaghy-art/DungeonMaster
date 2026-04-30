@@ -11,7 +11,15 @@
       {% block content %}
         <h1>Dungeon Master &mdash; bootstrapping</h1>
         <p class="version">v{{ version }}</p>
-        <p class="phase">Phase 0 (Bootstrap). Phase 1 (BFRPG engine) lands next.</p>
+        <p class="phase">Phase 1 (BFRPG engine) in progress.</p>
+        {% if user %}
+          <p>Signed in as <strong>{{ user.username }}</strong>.</p>
+          <form method="post" action="/api/auth/logout">
+            <button type="submit">Sign out</button>
+          </form>
+        {% else %}
+          <p><a href="/login">Sign in</a></p>
+        {% endif %}
       {% endblock %}
     </main>
   </body>

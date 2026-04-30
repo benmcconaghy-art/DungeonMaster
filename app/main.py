@@ -1,10 +1,9 @@
 """FastAPI app factory and lifespan.
 
-Builds the app, mounts static assets, registers Phase 0's two routes
-(``/`` and ``/health``), and disposes of the SQLAlchemy engine on
-shutdown so the gunicorn worker shuts down cleanly under systemd.
-
-Phase 1 onward will register routers from ``app/api/`` here.
+Builds the app, mounts static assets, registers ``SessionMiddleware``
+(spec §13: server-signed session cookies for auth), registers the auth
+router and the bootstrap routes, and disposes of the SQLAlchemy engine
+on shutdown so the gunicorn worker shuts down cleanly under systemd.
 """
 
 from __future__ import annotations
@@ -21,8 +20,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlalchemy import text
+from starlette.middleware.sessions import SessionMiddleware
 
-from app.db.session import SessionLocal, engine
+from app.api.auth import router as auth_router
+from app.config import get_settings
+from app.db.session import engine
+from app.deps import CurrentUserOrNone, DbSession
 
 _APP_DIR = Path(__file__).resolve().parent
 _TEMPLATES = Jinja2Templates(directory=str(_APP_DIR / "templates"))
@@ -69,11 +72,27 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     """Build and return the FastAPI application."""
 
+    settings = get_settings()
     app = FastAPI(
         title="Dungeon Master",
         version=VERSION,
         lifespan=lifespan,
     )
+
+    # Signed-cookie sessions per spec §13. ``https_only`` would set the
+    # Secure flag, but our self-signed dev cert means a dev browser
+    # connecting via plain http:// would refuse to send the cookie back —
+    # leave it off so dev works locally; production runs behind nginx TLS
+    # so cookies arrive over HTTPS regardless.
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=settings.session_secret,
+        session_cookie="dm_session",
+        max_age=60 * 60 * 24 * 30,  # 30 days, per spec §13
+        same_site="lax",
+    )
+
+    app.include_router(auth_router)
 
     app.mount(
         "/static",
@@ -82,19 +101,22 @@ def create_app() -> FastAPI:
     )
 
     @app.get("/", response_class=HTMLResponse)
-    async def index(request: Request) -> HTMLResponse:
+    async def index(request: Request, user: CurrentUserOrNone) -> HTMLResponse:
         return _TEMPLATES.TemplateResponse(
             request,
             "base.html",
-            {"version": VERSION},
+            {"version": VERSION, "user": user},
         )
 
+    @app.get("/login", response_class=HTMLResponse)
+    async def login_form(request: Request) -> HTMLResponse:
+        return _TEMPLATES.TemplateResponse(request, "login.html", {})
+
     @app.get("/health", response_model=HealthResponse)
-    async def health() -> JSONResponse:
+    async def health(db: DbSession) -> JSONResponse:
         db_status: Literal["ok", "error"] = "ok"
         try:
-            async with SessionLocal() as session:
-                await session.execute(text("SELECT 1"))
+            await db.execute(text("SELECT 1"))
         except Exception:
             db_status = "error"
 
