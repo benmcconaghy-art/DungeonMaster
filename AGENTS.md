@@ -198,20 +198,96 @@ uv run mypy app                                 # type check
 - **§14** — Phased implementation plan
 - **§15** — Decisions log
 
-## Known limitations / parking lot
+## Current build phase
 
-Things we know are imperfect and have intentionally deferred. Touch when they
-bite, not before.
+**Phase 3 complete; Phase 4 (multiplayer) ready to start.**
 
-- **Spells with different per-class levels need duplicate records.**
-  `data/bfrpg/spells.yaml` carries `caster_classes: list[str]` and a single
-  `level: int`. BFRPG has ~6 spells (Hold Person, Continual Light, Locate
-  Object, Detect Evil, Protection from Evil 10' Radius, Remove Curse) where
-  the cleric and magic-user lists assign different levels. Those currently
-  ship as two records each, with a disambiguating `(Magic-User)` suffix on
-  the secondary entry. Real fix: `castings: list[{caster_class, level}]`.
-  Park until a UI / spell-prep flow in Phase 6 makes the duplication a
-  problem.
+Update this line as phases complete. The phased plan is in spec §14.
+
+## Follow-ups
+
+Parking lot for items deliberately deferred. Each entry is a short,
+actionable note; the trigger condition tells future-you when to pick it
+up. Promote to a real issue / phase task when its trigger fires.
+
+- **Nemotron prompt pacing** (added 2026-04-30, target Phase 4 prep).
+  Real-traffic measurement showed Nemotron drives both sides of a combat
+  round in 6-10 tool calls when it should pause for player input between
+  major beats. The iteration cap was raised 5→10 in Phase 2 to
+  accommodate; tightening the system prompt to encourage pausing would
+  let us drop the cap back down and improve player agency. Evaluate
+  against Phase 3's prompt shape (with retrieval + summaries), not
+  Phase 2's. **Trigger:** start of Phase 4 prep work, OR if iteration_cap
+  / empty_completion outcomes appear in real-player session logs.
+  **Context:** Phase 2 finding #3, Phase 3 integration test
+  `bkz1lnz4h` (logs at `/tmp/memory_integration2.log` while still on
+  this machine).
+
+- **Reasoning mode tuning** (added 2026-04-30, target Phase 5).
+  Apply Nemotron's `low_effort` reasoning mode to memory subsystem
+  calls (session summariser, campaign summariser, fact extractor)
+  while keeping the DM turn loop at full reasoning. Mechanical change
+  to `app/llm/client.py` adding a `reasoning_mode` parameter.
+  **Verify:** `low_effort` doesn't degrade JSON output on the fact
+  extractor — if it does, keep the extractor at full and only the
+  summarisers low. Phase 5 is the right home because it's where the
+  project first cares seriously about latency budgets across async
+  workloads. **Trigger:** start of Phase 5 image-generation work
+  (latency on memory tasks competes with image-worker priority).
+  **Context:** discussion of `nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4`
+  reasoning modes in the Phase 3 conversation.
+
+- **Per-class spell levels** (added 2026-04-30, target: when it bites).
+  Spells like Hold Person and Continual Light have different levels per
+  caster class (MU3 vs Cleric2). Current schema requires duplicate
+  records — `data/bfrpg/spells.yaml` ships ~6 affected spells as two
+  entries each, with a disambiguating `(Magic-User)` suffix on the
+  secondary entry. Real fix: `castings: list[{caster_class, level}]`
+  on the spell schema. **Trigger:** a player actually casts one of the
+  affected spells in play and the rules engine returns a wrong outcome,
+  OR a Phase 6 spell-prep UI surfaces the duplication. Premature
+  schema work otherwise. **Context:** Phase 2 finding #6.
+
+- **Bare-string fact-extractor coercion** (added 2026-04-30, target
+  Phase 4-5 prep). Nemotron's fact-extractor response sometimes mixes
+  proper objects with bare strings: `[{"fact": "...", ...}, "Castellan
+  Thorvald", "keep"]`. The current parser drops the bare strings with
+  a warning. Phase 3's 25-turn integration test logged ~20 dropped
+  bare entries against ~35 persisted objects — losing roughly a third
+  of memorable signal. Fix: coerce bare strings to
+  `{"fact": s, "tags": [], "importance": 5}`. Small, ~10-line change
+  to `app/llm/memory.py`'s extractor parser. **Trigger:** any
+  follow-up integration run shows >25% of extracted entries dropped,
+  OR a real session reports "the DM forgot something obvious."
+  **Context:** Phase 3 commit `64d690e`, log lines starting
+  `fact extractor: dropping malformed fact entry:`.
+
+- **Production embedding endpoint** (added 2026-04-30, target Phase 7
+  hardening / production deploy). Default backend is local
+  `sentence-transformers` with `BAAI/bge-large-en-v1.5` (1024-dim).
+  Pulls torch as a transitive dep (~2GB), loads ~1.5GB of weights into
+  RAM. Production should set `EMBEDDING_BASE_URL` pointing at Ollama
+  once an operator runs `ollama pull <embedding-model>` on
+  `svrai01:11436` (currently no embedding model is loaded there;
+  `nomic-embed-text` is 768-dim, `bge-large` is 1024-dim — match
+  `embedding_dim`). After the swap, drop `sentence-transformers` from
+  required deps to optional. **Trigger:** start of Phase 7 hardening,
+  OR an operator schedules a deploy.
+  **Context:** Phase 3 prep probes; commit `64d690e`.
+
+- **Cross-worker memory cache invalidation** (added 2026-04-30, target
+  Phase 4 review / Phase 7+ scale-out). The `WorldFactRetriever` cache
+  and the per-session / per-campaign summariser locks
+  (`_session_summary_locks`, `_campaign_summary_locks`) all live in
+  process memory. Spec §13's single-gunicorn-worker deployment makes
+  this correct today. Phase 4 multiplayer doesn't add workers, but
+  any future shard-out needs Redis pub/sub for cache fan-out;
+  retrieval would otherwise serve stale per-campaign matrices and
+  summary locks would race. **Trigger:** spec gets a multi-worker
+  deployment story (currently no such plans), OR Phase 7+ load
+  testing shows the single worker is the bottleneck.
+  **Context:** Phase 3 commit `64d690e` flags; spec §13 single-worker
+  rationale.
 
 ## Working with subagents
 
@@ -228,9 +304,3 @@ Several have `isolation: worktree` so they automatically run in their own
 worktree. For top-level parallel sessions, use `claude --worktree <name>`.
 
 Add `.claude/worktrees/` to `.gitignore`.
-
-## Current build phase
-
-**Phase 3 complete; Phase 4 (multiplayer) ready to start.**
-
-Update this line as phases complete. The phased plan is in spec §14.
