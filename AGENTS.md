@@ -328,6 +328,35 @@ up. Promote to a real issue / phase task when its trigger fires.
   run would catch. **Context:** Phase 4 commit `e89bcbc`; module
   docstring of `tests/integration/test_multiplayer.py`.
 
+- **FLUX cold-load measurement vs spec estimate** (added 2026-05-01,
+  Phase 5 step 6 close-out). Spec §8 estimated "cold pipeline load
+  ~15-30s plus 28-step inference ~8-18s, ~25-45s end-to-end". Live
+  measurement on `svrai01:11437` against FLUX.1 [dev] on a 5090:
+  256x256/1-step = 4.85s, 1280x768/28-steps cold = 16.95s, warm =
+  17.02s (no cold-load tax detected — model stayed resident or there
+  is no real cold-load on warm hardware). The service-reported
+  `generation_time_seconds` (12.0s for the 28-step run) understates
+  wall-clock by ~5s, so it's not load+inference split — it's
+  inference-only with the rest in encoding/transport. **Implication:**
+  the 180s read timeout in `app/images/client.py` has plenty of headroom;
+  the 60s probe timeout is generous; the watchdog's 30s tick interval
+  is fine. **Watch:** a different GPU or a degraded VRAM state could
+  swing this 3-5x. If portrait/scene latency complaints surface,
+  capture timing again before tuning. **Context:** commits
+  `51d09b4`/`c520651` and the post-Step 6 measurement run.
+
+- **GPU squatter ops watch** (added 2026-05-01, ongoing). Phase 5 Step
+  6 close-out: a 7GB unrelated process squatting on the 5090 pushed
+  FLUX over VRAM. /health stayed 200 OK with `flux_txt2img_loaded:false`
+  while /generate returned 500. The watchdog now uses a deep
+  /generate probe (256x256/1-step) so this state surfaces as
+  "degraded" within ~120s. **Operator runbook:** if the worker logs
+  show `image:status -> degraded` and the FLUX service is reachable
+  on /health, run `nvidia-smi` on `svrai01` and look for non-FLUX
+  PIDs holding VRAM. **Trigger:** add this to deploy docs the first
+  time anyone writes them. **Context:** Step 6 commits, the
+  `_watchdog` docstring in `app/images/worker.py`.
+
 - **`:memory-sentinel:` SQLite artefacts in repo root** (added 2026-04-30,
   target whenever annoying). `tests/conftest.py` sets
   `DB_PATH=:memory-sentinel:` so production code that reads the env

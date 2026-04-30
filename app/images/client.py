@@ -1,11 +1,14 @@
 """FLUX HTTP client.
 
 Async wrapper around the FLUX.1 [dev] / FLUX.1 Kontext [dev] service running
-on ``svrai01:11437`` (spec §8). Exposes three operations:
+on ``svrai01:11437`` (spec §8). Exposes four operations:
 
-- ``health()`` — GET ``/health``. Used by the image worker's 30s watchdog
-  (>2 min unreachable → degraded mode, DM is told to omit
-  ``generate_scene_image`` calls).
+- ``health()`` — GET ``/health``. Cheap reachability probe; kept for
+  app-startup wiring checks. NOT used by the watchdog (see ``probe``).
+- ``probe()`` — POST ``/generate`` with 256x256/1-step. The watchdog's
+  liveness signal. Bypasses ``/health`` because the FLUX service
+  reports ``flux_txt2img_loaded:false`` even when ``/generate`` is
+  fully working — a 200 from /health is necessary but not sufficient.
 - ``generate(prompt, ...)`` — POST ``/generate`` (FLUX.1 txt2img).
 - ``edit(prompt, source_png, ...)`` — POST ``/edit`` (FLUX.1 Kontext
   instruction-based edit, used for character / NPC consistency).
@@ -121,6 +124,47 @@ class FluxClient:
                 f"FLUX /health returned non-object payload: {type(payload).__name__}"
             )
         return payload
+
+    async def probe(self) -> dict[str, Any]:
+        """POST ``/generate`` with 256x256/1-step as a deep liveness signal.
+
+        The watchdog calls this every ``POLL_INTERVAL_S`` to verify the
+        service is genuinely able to produce an image, not just answer
+        a health endpoint. /health alone is insufficient: in observed
+        runs the service returns 200 from /health while reporting
+        ``flux_txt2img_loaded:false``, and yet /generate succeeds —
+        and the converse failure (200 /health, 500 /generate) was the
+        original incident that motivated this method.
+
+        Single-shot: no 503 retry. The watchdog's polling cadence is
+        itself the retry — chaining the client's 65s backoff inside a
+        30s watchdog tick would cascade. A typical warm probe is ~5s;
+        a cold-load probe can run a bit longer, hence the 60s read
+        timeout (down from /generate's 180s, up from /health's 10s).
+
+        Returns the parsed JSON dict so the watchdog can log
+        ``generation_time_seconds`` if it wants. The image bytes in
+        the response are discarded — the watchdog has no use for them.
+        """
+
+        payload: dict[str, Any] = {
+            "prompt": "watchdog probe",
+            "width": 256,
+            "height": 256,
+            "num_inference_steps": 1,
+            "guidance_scale": 3.5,
+        }
+        try:
+            response = await self._client.post("/generate", json=payload, timeout=60.0)
+            response.raise_for_status()
+            data = response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            raise FluxClientError(f"FLUX /generate probe failed: {exc}") from exc
+        if not isinstance(data, dict):
+            raise FluxClientError(
+                f"FLUX /generate probe returned non-object: {type(data).__name__}"
+            )
+        return data
 
     async def generate(
         self,

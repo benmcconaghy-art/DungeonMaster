@@ -165,6 +165,116 @@ async def test_health_raises_on_non_object_payload(monkeypatch: pytest.MonkeyPat
 
 
 # ---------------------------------------------------------------------------
+# probe() — deep liveness signal used by the watchdog
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_probe_sends_minimal_generate_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The probe must hit /generate with 256x256/1-step. Any change to
+    these knobs raises the per-tick cost on FLUX (one inference per
+    30s of idle). The request shape is the contract."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/generate"
+        body = json.loads(request.content)
+        assert body["width"] == 256
+        assert body["height"] == 256
+        assert body["num_inference_steps"] == 1
+        return httpx.Response(200, json=_ok_image_payload())
+
+    captured = _install_transport(monkeypatch, handler)
+    client = FluxClient(base_url="http://test")
+    try:
+        result = await client.probe()
+    finally:
+        await client.aclose()
+
+    assert isinstance(result, dict)
+    assert "image_base64" in result
+    assert len(captured) == 1
+
+
+@pytest.mark.asyncio
+async def test_probe_raises_on_5xx(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A 500 from /generate is the canonical failure mode the probe
+    exists to detect (the bug that motivated this method: /health
+    returns 200 while /generate returns 500). Surface it as
+    FluxClientError so the watchdog counts it as a failure tick."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, text="VRAM exhausted")
+
+    _install_transport(monkeypatch, handler)
+    client = FluxClient(base_url="http://test")
+    try:
+        with pytest.raises(FluxClientError, match="probe"):
+            await client.probe()
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_probe_does_not_retry_on_503(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Single-shot: a 503 from the probe raises immediately rather
+    than running the 5/15/45 backoff. The watchdog's polling cadence
+    is itself the retry — chaining 65s of in-line backoff inside a
+    30s tick would cascade and delay degraded-state detection."""
+
+    sleeps = _patch_sleep(monkeypatch)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, text="busy")
+
+    captured = _install_transport(monkeypatch, handler)
+    client = FluxClient(base_url="http://test")
+    try:
+        with pytest.raises(FluxClientError, match="probe"):
+            await client.probe()
+    finally:
+        await client.aclose()
+
+    assert len(captured) == 1
+    assert sleeps == []
+
+
+@pytest.mark.asyncio
+async def test_probe_raises_on_transport_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Connection-refused / read-timeout against a wedged FLUX must
+    surface as FluxClientError so the watchdog ticks it as a failure
+    rather than crashing the watchdog task."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("refused")
+
+    _install_transport(monkeypatch, handler)
+    client = FluxClient(base_url="http://test")
+    try:
+        with pytest.raises(FluxClientError, match="probe"):
+            await client.probe()
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_probe_raises_on_non_object_payload(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A 200 with a list / scalar JSON body is malformed — fail loudly
+    rather than letting the watchdog mistake garbage for liveness."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=[1, 2, 3])
+
+    _install_transport(monkeypatch, handler)
+    client = FluxClient(base_url="http://test")
+    try:
+        with pytest.raises(FluxClientError, match="non-object"):
+            await client.probe()
+    finally:
+        await client.aclose()
+
+
+# ---------------------------------------------------------------------------
 # generate() — request shape + response decoding
 # ---------------------------------------------------------------------------
 

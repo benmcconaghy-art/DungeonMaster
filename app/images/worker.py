@@ -14,8 +14,10 @@ Runs as its own systemd unit (``dungeon-master-imageworker.service``).
 
 Concurrency: spec §8 has the FLUX service serialising with its own
 ``asyncio.Lock``, so worker concurrency >1 wouldn't help. We run a
-single async loop alongside a parallel watchdog task that polls
-``/health`` every 30s to maintain the ``image:status`` Valkey key.
+single async loop alongside a parallel watchdog task that runs a
+256x256/1-step ``/generate`` probe every 30s to maintain the
+``image:status`` Valkey key — see :func:`_watchdog` for why a
+``/health`` poll alone isn't sufficient.
 
 Failure handling per spec §8:
 - FLUX 503 retry exhaustion → emit ``image_failed`` with
@@ -373,18 +375,29 @@ def _image_url(image_id: str) -> str:
 
 
 async def _watchdog(flux: FluxClient, queue_client: Any) -> None:
-    """Poll FLUX ``/health`` every ``POLL_INTERVAL_S`` seconds; flip
-    ``image:status`` to ``degraded`` after ``DEGRADED_THRESHOLD_S`` of
-    consecutive failures. Restored to ``ok`` on the first successful
-    poll after a degraded period. Runs until cancelled by the main
-    task."""
+    """Poll FLUX with a deep ``/generate`` probe every
+    ``POLL_INTERVAL_S`` seconds; flip ``image:status`` to ``degraded``
+    after ``DEGRADED_THRESHOLD_S`` of consecutive failures. Restored to
+    ``ok`` on the first successful probe after a degraded period.
+    Runs until cancelled by the main task.
+
+    Why probe instead of /health: in production the FLUX service
+    has been observed reporting 200 OK from /health while /generate
+    returns 500 (a 7GB squatter on the GPU pushed FLUX over VRAM, with
+    no signal on /health). The probe runs a 256x256/1-step
+    generation — cheap to FLUX, definitive about whether image
+    generation is working. Any 5xx, transport error, or malformed
+    response counts as a failure tick: this is the "treat sustained
+    5xx as degraded" widening, beyond the spec's narrower 503-only
+    note (which only governs the client's automatic retry).
+    """
 
     last_success = asyncio.get_running_loop().time()
     current_status = "ok"
     await write_status(queue_client, "ok", since_iso=_now_iso())
     while True:
         try:
-            await flux.health()
+            await flux.probe()
             now = asyncio.get_running_loop().time()
             last_success = now
             if current_status != "ok":
@@ -395,7 +408,7 @@ async def _watchdog(flux: FluxClient, queue_client: Any) -> None:
             now = asyncio.get_running_loop().time()
             elapsed = now - last_success
             log.warning(
-                "image watchdog: FLUX health failed (%.0fs since last success): %s",
+                "image watchdog: FLUX probe failed (%.0fs since last success): %s",
                 elapsed,
                 exc,
             )

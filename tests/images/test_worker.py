@@ -1,5 +1,5 @@
-"""Tests for ``app.images.worker._process_job`` — the per-job
-end-to-end flow with FLUX, DB, and Pubsub at the boundaries.
+"""Tests for ``app.images.worker`` — per-job end-to-end flow plus the
+parallel watchdog task.
 
 We exercise ``_process_job`` directly rather than ``main()`` because:
 
@@ -17,7 +17,10 @@ can assert the right ``image_ready`` / ``image_failed`` flavour.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import hashlib
+import json
 from collections.abc import AsyncIterator
 from pathlib import Path
 from unittest.mock import AsyncMock
@@ -31,11 +34,13 @@ from app.db import models
 from app.db.base import Base
 from app.db.session import create_engine
 from app.images.client import FluxClientError
+from app.images.health import HEALTH_KEY
 from app.images.queue import ImageJob
 from app.images.worker import (
     _KIND_PARAMS,
     _hash_inputs,
     _process_job,
+    _watchdog,
 )
 from app.realtime.messages import ImageFailed, ImageReady, ServerMessage
 
@@ -684,3 +689,165 @@ def test_hash_is_deterministic() -> None:
     b = _hash_inputs(campaign_id="c", kind="scene", prompt_with_style="p", reference_image_id=None)
     assert a == b
     assert a == hashlib.sha256(b"c\x00scene\x00p\x00").hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# Watchdog
+# ---------------------------------------------------------------------------
+
+
+class _FakeKvClient:
+    """Minimal in-memory get/set for the image:status rendezvous key."""
+
+    def __init__(self) -> None:
+        self.store: dict[str, bytes] = {}
+
+    async def set(self, key: str, value: bytes) -> bool:
+        self.store[key] = value
+        return True
+
+    async def get(self, key: str) -> bytes | None:
+        return self.store.get(key)
+
+
+def _read_status(kv: _FakeKvClient) -> str | None:
+    raw = kv.store.get(HEALTH_KEY)
+    if raw is None:
+        return None
+    parsed = json.loads(raw)
+    assert isinstance(parsed, dict)
+    return str(parsed["status"])
+
+
+@pytest.mark.asyncio
+async def test_watchdog_uses_probe_not_health(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The probe is the deeper liveness signal; /health alone returned
+    200 in the incident that motivated this widening. A regression
+    that swaps probe() back to health() loses that signal silently."""
+
+    # Speed up the loop so the test resolves in milliseconds.
+    monkeypatch.setattr("app.images.worker.POLL_INTERVAL_S", 0.0)
+    flux = AsyncMock()
+    kv = _FakeKvClient()
+
+    task = asyncio.create_task(_watchdog(flux, kv))
+    # Yield enough times for the loop to make at least one probe.
+    for _ in range(5):
+        await asyncio.sleep(0)
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+    assert flux.probe.await_count >= 1
+    assert flux.health.await_count == 0
+
+
+@pytest.mark.asyncio
+async def test_watchdog_writes_initial_ok_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The watchdog writes ``ok`` immediately on entry so the
+    orchestrator sees a definite state from the moment the worker
+    starts, not the missing-key default."""
+
+    monkeypatch.setattr("app.images.worker.POLL_INTERVAL_S", 60.0)
+    flux = AsyncMock()
+    kv = _FakeKvClient()
+
+    task = asyncio.create_task(_watchdog(flux, kv))
+    await asyncio.sleep(0)  # let the initial write_status run
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+    assert _read_status(kv) == "ok"
+
+
+@pytest.mark.asyncio
+async def test_watchdog_flips_to_degraded_after_threshold(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sustained probe failures past DEGRADED_THRESHOLD_S elapsed time
+    flip image:status to degraded. Time is driven by a fake monotonic
+    clock so the test doesn't burn 120 wall-clock seconds."""
+
+    monkeypatch.setattr("app.images.worker.POLL_INTERVAL_S", 0.0)
+    monkeypatch.setattr("app.images.worker.DEGRADED_THRESHOLD_S", 120.0)
+
+    fake_clock = {"t": 0.0}
+
+    class _FakeLoop:
+        def time(self) -> float:
+            return fake_clock["t"]
+
+    monkeypatch.setattr(
+        "app.images.worker.asyncio.get_running_loop",
+        lambda: _FakeLoop(),
+    )
+
+    flux = AsyncMock()
+    flux.probe.side_effect = FluxClientError("500 boom")
+    kv = _FakeKvClient()
+
+    task = asyncio.create_task(_watchdog(flux, kv))
+    # First few ticks at t=0; status should still be ok (no elapsed
+    # time yet to cross the threshold).
+    for _ in range(3):
+        await asyncio.sleep(0)
+    assert _read_status(kv) == "ok"
+
+    # Advance clock past threshold; the next probe failure should flip.
+    fake_clock["t"] = 130.0
+    for _ in range(5):
+        await asyncio.sleep(0)
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+    assert _read_status(kv) == "degraded"
+
+
+@pytest.mark.asyncio
+async def test_watchdog_recovers_to_ok_after_degraded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """First successful probe after a degraded period flips back to
+    ok. Operators relying on the recovery path (e.g. squatter cleared
+    on the GPU, FLUX restarted) need this transition to fire on the
+    very first success, not after some hysteresis."""
+
+    monkeypatch.setattr("app.images.worker.POLL_INTERVAL_S", 0.0)
+    monkeypatch.setattr("app.images.worker.DEGRADED_THRESHOLD_S", 1.0)
+
+    fake_clock = {"t": 0.0}
+
+    class _FakeLoop:
+        def time(self) -> float:
+            return fake_clock["t"]
+
+    monkeypatch.setattr(
+        "app.images.worker.asyncio.get_running_loop",
+        lambda: _FakeLoop(),
+    )
+
+    flux = AsyncMock()
+    flux.probe.side_effect = FluxClientError("500")
+    kv = _FakeKvClient()
+
+    task = asyncio.create_task(_watchdog(flux, kv))
+    # Ramp time past the threshold to hit degraded.
+    for advance in (0.5, 1.5, 2.5, 3.5):
+        fake_clock["t"] = advance
+        for _ in range(2):
+            await asyncio.sleep(0)
+    assert _read_status(kv) == "degraded"
+
+    # Now recovery — probe stops failing.
+    flux.probe.side_effect = None
+    flux.probe.return_value = {"image_base64": "x", "seed_used": 1}
+    fake_clock["t"] = 5.0
+    for _ in range(5):
+        await asyncio.sleep(0)
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+    assert _read_status(kv) == "ok"
