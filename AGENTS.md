@@ -40,6 +40,18 @@ modules. Single-server deployment on AlmaLinux 10.1, trusted internal LAN.
    normalised vectors so cosine reduces to a dot product. Skip normalisation
    and retrieval breaks silently.
 
+6. **Only declare implemented tools to the LLM.** `tool_definitions(only_implemented=True)`
+   is the orchestrator's default. Surfacing not-yet-implemented stubs causes Nemotron
+   to call them, get a "not_implemented" tool result, retry — and chain to the
+   iteration cap. Tools become visible automatically as their handlers register.
+
+7. **Tool-call iteration cap is 10, not the spec's 5.** Real BFRPG combat rounds
+   chain 6-8 tool calls (to-hit, damage, apply_damage, save, monster's counter,
+   …). 5 false-positives on legitimate play. 10 is the calibrated value; if a
+   turn legitimately needs more we're modelling combat wrong (the LLM should
+   pause for the player rather than driving the round end-to-end). Constant in
+   `app/orchestrator/dm.py`.
+
 ## Tech stack
 
 - Python 3.12
@@ -102,6 +114,13 @@ async model within one worker. See spec §13 for rationale.
 - Validate every input with Pydantic. Never accept raw `dict` in handlers.
 - Return Pydantic models from API endpoints; let FastAPI handle serialisation.
 - WebSocket endpoint at `/ws/session/{session_id}`; messages are JSON, types defined in `app/realtime/messages.py`.
+- Handlers that depend on `require_user` (or any dependency that reads from the DB)
+  use `db.add(...)` + `await db.commit()`, **not** `async with db.begin():`. The
+  user-resolution dependency autobegins a read transaction during DI; an explicit
+  `begin()` in the handler body collides with "transaction already begun". Use
+  the explicit-begin pattern only in handlers that don't read from the DB before
+  writing — currently rare; see `app/orchestrator/dm.py` for the canonical
+  exception (it manages its own session lifecycle outside the DI chain).
 
 ### Tests
 - Each new module gets a parallel `tests/test_<module>.py` from day one.
@@ -179,6 +198,21 @@ uv run mypy app                                 # type check
 - **§14** — Phased implementation plan
 - **§15** — Decisions log
 
+## Known limitations / parking lot
+
+Things we know are imperfect and have intentionally deferred. Touch when they
+bite, not before.
+
+- **Spells with different per-class levels need duplicate records.**
+  `data/bfrpg/spells.yaml` carries `caster_classes: list[str]` and a single
+  `level: int`. BFRPG has ~6 spells (Hold Person, Continual Light, Locate
+  Object, Detect Evil, Protection from Evil 10' Radius, Remove Curse) where
+  the cleric and magic-user lists assign different levels. Those currently
+  ship as two records each, with a disambiguating `(Magic-User)` suffix on
+  the secondary entry. Real fix: `castings: list[{caster_class, level}]`.
+  Park until a UI / spell-prep flow in Phase 6 makes the duplication a
+  problem.
+
 ## Working with subagents
 
 Specialist agents are defined in `.claude/agents/`:
@@ -197,6 +231,6 @@ Add `.claude/worktrees/` to `.gitignore`.
 
 ## Current build phase
 
-**Phase 2 complete; Phase 3 (memory) ready to start.**
+**Phase 3 complete; Phase 4 (multiplayer) ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.

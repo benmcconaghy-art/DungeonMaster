@@ -39,12 +39,15 @@ from app.main import app as fastapi_app
 
 
 @pytest.fixture
-async def db_session() -> AsyncIterator[AsyncSession]:
+async def db_session(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncSession]:
     """Yield an ``AsyncSession`` against a fresh in-memory SQLite database.
 
-    The schema (``Base.metadata``) is created at fixture setup. Phase 0
-    has no models registered, so this currently materialises an empty
-    schema; Phase 1 onward populates it.
+    The schema (``Base.metadata``) is created at fixture setup.
+    Monkey-patches ``app.orchestrator.dm.SessionLocal`` to the same
+    in-memory factory so the orchestrator's fire-and-forget post-turn
+    tasks (fact extractor, session-summary regen) — which open their own
+    sessions via ``SessionLocal()`` rather than the one yielded here —
+    don't try to write to the production DB path during a unit test.
     """
 
     engine = create_engine("sqlite+aiosqlite:///:memory:")
@@ -53,6 +56,7 @@ async def db_session() -> AsyncIterator[AsyncSession]:
         await conn.run_sync(Base.metadata.create_all)
 
     factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+    monkeypatch.setattr("app.orchestrator.dm.SessionLocal", factory)
     async with factory() as session:
         yield session
 
@@ -82,6 +86,13 @@ async def client(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncClient]:
 
     fastapi_app.dependency_overrides[get_db] = _override_get_db
     monkeypatch.setattr("app.api.sse.SessionLocal", test_factory)
+    # The orchestrator's post-turn fact-extractor / session-summary tasks
+    # open their own session via SessionLocal(); send them at the test
+    # engine too so they don't create stray ``:memory-sentinel:`` files.
+    # The background tasks fire-and-forget; tests don't await them, but
+    # we still want them pointing at a real schema in case they're
+    # observed by a future test.
+    monkeypatch.setattr("app.orchestrator.dm.SessionLocal", test_factory)
 
     transport = ASGITransport(app=fastapi_app)
     try:

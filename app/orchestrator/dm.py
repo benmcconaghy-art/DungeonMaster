@@ -19,6 +19,7 @@ to its WS message type.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import re
@@ -30,7 +31,12 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import SessionMessage
+from app.db.session import SessionLocal
 from app.llm.client import RunawayTokenError, get_dm_client
+from app.llm.memory import (
+    extract_and_persist_facts,
+    maybe_regenerate_session_summary,
+)
 from app.llm.prompts import build_dm_prompt
 from app.llm.tools import ToolResult, get_handler, parse_tool_args, tool_definitions
 
@@ -422,6 +428,81 @@ async def take_turn(
         db.add(dm_msg)
 
     yield NarrationComplete(message_id=dm_msg.id, content=final_assistant_text)
+
+    # ------- 5. Schedule fire-and-forget post-turn memory work ---------------
+    # The fact extractor and the session-summary regeneration both run
+    # async after the turn so they never block the next player action.
+    # Each task opens its OWN database session — we don't pass ``db`` in
+    # because the caller (SSE bridge) closes it as soon as this generator
+    # returns.
+    _schedule_post_turn_memory(
+        session_id=session_id,
+        player_action=content,
+        dm_response=final_assistant_text,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Post-turn background tasks
+# ---------------------------------------------------------------------------
+
+
+# Module-level set keeps strong refs to in-flight tasks. Without this,
+# asyncio's create_task can drop them mid-flight when the only reference
+# is on a local variable that goes out of scope as ``take_turn`` returns.
+_BACKGROUND_TASKS: set[asyncio.Task[Any]] = set()
+
+
+def _schedule_post_turn_memory(
+    *,
+    session_id: str,
+    player_action: str,
+    dm_response: str,
+) -> None:
+    """Fire-and-forget the fact extractor and the (possibly-no-op)
+    session-summary regeneration."""
+
+    extractor_task = asyncio.create_task(
+        _run_fact_extractor(session_id, player_action, dm_response)
+    )
+    summary_task = asyncio.create_task(_run_session_summary(session_id))
+    for task in (extractor_task, summary_task):
+        _BACKGROUND_TASKS.add(task)
+        task.add_done_callback(_BACKGROUND_TASKS.discard)
+
+
+async def _run_fact_extractor(session_id: str, player_action: str, dm_response: str) -> None:
+    """Open a fresh session and run the fact extractor.
+
+    Errors are swallowed (logged only) — a failure here must not surface
+    to the player. ``extract_and_persist_facts`` itself is defensive
+    about LLM and JSON failures, so anything escaping is a programming
+    bug we want to log loudly without breaking the next turn.
+    """
+
+    try:
+        async with SessionLocal() as db:
+            await extract_and_persist_facts(
+                db,
+                session_id=session_id,
+                player_action=player_action,
+                dm_response=dm_response,
+            )
+    except Exception:
+        log.exception("post-turn fact extractor crashed (session=%s)", session_id)
+
+
+async def _run_session_summary(session_id: str) -> None:
+    """Open a fresh session and call the (no-op-most-of-the-time)
+    summary regenerator. The function only invokes the LLM when the
+    player-message count is a non-zero multiple of every_n_turns, so
+    calling it after every turn is cheap by design."""
+
+    try:
+        async with SessionLocal() as db:
+            await maybe_regenerate_session_summary(db, session_id=session_id)
+    except Exception:
+        log.exception("post-turn session-summary regen crashed (session=%s)", session_id)
 
 
 # ---------------------------------------------------------------------------

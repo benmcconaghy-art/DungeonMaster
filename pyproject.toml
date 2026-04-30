@@ -26,6 +26,11 @@ dependencies = [
     "itsdangerous>=2.2,<3",
     "uuid7>=0.1,<0.2",
     "pyyaml>=6.0,<7",
+    # Local fallback for the embedding backend when no remote
+    # /v1/embeddings endpoint is configured. Pulls torch as a transitive
+    # dep (~2GB); production deployments that point EMBEDDING_BASE_URL at
+    # Ollama or another /v1/embeddings server never load this.
+    "sentence-transformers>=3.3,<4",
 ]
 
 [dependency-groups]

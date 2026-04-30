@@ -59,6 +59,32 @@ class Settings(BaseSettings):
         description="Server-side secret used to sign session cookies.",
         min_length=16,
     )
+    embedding_base_url: str | None = Field(
+        default=None,
+        description=(
+            "Optional URL of an OpenAI-compatible embedding endpoint, e.g."
+            " 'http://svrai01.mcconaghygroup.internal:11436/v1' (Ollama). When"
+            " unset, the local sentence-transformers backend is used."
+        ),
+    )
+    embedding_model: str = Field(
+        default="BAAI/bge-large-en-v1.5",
+        description=(
+            "Model id passed to /v1/embeddings (or sentence-transformers"
+            " load_model). Default is 1024-dimensional, matching the spec §5"
+            " convention. Changing this invalidates existing world_facts rows"
+            " — they live in the old model's vector space."
+        ),
+    )
+    embedding_dim: int = Field(
+        default=1024,
+        description=(
+            "Expected output dimension. The embedder asserts at startup that"
+            " its actual output matches this; mismatches fail the worker rather"
+            " than silently writing inconsistent BLOBs."
+        ),
+        ge=1,
+    )
 
     @property
     def db_url(self) -> str:

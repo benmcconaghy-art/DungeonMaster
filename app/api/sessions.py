@@ -15,6 +15,7 @@ Phase 2 needs:
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -23,6 +24,10 @@ from sqlalchemy import select
 
 from app.db import models
 from app.deps import CurrentUser, DbSession
+from app.llm.client import DmClientError
+from app.llm.memory import regenerate_campaign_summary
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(tags=["sessions"])
 
@@ -159,6 +164,21 @@ async def end_session(
         )
         await db.commit()
         await db.refresh(session)
+
+        # Regenerate the campaign-level rolling summary now that this
+        # session's contribution is final. Awaited (not fired-and-forgotten)
+        # because "End session" is an explicit user action and the operator
+        # expects the summary to be in place once the response returns.
+        # The function manages its own transaction discipline.
+        try:
+            await regenerate_campaign_summary(db, campaign_id=session.campaign_id)
+        except DmClientError:
+            log.exception(
+                "end_session: campaign summary regeneration failed for %s",
+                session.campaign_id,
+            )
+            # Don't fail the close on a summary-regen blip; the session is
+            # ended and the operator can re-trigger summarisation later.
     return _session_to_snapshot(session)
 
 

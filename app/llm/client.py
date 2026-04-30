@@ -106,10 +106,68 @@ class DmClient:
         models = payload.get("data") or []
         if not models:
             raise DmClientError(f"vLLM at {self._base_url} returned no models in /v1/models")
-        self._resolved_model = models[0]["id"]
-        log.info("vLLM resolved model: %s", self._resolved_model)
+        first = models[0]
+        self._resolved_model = first["id"]
+        # The spec mentions "nemotron-3-super" by name; the actual served id
+        # is whatever the operator launched the engine with (e.g.
+        # ``nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4``). Log both the id
+        # and the context window so a misconfigured deployment is obvious in
+        # the boot log.
+        max_len = first.get("max_model_len")
+        log.info(
+            "vLLM resolved model: %s (max_model_len=%s)",
+            self._resolved_model,
+            max_len if max_len is not None else "unknown",
+        )
         result: dict[str, Any] = payload
         return result
+
+    async def complete(
+        self,
+        messages: list[dict[str, Any]],
+        *,
+        response_format: dict[str, Any] | None = None,
+        max_tokens: int = 2048,
+        temperature: float = 0.3,
+    ) -> str:
+        """Non-streaming convenience for archival / structured calls.
+
+        Used by the summariser (session + campaign rolling summaries)
+        and the world-fact extractor. These callers want a single string
+        back rather than the streaming chunk sequence ``stream_dm``
+        returns. Temperature defaults to 0.3 because the work is
+        structured / archival, not creative DM narration (which uses
+        0.85).
+
+        ``response_format`` is forwarded as-is — pass
+        ``{"type": "json_object"}`` to ask the server for guaranteed-
+        parseable JSON when the underlying engine supports it. Nemotron
+        on vLLM does, but the fact extractor still strips fenced code
+        blocks defensively because the parser sometimes wraps even with
+        ``json_object`` set.
+
+        Reuses the same ``self._client``; no separate transport.
+        """
+
+        kwargs: dict[str, Any] = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": False,
+        }
+        if response_format is not None:
+            kwargs["response_format"] = response_format
+
+        try:
+            response = await self._client.chat.completions.create(**kwargs)
+        except Exception as exc:  # openai exceptions don't share a clean base
+            raise DmClientError(f"chat.completions.create failed: {exc}") from exc
+
+        if not response.choices:
+            raise DmClientError("chat.completions.create returned no choices")
+        content = response.choices[0].message.content
+        return content or ""
 
     async def stream_dm(
         self,

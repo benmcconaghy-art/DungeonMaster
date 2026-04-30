@@ -29,7 +29,7 @@ from app.db.models import (
 from app.db.models import (
     Session as DmSession,
 )
-from app.llm.memory import recent_turns
+from app.llm.memory import WorldFactHit, get_world_fact_retriever, recent_turns
 from app.llm.rules_text import render_rules_text
 
 # Spec §4 default house rules. We render the *defaults* explicitly when
@@ -67,7 +67,7 @@ async def build_dm_prompt(
     db: AsyncSession,
     *,
     session_id: str,
-    recent_turns_n: int = 20,
+    recent_turns_n: int = 40,
 ) -> list[dict[str, Any]]:
     """Build the full chat-completions message list for one DM turn.
 
@@ -114,17 +114,40 @@ async def build_dm_prompt(
 
     turns = await recent_turns(db, session_id=session.id, n=recent_turns_n)
 
+    # Retrieve relevant world facts using the most recent player message
+    # as the query. Skip retrieval entirely if no player has spoken yet
+    # (the section renders ``(none yet)``). The retriever is read-only
+    # and has no transaction discipline implications.
+    last_player_query = _last_player_content(turns)
+    world_fact_hits: list[WorldFactHit] | None
+    if last_player_query is None:
+        world_fact_hits = None
+    else:
+        world_fact_hits = await get_world_fact_retriever().topk(
+            db, campaign.id, last_player_query, k=5
+        )
+
     system_text = _render_system(
         campaign=campaign,
         location=location,
         characters=characters,
         encounters=active_encounters,
         session=session,
+        world_fact_hits=world_fact_hits,
     )
 
     messages: list[dict[str, Any]] = [{"role": "system", "content": system_text}]
     messages.extend(_recent_turns_to_messages(turns))
     return messages
+
+
+def _last_player_content(turns: list[SessionMessage]) -> str | None:
+    """Return the most recent player message's content, or ``None``."""
+
+    for msg in reversed(turns):
+        if msg.sender_kind == "player" and msg.content:
+            return msg.content
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +162,7 @@ def _render_system(
     characters: list[Character],
     encounters: list[Encounter],
     session: DmSession,
+    world_fact_hits: list[WorldFactHit] | None,
 ) -> str:
     """Compose every layered section into the single system message body."""
 
@@ -162,13 +186,35 @@ def _render_system(
         )
     )
     blocks.append(_block("SESSION SO FAR", session.summary or "(none)"))
-    # Phase 3 fills retrieval; Phase 2 emits the marker.
-    blocks.append(_block("RELEVANT WORLD FACTS", "(none — Phase 3 will fill)"))
+    blocks.append(_block("RELEVANT WORLD FACTS", _render_world_fact_hits(world_fact_hits)))
     blocks.append(_block("ACTIVE ENCOUNTER", _render_encounters(encounters)))
     # Phase 8 wires modules in.
     blocks.append(_block("MODULE", "(none — Phase 8 will fill)"))
 
     return "\n\n".join(blocks)
+
+
+def _render_world_fact_hits(hits: list[WorldFactHit] | None) -> str:
+    """Bullet list of retrieved world facts, sorted by score descending.
+
+    ``hits is None`` means we never queried (no player message yet) and
+    we render ``(none yet)``. ``hits == []`` means we queried and got
+    nothing — render ``(none retrieved)`` so the human reading the
+    prompt can tell the two states apart.
+    """
+
+    if hits is None:
+        return "(none yet)"
+    if not hits:
+        return "(none retrieved)"
+    # Hits arrive sorted by score descending from the retriever, but
+    # sort defensively in case a future caller pre-filters / reorders.
+    ordered = sorted(hits, key=lambda h: h.score, reverse=True)
+    lines: list[str] = []
+    for hit in ordered:
+        tag_str = ",".join(hit.tags) if hit.tags else "-"
+        lines.append(f"  - [{hit.importance}/10, {tag_str}] {hit.fact}")
+    return "\n".join(lines)
 
 
 def _block(title: str, body: str) -> str:
