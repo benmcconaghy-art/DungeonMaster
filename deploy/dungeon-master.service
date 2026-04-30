@@ -1,0 +1,24 @@
+[Unit]
+Description=Dungeon Master web app
+After=network.target redis.service
+Wants=redis.service
+
+[Service]
+Type=notify
+User=dungeonmaster
+Group=dungeonmaster
+WorkingDirectory=/opt/dungeon-master
+EnvironmentFile=/etc/dungeon-master/env
+ExecStart=/opt/dungeon-master/.venv/bin/gunicorn \
+    -w 1 -k uvicorn.workers.UvicornWorker \
+    --bind 127.0.0.1:8001 \
+    app.main:app
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/dungeon-master /var/log/dungeon-master
+
+[Install]
+WantedBy=multi-user.target

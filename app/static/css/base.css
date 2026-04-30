@@ -1,0 +1,39 @@
+/* Bootstrap-page styling — replaced wholesale in Phase 6 (UX polish). */
+:root {
+  color-scheme: dark;
+  --bg: #1a1612;
+  --fg: #e8dcc4;
+  --accent: #b08a3e;
+}
+
+body {
+  margin: 0;
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+main.bootstrap {
+  max-width: 36rem;
+  margin: 6rem auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+main.bootstrap h1 {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid var(--accent);
+  padding-bottom: 0.5rem;
+}
+
+main.bootstrap .version {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  margin: 0.25rem 0;
+}
+
+main.bootstrap .phase {
+  opacity: 0.75;
+  font-style: italic;
+}

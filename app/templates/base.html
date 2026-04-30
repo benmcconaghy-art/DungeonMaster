@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Dungeon Master{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/base.css" />
+  </head>
+  <body>
+    <main class="bootstrap">
+      {% block content %}
+        <h1>Dungeon Master &mdash; bootstrapping</h1>
+        <p class="version">v{{ version }}</p>
+        <p class="phase">Phase 0 (Bootstrap). Phase 1 (BFRPG engine) lands next.</p>
+      {% endblock %}
+    </main>
+  </body>
+</html>

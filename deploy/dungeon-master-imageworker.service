@@ -1,0 +1,21 @@
+[Unit]
+Description=Dungeon Master image worker (FLUX.1 queue consumer)
+After=network.target redis.service dungeon-master.service
+Wants=redis.service
+
+[Service]
+Type=simple
+User=dungeonmaster
+Group=dungeonmaster
+WorkingDirectory=/opt/dungeon-master
+EnvironmentFile=/etc/dungeon-master/env
+ExecStart=/opt/dungeon-master/.venv/bin/python -m app.images.worker
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/dungeon-master /var/log/dungeon-master
+
+[Install]
+WantedBy=multi-user.target

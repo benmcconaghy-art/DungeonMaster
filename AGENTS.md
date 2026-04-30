@@ -197,6 +197,6 @@ Add `.claude/worktrees/` to `.gitignore`.
 
 ## Current build phase
 
-**Phase 0 (Bootstrap)** — pending.
+**Phase 0 complete; Phase 1 (BFRPG engine) ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.
