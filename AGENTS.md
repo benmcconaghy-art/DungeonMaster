@@ -287,17 +287,15 @@ up. Promote to a real issue / phase task when its trigger fires.
   **Context:** Phase 3 commit `64d690e`, Phase 4 commits
   `327a9c7`/`bd9ba9c`; spec §13 single-worker rationale.
 
-- **Phase 2 SSE bridge cleanup** (added 2026-04-30 during Phase 4
-  close-out, target Phase 6 polish). `app/api/sse.py` and the
-  `/api/sessions/{id}/events` endpoint are no longer referenced by
-  the production frontend (Phase 4 swapped `table.html` to WebSocket).
-  The endpoint still exists; the corresponding Phase 2 unit tests
-  (`tests/test_sse_bridge.py`) still pass and gate the contract.
-  Removing the endpoint isn't urgent — it doesn't cost anything sitting
-  there — but Phase 6 UX polish is the natural moment to delete it,
-  prune the tests, and shrink the API surface to the WS layer alone.
-  Watch for: a third caller (e.g., a CLI client) appearing first; if
-  one shows up, the endpoint becomes load-bearing again.
+- **SSE bridge removal** (added 2026-04-30, target Phase 5 prep or
+  end-of-Phase-5 cleanup). Phase 4 made `app/api/sse.py` and
+  `tests/test_sse_bridge.py` orphaned — WS hub is now the primary
+  transport. Remove only after confirming Phase 5's image worker
+  doesn't reuse the bridge for any streaming concern (the worker
+  publishes via Valkey pub/sub which the WS hub consumes directly,
+  so SSE shouldn't matter). Verify with grep + integration test
+  rerun before deletion. **Trigger:** at the start of Phase 5, the
+  agent picks this up as a 10-minute prep task.
   **Context:** Phase 2 commit `40e96af` (introduced); Phase 4 commit
   `13d9b60` (orphaned).
 
