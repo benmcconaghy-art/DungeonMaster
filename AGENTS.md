@@ -73,6 +73,30 @@ modules. Single-server deployment on AlmaLinux 10.1, trusted internal LAN.
    audience before letting a frame land on a socket. Never redact at write
    time; you'll lose context the DM needs for consistency on later turns.
 
+10. **Image worker uses /generate as its watchdog probe, not /health.** The
+    FLUX service at svrai01:11437 has been observed returning 200 OK from
+    /health while /generate returns 500 (a non-FLUX process held VRAM
+    above the threshold). Watchdog liveness is a 256x256/1-step
+    /generate every 30s — a real inference is the only definitive signal.
+    Sustained failure (any 5xx, transport, or malformed response) past
+    DEGRADED_THRESHOLD_S flips `image:status` to "degraded"; first success
+    flips back. The status key is the rendezvous between the imageworker
+    process and the FastAPI process.
+
+11. **Image-job side effects commit before the WS publish.** The worker's
+    `_persist_and_link` writes the `generated_images` row + any
+    `canonical_image_id` FK update inside a single transaction; only after
+    commit does it publish `image_ready`. A subscriber that reads the DB on
+    receipt always finds the row. This is the same transaction discipline as
+    invariant #2 but at the worker boundary — never publish before commit.
+
+12. **Portrait dispatch is `kind=npc` regardless of subject.** PCs and NPCs
+    both use the npc parameter set (768x1024/32-step) per spec §8 — they
+    are both single-figure portraits. The distinction is only in the FK
+    target: `subject_character_id` vs `subject_npc_id`. The `enqueue_portrait`
+    helper rejects setting both. A regression that sent `kind=scene` for
+    portraits would silently produce wide landscape renders.
+
 ## Tech stack
 
 - Python 3.12
@@ -170,8 +194,11 @@ app/
 │   └── rules_text.py   # condensed BFRPG rules text injected into system prompt
 ├── game/               # rules engine: dice, combat, chargen, classes, monsters, items
 ├── images/
-│   ├── client.py       # FLUX HTTP client (synchronous /generate, /edit)
-│   └── worker.py       # async queue consumer
+│   ├── client.py       # FLUX HTTP client (/health, /probe, /generate, /edit)
+│   ├── health.py       # image:status Valkey rendezvous (worker writes, orchestrator reads)
+│   ├── portrait.py     # prompt composer + enqueue helpers + queue-client singleton
+│   ├── queue.py        # ImageJob model + push/pop helpers
+│   └── worker.py       # async queue consumer + watchdog
 ├── realtime/
 │   ├── hub.py          # WebSocket session hub
 │   ├── messages.py     # WS message types
@@ -221,7 +248,7 @@ uv run mypy app                                 # type check
 
 ## Current build phase
 
-**Phase 4 complete; Phase 5 (image generation) ready to start.**
+**Phase 5 complete; Phase 6 (richer combat / encounter polish) ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.
 
@@ -327,6 +354,39 @@ up. Promote to a real issue / phase task when its trigger fires.
   OR a regression that the unit suite misses but a multi-client real
   run would catch. **Context:** Phase 4 commit `e89bcbc`; module
   docstring of `tests/integration/test_multiplayer.py`.
+
+- **Kontext /edit output dimensions vs scene-kind params** (added 2026-05-01,
+  Phase 5 step 8 close-out, target Phase 6 polish). Kontext `/edit`
+  preserves the source image's aspect ratio — a scene-edit job that
+  references an NPC's canonical portrait (768x1024) produces a 768x1024
+  image, not the scene-kind 1280x768. The worker today persists
+  `width=null, height=null` for /edit jobs because we don't know the
+  output size until decoded. **Acceptable for Phase 5** (the image still
+  renders and remains visually coherent) but the table will mix portrait-
+  shaped "scenes" with landscape-shaped ones, which is jarring. Three
+  acceptable fixes when this matters: (a) decode the PNG in the worker
+  to fill width/height post-hoc; (b) add an explicit `target_width` /
+  `target_height` to the edit request so Kontext outputs scene-shaped;
+  (c) crop/pad to scene aspect on the FastAPI side before serving.
+  **Trigger:** a player or playtest comments on the inconsistent aspect,
+  OR Phase 6 polish surfaces it during scene-image work.
+  **Context:** spec §8 line 766 explicitly puts Kontext scene edits in
+  Phase 6; Step 8 shipped the dispatch path early.
+
+- **Image events not in Snapshot.messages** (added 2026-05-01, Phase 5
+  step 9 close-out, target Phase 6 reconnect polish). The Snapshot wire
+  shape only carries persisted `session_messages`. Image lifecycle
+  events (`image_pending`, `image_ready`, `image_failed`) live only on
+  the live WS event stream — a player reconnecting mid-generation sees
+  nothing for that scene until the worker emits the eventual
+  ready/failed event, at which point the late-delivery path in
+  `appendImageReady` / `appendImageFailed` renders a fresh card. The
+  failure case is the worse one: a worker that died before publishing
+  produces a permanent gap. **Fix idea:** snapshot in-flight image jobs
+  by querying `images:queue` length + the worker's in-flight log.
+  **Trigger:** Phase 6 polish, OR a multi-tab reconnect bug surfaces it.
+  **Context:** `app/templates/table.html` has a comment marking this
+  Phase 5/6 boundary.
 
 - **FLUX cold-load measurement vs spec estimate** (added 2026-05-01,
   Phase 5 step 6 close-out). Spec §8 estimated "cold pipeline load
