@@ -12,6 +12,12 @@
       <a href="/">&larr; Home</a>
       <h1>{{ campaign.name }}</h1>
       <span class="session-id">session {{ session_id[:8] }}…</span>
+      <span
+        id="connection-status"
+        class="connection-status"
+        data-state="connecting"
+        aria-live="polite"
+      >connecting…</span>
     </header>
 
     <main class="table-grid">
@@ -35,6 +41,13 @@
       </section>
 
       <aside class="sidebar">
+        <section class="presence" id="presence">
+          <h2>Connected</h2>
+          <ul id="presence-list">
+            <li class="empty">connecting…</li>
+          </ul>
+        </section>
+
         <section class="party">
           <h2>Party</h2>
           {% for character in characters %}
@@ -74,38 +87,253 @@
       </aside>
 
       <form class="action" id="action-form">
-        <label class="visually-hidden" for="action-input">Your action</label>
-        <textarea
-          id="action-input"
-          name="content"
-          rows="2"
-          placeholder="What do you do? (Enter to submit, Shift+Enter for newline.)"
-          autocomplete="off"
-        ></textarea>
-        <button type="submit">Submit</button>
-        {% if characters|length == 1 %}
-          <input type="hidden" name="character_id" value="{{ characters[0].id }}" />
-        {% else %}
-          <select name="character_id" required>
-            {% for c in characters %}
-              <option value="{{ c.id }}">{{ c.name }}</option>
-            {% endfor %}
-          </select>
-        {% endif %}
+        <div class="action-row">
+          <label class="visually-hidden" for="action-input">Your action</label>
+          <textarea
+            id="action-input"
+            name="content"
+            rows="2"
+            placeholder="What do you do? (Enter to submit, Shift+Enter for newline.)"
+            autocomplete="off"
+            aria-describedby="turn-badge"
+          ></textarea>
+          <button type="submit">Submit</button>
+          {% if characters|length == 1 %}
+            <input type="hidden" name="character_id" value="{{ characters[0].id }}" />
+          {% else %}
+            <select name="character_id" required>
+              {% for c in characters %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+              {% endfor %}
+            </select>
+          {% endif %}
+        </div>
+        <div class="action-meta">
+          <span id="turn-badge" class="turn-badge" hidden></span>
+          <span id="action-notice" class="action-notice" hidden role="status"></span>
+        </div>
       </form>
     </main>
 
+    <div
+      id="whisper-overlay"
+      class="whisper-overlay"
+      hidden
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="whisper-overlay-title"
+    >
+      <div class="whisper-card" role="document">
+        <header>
+          <h2 id="whisper-overlay-title">Whisper from the DM</h2>
+          <button type="button" class="whisper-close" aria-label="Close whisper">&times;</button>
+        </header>
+        <p class="whisper-content"></p>
+      </div>
+    </div>
+
     <script>
-      // Phase 2: vanilla SSE. Phase 6 (UX polish) will swap to HTMX
-      // once the multiplayer WebSocket also lands in Phase 4.
+      // Phase 4: WebSocket-backed multiplayer table. The Phase-2 SSE
+      // bridge is gone; this is the only realtime channel. Phase 6 will
+      // revisit the JS layout (HTMX/Alpine) and CSS polish.
 
       const sessionId = {{ session_id|tojson }};
+      const selfUserId = {{ user.id|tojson }};
+      // ownedCharacterIds lights up the "your turn" hint when the current
+      // initiative slot is one of our PCs.
+      const ownedCharacterIds = new Set({{ characters|map(attribute="id")|list|tojson }});
+
       const narration = document.getElementById("narration");
       const diceHistory = document.getElementById("dice-history");
+      const presenceList = document.getElementById("presence-list");
       const form = document.getElementById("action-form");
       const input = document.getElementById("action-input");
+      const turnBadge = document.getElementById("turn-badge");
+      const actionNotice = document.getElementById("action-notice");
+      const connStatus = document.getElementById("connection-status");
+      const whisperOverlay = document.getElementById("whisper-overlay");
+      const whisperContentEl = whisperOverlay.querySelector(".whisper-content");
+      const whisperCloseBtn = whisperOverlay.querySelector(".whisper-close");
 
-      function appendMessage(kind, who, content) {
+      // ---- Mutable state ----------------------------------------------------
+      let socket = null;
+      let reconnectAttempt = 0;
+      let reconnectTimer = null;
+      let manuallyClosed = false;
+      let activeNarration = null;     // current streaming DM <p> node
+      let lastFrameType = null;       // for narration_chunk start logic
+      let currentActor = null;        // CurrentActor | null
+      let presenceRoster = [];        // PresenceEntry[]
+      let charactersById = {};        // {id: {id, name}}
+      // Characters from the initial Jinja render. The snapshot doesn't
+      // restate character names; we use this for player message labels.
+      {% for c in characters %}
+      charactersById[{{ c.id|tojson }}] = { id: {{ c.id|tojson }}, name: {{ c.name|tojson }} };
+      {% endfor %}
+
+      // ---- Heartbeat --------------------------------------------------------
+      const HEARTBEAT_MS = 20_000;
+      const PING_TIMEOUT_LIMIT = 3;
+      let heartbeatTimer = null;
+      let outstandingPings = new Map();   // nonce -> sentAt
+      let consecutiveMissedPings = 0;
+
+      function startHeartbeat() {
+        stopHeartbeat();
+        heartbeatTimer = setInterval(sendPing, HEARTBEAT_MS);
+      }
+      function stopHeartbeat() {
+        if (heartbeatTimer) {
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = null;
+        }
+        outstandingPings.clear();
+        consecutiveMissedPings = 0;
+      }
+      function sendPing() {
+        if (!socket || socket.readyState !== WebSocket.OPEN) return;
+        // Each ping has its own nonce; if it's still outstanding when
+        // the next interval fires, count it as a miss.
+        for (const [nonce, sentAt] of outstandingPings) {
+          if (Date.now() - sentAt >= HEARTBEAT_MS) {
+            outstandingPings.delete(nonce);
+            consecutiveMissedPings += 1;
+          }
+        }
+        if (consecutiveMissedPings >= PING_TIMEOUT_LIMIT) {
+          console.warn(`ws: ${consecutiveMissedPings} pings missed; force-closing for reconnect`);
+          forceReconnect();
+          return;
+        }
+        const nonce = (crypto.randomUUID && crypto.randomUUID()) ||
+          `${Date.now()}-${Math.random()}`;
+        outstandingPings.set(nonce, Date.now());
+        sendFrame({ type: "ping", nonce });
+      }
+      function forceReconnect() {
+        // Close the socket; the close handler triggers the backoff path.
+        if (socket) {
+          try { socket.close(4000, "heartbeat_timeout"); } catch (e) { /* ignore */ }
+        }
+      }
+
+      // ---- WS lifecycle -----------------------------------------------------
+      function wsUrl() {
+        const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+        return `${proto}//${window.location.host}/ws/session/${sessionId}`;
+      }
+
+      function connect() {
+        manuallyClosed = false;
+        setConnStatus("connecting");
+        try {
+          socket = new WebSocket(wsUrl());
+        } catch (err) {
+          console.error("ws: construct failed", err);
+          scheduleReconnect();
+          return;
+        }
+        socket.addEventListener("open", onOpen);
+        socket.addEventListener("message", onMessage);
+        socket.addEventListener("close", onClose);
+        socket.addEventListener("error", (ev) => console.warn("ws: error event", ev));
+      }
+
+      function onOpen() {
+        console.info("ws: connected");
+        reconnectAttempt = 0;
+        setConnStatus("connected");
+        startHeartbeat();
+      }
+
+      function onMessage(event) {
+        let msg;
+        try {
+          msg = JSON.parse(event.data);
+        } catch (err) {
+          console.warn("ws: invalid JSON frame", err);
+          return;
+        }
+        const handler = handlers[msg.type];
+        if (!handler) {
+          console.warn("ws: unknown frame type", msg.type);
+          return;
+        }
+        try {
+          handler(msg);
+        } catch (err) {
+          console.error("ws: handler error", msg.type, err);
+        }
+        // Track frame transitions so narration_chunk can start a new
+        // article whenever the previous frame wasn't part of the same
+        // streaming narration.
+        lastFrameType = msg.type;
+      }
+
+      function onClose(event) {
+        stopHeartbeat();
+        if (manuallyClosed) {
+          setConnStatus("closed");
+          return;
+        }
+        console.info(`ws: closed (code=${event.code}); scheduling reconnect`);
+        // 4xxx codes from the server (auth/membership reject) are
+        // permanent — don't churn through reconnects against them.
+        if (event.code === 1008) {
+          setConnStatus("rejected");
+          appendSystemMessage("[disconnected]", "Lost session: not authorised.");
+          return;
+        }
+        scheduleReconnect();
+      }
+
+      function scheduleReconnect() {
+        setConnStatus("reconnecting");
+        // 1s, 2s, 4s, 8s, then capped at 16s, with ±20% jitter.
+        const base = Math.min(1000 * Math.pow(2, reconnectAttempt), 16_000);
+        const jitter = base * 0.2 * (Math.random() * 2 - 1);
+        const delay = Math.max(250, Math.round(base + jitter));
+        reconnectAttempt += 1;
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          connect();
+        }, delay);
+      }
+
+      function setConnStatus(state) {
+        if (!connStatus) return;
+        connStatus.dataset.state = state;
+        const labels = {
+          connecting: "connecting…",
+          connected: "connected",
+          reconnecting: "reconnecting…",
+          rejected: "not authorised",
+          closed: "disconnected",
+        };
+        connStatus.textContent = labels[state] || state;
+      }
+
+      function sendFrame(obj) {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          console.warn("ws: dropping send; socket not open", obj);
+          return false;
+        }
+        socket.send(JSON.stringify(obj));
+        return true;
+      }
+
+      // ---- Render helpers ---------------------------------------------------
+      function clearNarration() {
+        narration.replaceChildren();
+        activeNarration = null;
+      }
+
+      function appendMessage(kind, who, content, when) {
+        // Drop the empty-log placeholder if it's still there.
+        const empty = narration.querySelector(".empty-log");
+        if (empty) empty.remove();
+
         const article = document.createElement("article");
         article.className = `message message-${kind}`;
         const header = document.createElement("header");
@@ -113,15 +341,277 @@
         whoSpan.className = "who";
         whoSpan.textContent = who;
         header.appendChild(whoSpan);
+        if (when) {
+          const time = document.createElement("time");
+          time.textContent = when;
+          header.appendChild(time);
+        }
         article.appendChild(header);
         const p = document.createElement("p");
-        p.textContent = content;
+        p.textContent = content || "";
         article.appendChild(p);
         narration.appendChild(article);
         narration.scrollTop = narration.scrollHeight;
         return p;
       }
 
+      function appendSystemMessage(who, content) {
+        return appendMessage("system", who, content, formatNow());
+      }
+
+      function formatNow() {
+        const d = new Date();
+        return d.toTimeString().slice(0, 8);
+      }
+
+      function isoTimeOf(iso) {
+        if (!iso || typeof iso !== "string") return formatNow();
+        // Snapshot/sender 'created_at' values arrive ISO-8601-ish; the
+        // existing template just slices [11:19]. Match that.
+        if (iso.length >= 19 && iso[10] === "T") return iso.slice(11, 19);
+        return iso;
+      }
+
+      function senderLabel(senderKind, senderId) {
+        if (senderKind === "dm") return "DM";
+        if (senderKind === "player") {
+          if (senderId && charactersById[senderId]) return charactersById[senderId].name;
+          // Fall back to roster lookup (other players' characters).
+          for (const entry of presenceRoster) {
+            if (entry.character_id === senderId && entry.character_name) {
+              return entry.character_name;
+            }
+          }
+          return senderId ? "Player" : "Table";
+        }
+        return senderKind.charAt(0).toUpperCase() + senderKind.slice(1);
+      }
+
+      // ---- Frame handlers ---------------------------------------------------
+      const handlers = {
+        snapshot(msg) {
+          // Authoritative state on (re)connect: rebuild the log fresh.
+          clearNarration();
+          for (const m of msg.messages || []) {
+            const who = senderLabel(m.sender_kind, m.sender_id);
+            const kind = m.sender_kind === "dm" ? "dm"
+              : m.sender_kind === "player" ? "player"
+              : "system";
+            appendMessage(kind, who, m.content, isoTimeOf(m.created_at));
+          }
+          if (!(msg.messages && msg.messages.length)) {
+            // Restore the placeholder if the snapshot is empty.
+            const p = document.createElement("p");
+            p.className = "empty-log";
+            p.textContent = "The DM is preparing the scene…";
+            narration.appendChild(p);
+          }
+          presenceRoster = msg.connected || [];
+          renderPresence();
+          currentActor = msg.current_actor || null;
+          renderTurnHints();
+          activeNarration = null;
+        },
+        narration_chunk(msg) {
+          // Start a new article on the first chunk after anything else
+          // (snapshot, complete, dice, presence, ...). Mid-stream
+          // chunks just append.
+          if (!activeNarration || lastFrameType !== "narration_chunk") {
+            activeNarration = appendMessage("dm", "DM", "", formatNow());
+          }
+          activeNarration.textContent += (msg.content || "");
+          narration.scrollTop = narration.scrollHeight;
+        },
+        narration_complete(msg) {
+          // Server sends the canonical full text; if we streamed chunk
+          // by chunk it should match. If the chunks were missed (e.g.
+          // a brief pubsub hiccup) replace with the canonical content.
+          if (activeNarration) {
+            if (msg.content) activeNarration.textContent = msg.content;
+          } else if (msg.content) {
+            appendMessage("dm", "DM", msg.content, formatNow());
+          }
+          activeNarration = null;
+        },
+        pc_action(msg) {
+          // De-dupe: the local user already optimistically rendered
+          // their own action. The server tags pc_action frames with the
+          // originating user_id so a single user with two open tabs
+          // still sees the action mirrored on the other tab.
+          if (msg.user_id && msg.user_id === selfUserId) return;
+          const who = senderLabel("player", msg.character_id);
+          appendMessage("player", who, msg.content, formatNow());
+        },
+        whisper(msg) {
+          showWhisper(msg.content || "");
+        },
+        dice_roll(msg) {
+          const li = document.createElement("li");
+          const code = document.createElement("code");
+          code.textContent = msg.expression || "";
+          const eq = document.createTextNode(" = ");
+          const total = document.createElement("strong");
+          total.textContent = String(msg.total ?? "");
+          const purpose = document.createElement("span");
+          purpose.className = "purpose";
+          purpose.textContent = msg.purpose || "";
+          li.appendChild(code);
+          li.appendChild(eq);
+          li.appendChild(total);
+          li.appendChild(document.createTextNode(" "));
+          li.appendChild(purpose);
+          const empty = diceHistory.querySelector(".empty");
+          if (empty) empty.remove();
+          diceHistory.prepend(li);
+        },
+        state_update(msg) {
+          const kind = msg.side_effects && msg.side_effects.kind;
+          if (kind === "encounter_started") {
+            const initiative = msg.side_effects.initiative || [];
+            const turnIdx = msg.side_effects.current_turn ?? 0;
+            const round = msg.side_effects.round_number ?? 1;
+            const encounterId = msg.side_effects.encounter_id || "";
+            const entry = initiative[Math.max(0, Math.min(turnIdx, initiative.length - 1))];
+            if (entry) {
+              currentActor = {
+                encounter_id: encounterId,
+                participant_id: String(entry.participant_id || ""),
+                name: String(entry.name || ""),
+                is_player: Boolean(entry.is_player),
+                round_number: Number(round),
+              };
+              renderTurnHints();
+            }
+          } else if (kind === "encounter_ended") {
+            currentActor = null;
+            renderTurnHints();
+          } else {
+            // hp/ac/etc. — Phase 6 wires the sidebar; for now log it.
+            console.debug("state_update", msg.side_effects);
+          }
+        },
+        presence(msg) {
+          presenceRoster = msg.connected || [];
+          renderPresence();
+          renderTurnHints();
+        },
+        dm_error(msg) {
+          if (msg.reason === "not_your_turn") {
+            showActionNotice(msg.message || "It's not your turn.");
+            return;
+          }
+          appendSystemMessage("[error]", msg.message || msg.reason || "DM error");
+        },
+        pong(msg) {
+          if (!msg.nonce) return;
+          const sentAt = outstandingPings.get(msg.nonce);
+          if (sentAt !== undefined) {
+            outstandingPings.delete(msg.nonce);
+            consecutiveMissedPings = 0;
+            console.debug(`ws: pong rtt=${Date.now() - sentAt}ms`);
+          }
+        },
+        // Phase 5 wire-shape only — no body until the image worker
+        // ships. Stubs here keep onMessage from logging "unknown frame
+        // type" warnings for valid server messages.
+        image_pending(_msg) {},
+        image_ready(_msg) {},
+      };
+
+      // ---- Presence / turn hints --------------------------------------------
+      function renderPresence() {
+        presenceList.replaceChildren();
+        if (!presenceRoster.length) {
+          const li = document.createElement("li");
+          li.className = "empty";
+          li.textContent = "no one connected";
+          presenceList.appendChild(li);
+          return;
+        }
+        for (const entry of presenceRoster) {
+          const li = document.createElement("li");
+          const isCurrent =
+            currentActor &&
+            currentActor.is_player &&
+            entry.character_id &&
+            entry.character_id === currentActor.participant_id;
+          if (isCurrent) li.classList.add("current-actor");
+          const name = document.createElement("span");
+          name.className = "presence-name";
+          name.textContent = entry.username || "?";
+          const charSpan = document.createElement("span");
+          charSpan.className = "presence-character";
+          charSpan.textContent = entry.character_name
+            ? ` — ${entry.character_name}`
+            : "";
+          li.appendChild(name);
+          li.appendChild(charSpan);
+          presenceList.appendChild(li);
+        }
+      }
+
+      function renderTurnHints() {
+        // Re-paint presence rows so .current-actor is current.
+        renderPresence();
+
+        if (!currentActor) {
+          turnBadge.hidden = true;
+          turnBadge.textContent = "";
+          turnBadge.dataset.state = "";
+          return;
+        }
+        turnBadge.hidden = false;
+        if (
+          currentActor.is_player &&
+          currentActor.participant_id &&
+          ownedCharacterIds.has(currentActor.participant_id)
+        ) {
+          turnBadge.textContent = `Your turn (round ${currentActor.round_number})`;
+          turnBadge.dataset.state = "you";
+        } else {
+          const who = currentActor.name || "the DM";
+          turnBadge.textContent = `Waiting on ${who} (round ${currentActor.round_number})`;
+          turnBadge.dataset.state = "other";
+        }
+      }
+
+      // ---- Action notice (inline, non-modal) --------------------------------
+      let actionNoticeTimer = null;
+      function showActionNotice(text) {
+        actionNotice.textContent = text;
+        actionNotice.hidden = false;
+        if (actionNoticeTimer) clearTimeout(actionNoticeTimer);
+        actionNoticeTimer = setTimeout(() => {
+          actionNotice.hidden = true;
+          actionNotice.textContent = "";
+        }, 6000);
+      }
+
+      // ---- Whisper overlay --------------------------------------------------
+      function showWhisper(content) {
+        whisperContentEl.textContent = content;
+        whisperOverlay.hidden = false;
+        // Move focus to the close button for keyboard dismiss.
+        whisperCloseBtn.focus();
+      }
+      function hideWhisper() {
+        whisperOverlay.hidden = true;
+        whisperContentEl.textContent = "";
+      }
+      whisperCloseBtn.addEventListener("click", hideWhisper);
+      whisperOverlay.addEventListener("click", (ev) => {
+        // Click outside the card dismisses; clicks inside the card
+        // bubble up here too, so check the target.
+        if (ev.target === whisperOverlay) hideWhisper();
+      });
+      document.addEventListener("keydown", (ev) => {
+        if (ev.key === "Escape" && !whisperOverlay.hidden) {
+          ev.preventDefault();
+          hideWhisper();
+        }
+      });
+
+      // ---- Action input -----------------------------------------------------
       input.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
@@ -129,59 +619,62 @@
         }
       });
 
-      form.addEventListener("submit", async (event) => {
+      form.addEventListener("submit", (event) => {
         event.preventDefault();
         const content = input.value.trim();
         if (!content) return;
         const characterEl = form.querySelector('[name="character_id"]');
         const characterId = characterEl ? characterEl.value : null;
-        input.value = "";
 
-        appendMessage("player", "You", content);
+        // Determine action kind: combat iff the current actor is a
+        // player AND it's the submitting character's turn. Server
+        // re-validates regardless.
+        let kind = "other";
+        if (
+          currentActor &&
+          currentActor.is_player &&
+          characterId &&
+          currentActor.participant_id === characterId
+        ) {
+          kind = "combat";
+        }
 
-        const params = new URLSearchParams({ content });
-        if (characterId) params.set("character_id", characterId);
-
-        const source = new EventSource(
-          `/api/sessions/${sessionId}/events?` + params.toString()
-        );
-
-        let activeNarration = null;
-        source.addEventListener("narration_chunk", (e) => {
-          const data = JSON.parse(e.data);
-          if (!activeNarration) {
-            activeNarration = appendMessage("dm", "DM", "");
-          }
-          activeNarration.textContent += data.delta;
-          narration.scrollTop = narration.scrollHeight;
-        });
-        source.addEventListener("narration_complete", () => {
-          activeNarration = null;
-        });
-        source.addEventListener("dice_roll", (e) => {
-          const data = JSON.parse(e.data);
-          const li = document.createElement("li");
-          li.innerHTML = `<code>${data.expression}</code> = <strong>${data.total}</strong> <span class="purpose">${data.purpose || ""}</span>`;
-          const empty = diceHistory.querySelector(".empty");
-          if (empty) empty.remove();
-          diceHistory.prepend(li);
-        });
-        source.addEventListener("state_update", () => {
-          // Phase 2 keeps the sidebar HP/AC stale until reload; Phase 6
-          // will hydrate this in place via partial fetches.
-        });
-        source.addEventListener("dm_error", (e) => {
-          const data = JSON.parse(e.data);
-          appendMessage("system", "[error]", data.message || "DM error");
-          source.close();
-        });
-        source.addEventListener("turn_done", () => {
-          source.close();
-        });
-        source.onerror = () => {
-          source.close();
+        const frame = {
+          type: "pc_action",
+          character_id: characterId,
+          content,
+          kind,
         };
+
+        if (!sendFrame(frame)) {
+          showActionNotice("Not connected — message not sent.");
+          return;
+        }
+
+        input.value = "";
+        // Optimistic render: the server will broadcast a pc_action,
+        // but we filter our own in the handler.
+        const who = characterId && charactersById[characterId]
+          ? charactersById[characterId].name
+          : "You";
+        appendMessage("player", who, content, formatNow());
       });
+
+      // ---- Cleanup on navigation -------------------------------------------
+      window.addEventListener("beforeunload", () => {
+        manuallyClosed = true;
+        stopHeartbeat();
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          try { socket.close(1000, "page_unload"); } catch (e) { /* ignore */ }
+        }
+      });
+
+      // Kick it off.
+      connect();
     </script>
   </body>
 </html>

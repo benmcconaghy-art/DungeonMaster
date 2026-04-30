@@ -215,6 +215,7 @@ def create_app() -> FastAPI:
             {
                 "session_id": session_id,
                 "campaign": campaign,
+                "user": user,
                 "characters": characters,
                 "characters_by_id": characters_by_id,
                 "messages": recent_messages,
