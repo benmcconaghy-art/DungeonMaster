@@ -786,3 +786,163 @@ async def test_fact_extractor_empty_array_is_a_no_op(
     embedder.embed.assert_not_called()
     count_stmt = select(func.count(WorldFact.id)).where(WorldFact.campaign_id == campaign.id)
     assert int((await db_session.execute(count_stmt)).scalar_one()) == 0
+
+
+@pytest.mark.asyncio
+async def test_fact_extractor_accepts_object_envelope(
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Phase 4 prep: the prompt now asks for ``{"facts": [...]}`` so it
+    aligns with ``response_format=json_object``. The parser MUST accept
+    that shape — Phase 3 saw Nemotron emit malformed flat duplicate-key
+    objects when the prompt asked for a bare array but the response
+    format constrained it to an object."""
+
+    user = await make_user(db_session)
+    campaign = await make_campaign(db_session, owner_id=user.id)
+    session = await make_session(db_session, campaign_id=campaign.id)
+    await db_session.commit()
+
+    payload = json.dumps(
+        {
+            "facts": [
+                {"fact": "Thorvald greys at the temples.", "tags": ["npc"], "importance": 6},
+                {"fact": "Goblins raid by night.", "tags": ["lore"], "importance": 7},
+            ]
+        }
+    )
+    client = _make_dm_client(payload)
+    monkeypatch.setattr("app.llm.memory.get_dm_client", lambda: client)
+    monkeypatch.setattr("app.llm.memory.get_embedder", lambda: _make_embedder(dim=4))
+    monkeypatch.setattr("app.llm.memory.get_world_fact_retriever", lambda: MagicMock())
+
+    persisted = await extract_and_persist_facts(
+        db_session,
+        session_id=session.id,
+        player_action="I look around the keep.",
+        dm_response="Thorvald greets you; the goblins are restless.",
+    )
+    assert persisted == ["Thorvald greys at the temples.", "Goblins raid by night."]
+
+
+@pytest.mark.asyncio
+async def test_fact_extractor_object_envelope_with_prose(
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The envelope-stripper handles a leading-prose object response
+    even when the array delimiters appear inside the object body."""
+
+    user = await make_user(db_session)
+    campaign = await make_campaign(db_session, owner_id=user.id)
+    session = await make_session(db_session, campaign_id=campaign.id)
+    await db_session.commit()
+
+    payload = (
+        "Here's the data:\n"
+        '{"facts": [{"fact": "Found a key.", "tags": ["item"], "importance": 5}]}'
+        "\n\nLet me know if you'd like more!"
+    )
+    client = _make_dm_client(payload)
+    monkeypatch.setattr("app.llm.memory.get_dm_client", lambda: client)
+    monkeypatch.setattr("app.llm.memory.get_embedder", lambda: _make_embedder(dim=4))
+    monkeypatch.setattr("app.llm.memory.get_world_fact_retriever", lambda: MagicMock())
+
+    persisted = await extract_and_persist_facts(
+        db_session,
+        session_id=session.id,
+        player_action="I search the room.",
+        dm_response="A key glints in the dust.",
+    )
+    assert persisted == ["Found a key."]
+
+
+@pytest.mark.asyncio
+async def test_fact_extractor_object_envelope_missing_facts_key(
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """If Nemotron returns an object that doesn't have a ``facts`` array
+    (e.g. because the prompt confused it again), log a clear warning and
+    persist nothing — never crash the post-turn pipeline."""
+
+    user = await make_user(db_session)
+    campaign = await make_campaign(db_session, owner_id=user.id)
+    session = await make_session(db_session, campaign_id=campaign.id)
+    await db_session.commit()
+
+    payload = json.dumps({"fact": "single", "importance": 5})
+    client = _make_dm_client(payload)
+    monkeypatch.setattr("app.llm.memory.get_dm_client", lambda: client)
+    monkeypatch.setattr("app.llm.memory.get_embedder", lambda: _make_embedder(dim=4))
+    monkeypatch.setattr("app.llm.memory.get_world_fact_retriever", lambda: MagicMock())
+
+    with caplog.at_level("WARNING", logger="app.llm.memory"):
+        persisted = await extract_and_persist_facts(
+            db_session,
+            session_id=session.id,
+            player_action="I do nothing.",
+            dm_response="Nothing happens.",
+        )
+
+    assert persisted == []
+    assert any('missing "facts" array' in rec.message for rec in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_fact_extractor_coerces_bare_string_entries(
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Phase 3 finding: Nemotron mixes bare strings into the array even
+    with the schema spelled out. Coerce ``"Castellan Thorvald"`` into
+    ``{fact: "Castellan Thorvald", tags: [], importance: 5}`` rather
+    than dropping it on the floor."""
+
+    user = await make_user(db_session)
+    campaign = await make_campaign(db_session, owner_id=user.id)
+    session = await make_session(db_session, campaign_id=campaign.id)
+    await db_session.commit()
+
+    payload = json.dumps(
+        [
+            {"fact": "Thorvald hired the party.", "tags": ["hook"], "importance": 9},
+            "Castellan Thorvald",
+            "the keep",
+            "   ",  # whitespace-only string is dropped
+            42,  # non-string non-object is dropped (no recovery)
+        ]
+    )
+    client = _make_dm_client(payload)
+    monkeypatch.setattr("app.llm.memory.get_dm_client", lambda: client)
+    monkeypatch.setattr("app.llm.memory.get_embedder", lambda: _make_embedder(dim=4))
+    monkeypatch.setattr("app.llm.memory.get_world_fact_retriever", lambda: MagicMock())
+
+    persisted = await extract_and_persist_facts(
+        db_session,
+        session_id=session.id,
+        player_action="I meet the castellan.",
+        dm_response="Thorvald nods curtly.",
+    )
+
+    assert persisted == [
+        "Thorvald hired the party.",
+        "Castellan Thorvald",
+        "the keep",
+    ]
+
+    rows = list(
+        (
+            await db_session.scalars(select(WorldFact).where(WorldFact.campaign_id == campaign.id))
+        ).all()
+    )
+    by_fact = {r.fact: r for r in rows}
+    # Coerced rows take the documented defaults: empty tags, importance=5.
+    assert by_fact["Castellan Thorvald"].tags == []
+    assert by_fact["Castellan Thorvald"].importance == 5
+    assert by_fact["the keep"].tags == []
+    assert by_fact["the keep"].importance == 5
+    # The proper object's own values are preserved.
+    assert by_fact["Thorvald hired the party."].importance == 9

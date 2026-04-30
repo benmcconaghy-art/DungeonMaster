@@ -38,6 +38,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -563,10 +564,31 @@ _FACT_EXTRACTOR_SYSTEM = (
     "and DM response, identify any facts that should be remembered\n"
     "long-term: NPC names and traits, locations and their features,\n"
     "decisions made, deals struck, secrets revealed, items acquired\n"
-    "or lost, character relationships established. Return a JSON\n"
-    'array of objects: [{"fact": str, "tags": [str], "importance": 1-10}].\n'
-    "Importance: 10 = central plot, 1 = trivial colour. Return [] if\n"
-    "nothing notable happened. Output ONLY the JSON array."
+    "or lost, character relationships established.\n"
+    "\n"
+    'OUTPUT FORMAT (strict): a JSON object {"facts": [...]} whose\n'
+    '"facts" value is an array of OBJECTS. Each entry MUST be an\n'
+    'object with three keys: "fact" (string, required, the full\n'
+    'sentence to remember), "tags" (array of short string labels,\n'
+    'optional, may be empty), "importance" (integer 1-10).\n'
+    "\n"
+    "Bare strings, NPC names alone, or one-word entries are NOT\n"
+    "valid — every entry must be the full {fact, tags, importance}\n"
+    "object. Importance: 10 = central plot, 1 = trivial colour.\n"
+    "\n"
+    "EXAMPLE (good):\n"
+    '{"facts": [\n'
+    '  {"fact": "Castellan Thorvald hired the party to investigate'
+    ' goblin raids.", "tags": ["npc", "hook"], "importance": 9},\n'
+    '  {"fact": "The keep gates close at dusk.", "tags": ["location"],'
+    ' "importance": 4}\n'
+    "]}\n"
+    "\n"
+    "EXAMPLE (bad — do not do this):\n"
+    '{"facts": [{"fact": "...", ...}, "Castellan Thorvald", "keep"]}\n'
+    "\n"
+    'Return {"facts": []} if nothing notable happened. Output ONLY\n'
+    "the JSON object — no fences, no commentary."
 )
 
 
@@ -577,15 +599,17 @@ _FENCE_RE = re.compile(r"```(?:json)?\s*\n?(.*?)```", re.DOTALL | re.IGNORECASE)
 
 
 def _strip_json_envelope(raw: str) -> str:
-    """Pull a JSON array/object out of a possibly-fenced or trailing-prose
+    """Pull a JSON object/array out of a possibly-fenced or trailing-prose
     response.
 
-    Handles three Nemotron-isms:
+    Handles four Nemotron-isms:
 
-    1. Fenced code block: ```json\\n[...]\\n```
+    1. Fenced code block: ```json\\n{...}\\n``` or ```json\\n[...]\\n```.
     2. Pure JSON with leading/trailing whitespace.
-    3. JSON followed by trailing commentary ("Here's the array: [...] —
-       hope that helps!").
+    3. JSON object followed by trailing commentary ("Here's the data:
+       {...} — hope that helps!").
+    4. JSON array followed by trailing commentary (legacy bare-array
+       responses, kept for backwards compat with the older prompt).
 
     Falls back to the original string if none of these match; the JSON
     parser then surfaces the failure with a clear error.
@@ -595,12 +619,23 @@ def _strip_json_envelope(raw: str) -> str:
     fenced = _FENCE_RE.search(text)
     if fenced:
         return fenced.group(1).strip()
-    # Try to find the first ``[`` and matching last ``]``; this catches the
-    # trailing-prose case. If neither is present, return the original
-    # string for the JSON parser to fail on cleanly.
+    # Pick the envelope by which delimiter appears OUTERMOST in the text,
+    # not by which is "preferred". A bare-array response with prose
+    # ("Here's: [{...}]") would otherwise have its inner object braces
+    # mistakenly chosen and the array dropped.
+    first_brace = text.find("{")
+    last_brace = text.rfind("}")
     first_bracket = text.find("[")
     last_bracket = text.rfind("]")
-    if first_bracket != -1 and last_bracket > first_bracket:
+    has_object = first_brace != -1 and last_brace > first_brace
+    has_array = first_bracket != -1 and last_bracket > first_bracket
+    # Effective "first index" sentinel for comparison: missing delimiter
+    # is treated as +infinity so the present one wins.
+    brace_at = first_brace if has_object else float("inf")
+    bracket_at = first_bracket if has_array else float("inf")
+    if has_object and brace_at <= bracket_at:
+        return text[first_brace : last_brace + 1]
+    if has_array:
         return text[first_bracket : last_bracket + 1]
     return text
 
@@ -640,10 +675,15 @@ async def extract_and_persist_facts(
 
     client = get_dm_client()
     try:
+        # max_tokens=2048 (was 1024) — Phase 3 integration logs showed
+        # Nemotron's {facts: [...]} responses for a single rich turn
+        # commonly run 1500-1800 tokens, with the previous 1024 cap
+        # truncating mid-array and breaking the parse. 2048 leaves
+        # headroom; the summarisers run at the same ceiling.
         raw = await client.complete(
             messages,
             response_format={"type": "json_object"},
-            max_tokens=1024,
+            max_tokens=2048,
             temperature=0.2,
         )
     except DmClientError:
@@ -660,16 +700,47 @@ async def extract_and_persist_facts(
         )
         return []
 
-    if not isinstance(parsed, list):
+    # The prompt asks for {"facts": [...]} (which matches response_format=
+    # json_object). Earlier prompts asked for a bare array — accept both
+    # shapes so tests written against the array-only contract keep passing
+    # and so a momentary Nemotron deviation doesn't kill the whole turn.
+    entries: list[Any]
+    if isinstance(parsed, dict):
+        facts_value = parsed.get("facts")
+        if not isinstance(facts_value, list):
+            log.warning(
+                'fact extractor: response object missing "facts" array;'
+                " keys=%s; raw (first 500): %s",
+                sorted(parsed.keys()),
+                raw[:500],
+            )
+            return []
+        entries = facts_value
+    elif isinstance(parsed, list):
+        entries = parsed
+    else:
         log.warning(
-            "fact extractor: response was not a JSON array; got %s; raw (first 500): %s",
+            "fact extractor: response was neither object nor array; got %s; raw (first 500): %s",
             type(parsed).__name__,
             raw[:500],
         )
         return []
 
     facts: list[_ExtractedFact] = []
-    for entry in parsed:
+    for entry in entries:
+        # Defence in depth: Nemotron sometimes mixes bare strings into
+        # the array even with the schema spelled out in the prompt
+        # (Phase 3 finding: ~36% of candidate facts dropped this way).
+        # A non-empty string is a recoverable signal — coerce to the
+        # canonical {fact, tags, importance} shape with sensible
+        # defaults rather than dropping. Anything else (numbers, null,
+        # lists, dicts missing 'fact', etc.) still drops with a warning.
+        if isinstance(entry, str):
+            stripped = entry.strip()
+            if not stripped:
+                log.warning("fact extractor: dropping empty bare-string entry")
+                continue
+            entry = {"fact": stripped, "tags": [], "importance": 5}
         try:
             facts.append(_ExtractedFact.model_validate(entry))
         except ValidationError:
