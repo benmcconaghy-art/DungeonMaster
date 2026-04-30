@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ session_id }} &mdash; Dungeon Master</title>
+    <link rel="stylesheet" href="/static/css/base.css" />
+    <link rel="stylesheet" href="/static/css/table.css" />
+  </head>
+  <body class="table-screen">
+    <header class="table-header">
+      <a href="/">&larr; Home</a>
+      <h1>{{ campaign.name }}</h1>
+      <span class="session-id">session {{ session_id[:8] }}…</span>
+    </header>
+
+    <main class="table-grid">
+      <section class="narration" id="narration" aria-live="polite">
+        {% for message in messages %}
+          <article class="message message-{{ message.sender_kind }}">
+            <header>
+              <span class="who">
+                {%- if message.sender_kind == "dm" -%}DM
+                {%- elif message.sender_kind == "player" -%}{{ characters_by_id.get(message.sender_id, "Player").name if message.sender_id else "Player" }}
+                {%- else -%}{{ message.sender_kind|capitalize }}
+                {%- endif -%}
+              </span>
+              <time>{{ message.created_at[11:19] }}</time>
+            </header>
+            <p>{{ message.content }}</p>
+          </article>
+        {% else %}
+          <p class="empty-log">The DM is preparing the scene…</p>
+        {% endfor %}
+      </section>
+
+      <aside class="sidebar">
+        <section class="party">
+          <h2>Party</h2>
+          {% for character in characters %}
+            <article class="pc">
+              <h3>{{ character.name }}</h3>
+              <p class="subtitle">
+                {{ character.race }} {{ character.class_name }} (lvl {{ character.level }})
+              </p>
+              <dl class="stats">
+                <dt>HP</dt><dd>{{ character.hp_current }}/{{ character.hp_max }}</dd>
+                <dt>AC</dt><dd>{{ character.ac }}</dd>
+                <dt>STR</dt><dd>{{ character.str_score }}</dd>
+                <dt>DEX</dt><dd>{{ character.dex_score }}</dd>
+                <dt>CON</dt><dd>{{ character.con_score }}</dd>
+                <dt>INT</dt><dd>{{ character.int_score }}</dd>
+                <dt>WIS</dt><dd>{{ character.wis_score }}</dd>
+                <dt>CHA</dt><dd>{{ character.cha_score }}</dd>
+              </dl>
+            </article>
+          {% endfor %}
+        </section>
+
+        <section class="rolls">
+          <h2>Recent rolls</h2>
+          <ul id="dice-history">
+            {% for roll in recent_rolls %}
+              <li>
+                <code>{{ roll.expression }}</code>
+                = <strong>{{ roll.total }}</strong>
+                <span class="purpose">{{ roll.purpose }}</span>
+              </li>
+            {% else %}
+              <li class="empty">no rolls yet</li>
+            {% endfor %}
+          </ul>
+        </section>
+      </aside>
+
+      <form class="action" id="action-form">
+        <label class="visually-hidden" for="action-input">Your action</label>
+        <textarea
+          id="action-input"
+          name="content"
+          rows="2"
+          placeholder="What do you do? (Enter to submit, Shift+Enter for newline.)"
+          autocomplete="off"
+        ></textarea>
+        <button type="submit">Submit</button>
+        {% if characters|length == 1 %}
+          <input type="hidden" name="character_id" value="{{ characters[0].id }}" />
+        {% else %}
+          <select name="character_id" required>
+            {% for c in characters %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        {% endif %}
+      </form>
+    </main>
+
+    <script>
+      // Phase 2: vanilla SSE. Phase 6 (UX polish) will swap to HTMX
+      // once the multiplayer WebSocket also lands in Phase 4.
+
+      const sessionId = {{ session_id|tojson }};
+      const narration = document.getElementById("narration");
+      const diceHistory = document.getElementById("dice-history");
+      const form = document.getElementById("action-form");
+      const input = document.getElementById("action-input");
+
+      function appendMessage(kind, who, content) {
+        const article = document.createElement("article");
+        article.className = `message message-${kind}`;
+        const header = document.createElement("header");
+        const whoSpan = document.createElement("span");
+        whoSpan.className = "who";
+        whoSpan.textContent = who;
+        header.appendChild(whoSpan);
+        article.appendChild(header);
+        const p = document.createElement("p");
+        p.textContent = content;
+        article.appendChild(p);
+        narration.appendChild(article);
+        narration.scrollTop = narration.scrollHeight;
+        return p;
+      }
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          form.requestSubmit();
+        }
+      });
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const content = input.value.trim();
+        if (!content) return;
+        const characterEl = form.querySelector('[name="character_id"]');
+        const characterId = characterEl ? characterEl.value : null;
+        input.value = "";
+
+        appendMessage("player", "You", content);
+
+        const params = new URLSearchParams({ content });
+        if (characterId) params.set("character_id", characterId);
+
+        const source = new EventSource(
+          `/api/sessions/${sessionId}/events?` + params.toString()
+        );
+
+        let activeNarration = null;
+        source.addEventListener("narration_chunk", (e) => {
+          const data = JSON.parse(e.data);
+          if (!activeNarration) {
+            activeNarration = appendMessage("dm", "DM", "");
+          }
+          activeNarration.textContent += data.delta;
+          narration.scrollTop = narration.scrollHeight;
+        });
+        source.addEventListener("narration_complete", () => {
+          activeNarration = null;
+        });
+        source.addEventListener("dice_roll", (e) => {
+          const data = JSON.parse(e.data);
+          const li = document.createElement("li");
+          li.innerHTML = `<code>${data.expression}</code> = <strong>${data.total}</strong> <span class="purpose">${data.purpose || ""}</span>`;
+          const empty = diceHistory.querySelector(".empty");
+          if (empty) empty.remove();
+          diceHistory.prepend(li);
+        });
+        source.addEventListener("state_update", () => {
+          // Phase 2 keeps the sidebar HP/AC stale until reload; Phase 6
+          // will hydrate this in place via partial fetches.
+        });
+        source.addEventListener("dm_error", (e) => {
+          const data = JSON.parse(e.data);
+          appendMessage("system", "[error]", data.message || "DM error");
+          source.close();
+        });
+        source.addEventListener("turn_done", () => {
+          source.close();
+        });
+        source.onerror = () => {
+          source.close();
+        };
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,213 @@
+/* Phase 2 single-player play screen.
+ * Replaced wholesale in Phase 6 (UX polish). The goal here is *legible
+ * during dev*, not pretty.
+ */
+
+body.table-screen {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.table-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.6rem 1.2rem;
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid var(--accent);
+  font-size: 0.95rem;
+}
+
+.table-header h1 {
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 500;
+}
+
+.table-header .session-id {
+  margin-left: auto;
+  opacity: 0.6;
+  font-family: ui-monospace, monospace;
+}
+
+.table-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 18rem;
+  grid-template-rows: 1fr auto;
+  gap: 0;
+}
+
+.narration {
+  grid-row: 1;
+  grid-column: 1;
+  overflow-y: auto;
+  padding: 1.2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.message {
+  border-left: 2px solid transparent;
+  padding-left: 0.8rem;
+}
+
+.message-dm {
+  border-left-color: var(--accent);
+}
+
+.message-player {
+  border-left-color: rgba(160, 200, 240, 0.5);
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.message-system {
+  border-left-color: #d97a5b;
+  font-family: ui-monospace, monospace;
+  font-size: 0.9rem;
+}
+
+.message header {
+  display: flex;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.message p {
+  margin: 0.3rem 0 0;
+  white-space: pre-wrap;
+}
+
+.empty-log {
+  opacity: 0.5;
+  font-style: italic;
+  text-align: center;
+}
+
+.sidebar {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1.2rem 1rem;
+  overflow-y: auto;
+}
+
+.sidebar h2 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin: 0 0 0.6rem;
+}
+
+.pc {
+  margin-bottom: 1.4rem;
+}
+
+.pc h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.pc .subtitle {
+  margin: 0.1rem 0 0.5rem;
+  opacity: 0.7;
+  font-size: 0.85rem;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.1rem 0.6rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.stats dt {
+  opacity: 0.6;
+}
+
+.stats dd {
+  margin: 0;
+}
+
+.rolls ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.rolls li {
+  padding: 0.25rem 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+}
+
+.rolls .empty {
+  opacity: 0.4;
+  font-style: italic;
+}
+
+.rolls .purpose {
+  opacity: 0.6;
+  font-size: 0.8rem;
+}
+
+.action {
+  grid-row: 2;
+  grid-column: 1;
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.8rem 1.2rem;
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.action textarea {
+  flex: 1;
+  resize: vertical;
+  font-family: inherit;
+  font-size: inherit;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  border: 1px solid rgba(176, 138, 62, 0.3);
+  border-radius: 3px;
+  padding: 0.5rem;
+}
+
+.action button {
+  padding: 0.5rem 1.4rem;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.action select {
+  font-family: inherit;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  border: 1px solid rgba(176, 138, 62, 0.3);
+  border-radius: 3px;
+  padding: 0.4rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

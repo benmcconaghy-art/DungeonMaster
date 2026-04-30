@@ -33,9 +33,10 @@ env/
 *.swp
 .DS_Store
 
-# Claude Code worktrees and local-only settings
+# Claude Code worktrees, local-only settings, and runtime state
 .claude/worktrees/
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 
 # Deployment-host paths (referenced in scripts but never tracked)
 /var/lib/dungeon-master

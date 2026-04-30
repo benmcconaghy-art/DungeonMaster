@@ -8,13 +8,14 @@ on shutdown so the gunicorn worker shuts down cleanly under systemd.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -23,9 +24,17 @@ from sqlalchemy import text
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.auth import router as auth_router
+from app.api.campaigns import router as campaigns_router
+from app.api.characters import router as characters_router
+from app.api.sessions import router as sessions_router
+from app.api.sse import router as sse_router
 from app.config import get_settings
+from app.db import models
 from app.db.session import engine
-from app.deps import CurrentUserOrNone, DbSession
+from app.deps import CurrentUser, CurrentUserOrNone, DbSession
+from app.llm.client import DmClientError, get_dm_client
+
+log = logging.getLogger(__name__)
 
 _APP_DIR = Path(__file__).resolve().parent
 _TEMPLATES = Jinja2Templates(directory=str(_APP_DIR / "templates"))
@@ -59,13 +68,28 @@ class HealthResponse(BaseModel):
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Process-level setup/teardown.
 
-    Phase 0: nothing to start at boot. On shutdown, dispose the engine so
-    the gunicorn worker doesn't leave dangling SQLite handles.
+    Boot: probe the vLLM endpoint and resolve the served model id (so a
+    misconfigured endpoint fails the worker startup loudly rather than
+    on first DM turn). Failure is non-fatal — the rest of the app
+    starts; ``/health`` will reflect the broken DM client and the
+    orchestrator will surface ``dm_error`` events when a turn is
+    attempted.
+
+    Shutdown: dispose the engine and the openai client so the gunicorn
+    worker shuts down cleanly under systemd.
     """
+
+    client = get_dm_client()
+    try:
+        await client.health()
+        log.info("DM client booted; resolved model: %s", client.model)
+    except DmClientError as exc:
+        log.warning("DM client health check failed at boot: %s", exc)
 
     try:
         yield
     finally:
+        await client.aclose()
         await engine.dispose()
 
 
@@ -93,6 +117,10 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(auth_router)
+    app.include_router(campaigns_router)
+    app.include_router(characters_router)
+    app.include_router(sessions_router)
+    app.include_router(sse_router)
 
     app.mount(
         "/static",
@@ -111,6 +139,77 @@ def create_app() -> FastAPI:
     @app.get("/login", response_class=HTMLResponse)
     async def login_form(request: Request) -> HTMLResponse:
         return _TEMPLATES.TemplateResponse(request, "login.html", {})
+
+    @app.get("/play/{session_id}", response_class=HTMLResponse)
+    async def play_screen(
+        request: Request,
+        session_id: str,
+        user: CurrentUser,
+        db: DbSession,
+    ) -> HTMLResponse:
+        from sqlalchemy import select
+
+        session = await db.get(models.Session, session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail="session not found")
+        membership = await db.get(models.CampaignMember, (session.campaign_id, user.id))
+        if membership is None:
+            raise HTTPException(status_code=403, detail="not a member of this campaign")
+
+        campaign = await db.get(models.Campaign, session.campaign_id)
+        characters = list(
+            (
+                await db.scalars(
+                    select(models.Character)
+                    .where(models.Character.campaign_id == session.campaign_id)
+                    .where(models.Character.user_id == user.id)
+                    .order_by(models.Character.name)
+                )
+            ).all()
+        )
+        recent_messages = list(
+            (
+                await db.scalars(
+                    select(models.SessionMessage)
+                    .where(models.SessionMessage.session_id == session_id)
+                    .order_by(models.SessionMessage.created_at.desc())
+                    .limit(50)
+                )
+            ).all()
+        )
+        recent_messages.reverse()
+        # Filter whispers the user shouldn't see.
+        visible_character_ids = {c.id for c in characters}
+        recent_messages = [
+            m
+            for m in recent_messages
+            if not m.audience or any(cid in visible_character_ids for cid in m.audience)
+        ]
+        characters_by_id = {c.id: c for c in characters}
+
+        recent_rolls = list(
+            (
+                await db.scalars(
+                    select(models.DiceRoll)
+                    .where(models.DiceRoll.session_id == session_id)
+                    .order_by(models.DiceRoll.created_at.desc())
+                    .limit(10)
+                )
+            ).all()
+        )
+
+        return _TEMPLATES.TemplateResponse(
+            request,
+            "table.html",
+            {
+                "session_id": session_id,
+                "campaign": campaign,
+                "characters": characters,
+                "characters_by_id": characters_by_id,
+                "messages": recent_messages,
+                "recent_rolls": recent_rolls,
+            },
+        )
 
     @app.get("/health", response_model=HealthResponse)
     async def health(db: DbSession) -> JSONResponse:
