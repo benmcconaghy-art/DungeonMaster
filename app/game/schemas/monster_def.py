@@ -1,8 +1,16 @@
 """Pydantic schema for ``data/bfrpg/monsters.yaml``.
 
-Matches the shape in ``.claude/agents/bfrpg-data.md``. ``hit_dice`` is a
-string because BFRPG uses fractional notation like ``"1-1"`` and ``"½"``;
-the loader parses it into the engine's :class:`HitDice` representation.
+``hit_dice`` is a string because BFRPG uses fractional notation like
+``"1-1"`` and ``"½"``; the loader parses it into the engine's
+:class:`HitDice` representation.
+
+Movement is a structured ``movement_modes: {mode: feet}`` mapping rather
+than a single int: fliers, swimmers, and climbers commonly have multiple
+locomotion modes and Phase 2's combat / pursuit logic needs to ask "what
+speed in this terrain?" structurally rather than by parsing prose.
+Conventional keys (not enforced as a Literal so future modes don't
+require schema churn): ``land``, ``fly``, ``swim``, ``climb``, ``burrow``,
+``hover``. Single-mode creatures use ``{"land": N}``.
 """
 
 from __future__ import annotations
@@ -44,10 +52,7 @@ class MonsterDefinition(_Strict):
     hit_dice: str
     hp_typical: Annotated[int, Field(ge=1)]
     ac: int
-    movement: int
-    fly_movement: int | None = None
-    swim_movement: int | None = None
-    climb_movement: int | None = None
+    movement_modes: Annotated[dict[str, Annotated[int, Field(ge=0)]], Field(min_length=1)]
     attacks: list[MonsterAttack] = Field(default_factory=list)
     no_appearing: str | None = None
     save_as: str  # e.g. "F1", "MU3"

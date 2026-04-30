@@ -195,7 +195,7 @@ def test_inline_spell_fixture_validates() -> None:
             {
                 "name": "Magic Missile",
                 "level": 1,
-                "caster_class": "magic_user",
+                "caster_classes": ["magic_user"],
                 "range": "150 feet",
                 "duration": "instant",
                 "description": "An unerring bolt of force.",
@@ -219,7 +219,7 @@ def test_inline_monster_fixture_validates() -> None:
                 "hit_dice": "1",
                 "hp_typical": 4,
                 "ac": 12,
-                "movement": 30,
+                "movement_modes": {"land": 30},
                 "attacks": [{"name": "spear", "damage": "1d6"}],
                 "save_as": "F1",
                 "morale": 8,

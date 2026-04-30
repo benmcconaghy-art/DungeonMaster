@@ -1,987 +1,1008 @@
-# Basic Fantasy RPG bestiary — core selection.
-# Mechanics conform to BFRPG 4th edition (CC BY-SA, Basic Fantasy Project).
-#
-# Field conventions (see app/game/schemas/monster_def.py):
-#   hit_dice:       BFRPG dice notation; "1-1" = 1d8-1; "1d4 hp" = 1d4 hp.
-#   hp_typical:     average rolled hp at typical HD
-#   ac:             ascending AC
-#   movement:       feet per round (primary mode of locomotion)
-#   attacks:        list of {name, damage, to_hit_bonus?, range?, notes?}
-#   no_appearing:   "encounter (lair)" notation
-#   save_as:        class and level for saving throws (e.g. "F1", "MU3", "NM" = Normal Human, "C1" = Cleric 1)
-#   morale:         2d6 break threshold; the monster routs when 2d6 > morale.
-#   alignment:      lawful / neutral / chaotic (lowercase)
-#   treasure_type: BFRPG treasure-type letter(s)
-#   xp:             experience awarded for defeating one
-#   description / ecology: paraphrased flavour, in our own words.
-#   special_abilities: free-form display strings for non-attack capabilities
-#     (regeneration, breath weapons, alternate movement modes, etc.)
-
-# --------------------------------------------------------------------------
-# HUMANOIDS
-# --------------------------------------------------------------------------
-
 - name: Goblin
-  hit_dice: "1-1"
+  hit_dice: 1-1
   hp_typical: 3
   ac: 14
-  movement: 20
+  movement_modes:
+    land: 20
   attacks:
-    - {name: scimitar, damage: "1d6", to_hit_bonus: 0}
-  no_appearing: "2d4 (6d10)"
+  - name: scimitar
+    damage: 1d6
+    to_hit_bonus: 0
+  no_appearing: 2d4 (6d10)
   save_as: NM
   morale: 7
   alignment: chaotic
-  treasure_type: "(P) each, R lair"
+  treasure_type: (P) each, R lair
   xp: 10
-  description: >
-    A wiry, malnourished humanoid standing four feet tall, with greenish
-    grey skin and yellow eyes that hate sunlight. Goblins are cowardly
-    when matched and vicious in numbers, famous for cruelty toward
-    captives and a peculiar fondness for cheap, jangling jewellery.
-  ecology: >
-    Live underground or in dense forest, avoiding open ground in
-    daylight (where they suffer -1 to attack rolls). Often in service
-    to larger creatures — hobgoblins, bugbears, ogres — but always
-    plotting some petty rebellion against their bosses.
-  special_abilities:
-    - "-1 to attack rolls in direct sunlight"
+  description: 'A wiry, malnourished humanoid standing four feet tall, with greenish grey skin and yellow
+    eyes that hate sunlight. Goblins are cowardly when matched and vicious in numbers, famous for cruelty
+    toward captives and a peculiar fondness for cheap, jangling jewellery.
 
+    '
+  ecology: "Live underground or in dense forest, avoiding open ground in daylight (where they suffer -1\
+    \ to attack rolls). Often in service to larger creatures \u2014 hobgoblins, bugbears, ogres \u2014\
+    \ but always plotting some petty rebellion against their bosses.\n"
+  special_abilities:
+  - -1 to attack rolls in direct sunlight
 - name: Orc
-  hit_dice: "1"
+  hit_dice: '1'
   hp_typical: 4
   ac: 14
-  movement: 30
+  movement_modes:
+    land: 30
   attacks:
-    - {name: weapon, damage: "1d8", to_hit_bonus: 0}
-  no_appearing: "2d4 (1d6 x10)"
+  - name: weapon
+    damage: 1d8
+    to_hit_bonus: 0
+  no_appearing: 2d4 (1d6 x10)
   save_as: F1
   morale: 8
   alignment: chaotic
-  treasure_type: "(P) each, D lair"
+  treasure_type: (P) each, D lair
   xp: 25
-  description: >
-    Stocky, pig-snouted humanoids with bristled hides and tusks that
-    show even when their mouths are shut. Orcs stand about five and a
-    half feet tall and are stronger than most humans of similar build.
-    They are noisy on the march, brutal in fight, and quarrelsome in
-    every other circumstance.
-  ecology: >
-    Tribal, with chieftains commanding 1d4 x 10 warriors per tribe.
-    Each tribe keeps a particular standard (a banner, a flayed skin)
-    that is fanatically defended; loss of the standard typically
-    triggers a morale check at -2.
+  description: 'Stocky, pig-snouted humanoids with bristled hides and tusks that show even when their
+    mouths are shut. Orcs stand about five and a half feet tall and are stronger than most humans of similar
+    build. They are noisy on the march, brutal in fight, and quarrelsome in every other circumstance.
 
+    '
+  ecology: 'Tribal, with chieftains commanding 1d4 x 10 warriors per tribe. Each tribe keeps a particular
+    standard (a banner, a flayed skin) that is fanatically defended; loss of the standard typically triggers
+    a morale check at -2.
+
+    '
 - name: Hobgoblin
-  hit_dice: "1+1"
+  hit_dice: 1+1
   hp_typical: 5
   ac: 15
-  movement: 30
+  movement_modes:
+    land: 30
   attacks:
-    - {name: weapon, damage: "1d8", to_hit_bonus: 0}
-  no_appearing: "1d6 (4d6)"
+  - name: weapon
+    damage: 1d8
+    to_hit_bonus: 0
+  no_appearing: 1d6 (4d6)
   save_as: F1
   morale: 8
   alignment: chaotic
-  treasure_type: "(Q) each, D lair"
+  treasure_type: (Q) each, D lair
   xp: 50
-  description: >
-    Larger, stronger, and considerably more disciplined than their
-    goblin cousins. A hobgoblin warband keeps formation, drills with
-    real weapons, and bears uniform colours. Tactics, not numbers,
+  description: 'Larger, stronger, and considerably more disciplined than their goblin cousins. A hobgoblin
+    warband keeps formation, drills with real weapons, and bears uniform colours. Tactics, not numbers,
     win their battles; mercy is not among their tactics.
-  ecology: >
-    Found in fortified camps and lairs, often with goblin auxiliaries
-    and trained worgs. Will trade with humans when convenient and
-    raid them when not. Lairs always feature the chief's banner and
-    a stockade.
 
+    '
+  ecology: 'Found in fortified camps and lairs, often with goblin auxiliaries and trained worgs. Will
+    trade with humans when convenient and raid them when not. Lairs always feature the chief''s banner
+    and a stockade.
+
+    '
 - name: Bugbear
-  hit_dice: "3+1"
+  hit_dice: 3+1
   hp_typical: 14
   ac: 15
-  movement: 30
+  movement_modes:
+    land: 30
   attacks:
-    - {name: weapon, damage: "2d4", to_hit_bonus: 0, notes: "+1 to attack on surprise"}
-  no_appearing: "2d4 (5d4)"
+  - name: weapon
+    damage: 2d4
+    to_hit_bonus: 0
+    notes: +1 to attack on surprise
+  no_appearing: 2d4 (5d4)
   save_as: F3
   morale: 9
   alignment: chaotic
-  treasure_type: "(Q) each, B lair"
+  treasure_type: (Q) each, B lair
   xp: 145
-  description: >
-    Tall and shaggy goblin-kin standing seven feet at the shoulder,
-    with hides like a bear's and eyes that gleam in the dark. Despite
-    their size they move almost noiselessly — a bugbear's preferred
-    introduction to most parties is a heavy weapon out of the dark
-    and a corpse on the floor.
-  ecology: >
-    Often found at the heart of mixed humanoid lairs as enforcers and
-    raid-leaders. A bugbear raid is always patient and never loud.
-  special_abilities:
-    - "Surprises on 1-3 on 1d6 due to uncanny stealth"
+  description: "Tall and shaggy goblin-kin standing seven feet at the shoulder, with hides like a bear's\
+    \ and eyes that gleam in the dark. Despite their size they move almost noiselessly \u2014 a bugbear's\
+    \ preferred introduction to most parties is a heavy weapon out of the dark and a corpse on the floor.\n"
+  ecology: 'Often found at the heart of mixed humanoid lairs as enforcers and raid-leaders. A bugbear
+    raid is always patient and never loud.
 
+    '
+  special_abilities:
+  - Surprises on 1-3 on 1d6 due to uncanny stealth
 - name: Gnoll
-  hit_dice: "2"
+  hit_dice: '2'
   hp_typical: 9
   ac: 15
-  movement: 30
+  movement_modes:
+    land: 30
   attacks:
-    - {name: weapon, damage: "2d4", to_hit_bonus: 0}
-  no_appearing: "1d6 (3d6)"
+  - name: weapon
+    damage: 2d4
+    to_hit_bonus: 0
+  no_appearing: 1d6 (3d6)
   save_as: F2
   morale: 8
   alignment: chaotic
-  treasure_type: "(P) each, D lair"
+  treasure_type: (P) each, D lair
   xp: 75
-  description: >
-    Hyena-headed humanoids over seven feet tall, with mottled hides
-    and a barking laugh that carries for half a mile. Gnolls are
-    natural pack hunters: they prefer to harry weaker prey to
-    exhaustion, then close in and tear apart the survivors.
-  ecology: >
-    Roving bands rather than fixed settlements, though some gnolls
-    keep slave-pens in caves. Subservient to demonic patrons in many
-    settings — flag this with the GM if running outside the default
-    BFRPG cosmology.
+  description: 'Hyena-headed humanoids over seven feet tall, with mottled hides and a barking laugh that
+    carries for half a mile. Gnolls are natural pack hunters: they prefer to harry weaker prey to exhaustion,
+    then close in and tear apart the survivors.
 
+    '
+  ecology: "Roving bands rather than fixed settlements, though some gnolls keep slave-pens in caves. Subservient\
+    \ to demonic patrons in many settings \u2014 flag this with the GM if running outside the default\
+    \ BFRPG cosmology.\n"
 - name: Kobold
-  hit_dice: "1d4 hp"
+  hit_dice: 1d4 hp
   hp_typical: 2
   ac: 13
-  movement: 20
+  movement_modes:
+    land: 20
   attacks:
-    - {name: weapon, damage: "1d4", to_hit_bonus: -1}
-  no_appearing: "4d4 (6d10)"
+  - name: weapon
+    damage: 1d4
+    to_hit_bonus: -1
+  no_appearing: 4d4 (6d10)
   save_as: NM
   morale: 6
   alignment: chaotic
-  treasure_type: "(P) each, J lair"
+  treasure_type: (P) each, J lair
   xp: 5
-  description: >
-    Three-foot reptilian humanoids with rust-coloured scales, spindly
-    limbs, and a constant nasal yipping. Individually almost no
-    threat — a kobold loses straight fights to a determined housecat —
-    but their settlements make up the difference with traps, snares,
-    and absurdly steep numbers.
-  ecology: >
-    Live in twisting tunnel-warrens beneath rough country, the sort of
-    place where every other corridor has a deadfall, a pit, or a cord
-    of rocks ready to swing down. Kobolds detest gnomes for reasons
-    none of them remember.
+  description: "Three-foot reptilian humanoids with rust-coloured scales, spindly limbs, and a constant\
+    \ nasal yipping. Individually almost no threat \u2014 a kobold loses straight fights to a determined\
+    \ housecat \u2014 but their settlements make up the difference with traps, snares, and absurdly steep\
+    \ numbers.\n"
+  ecology: 'Live in twisting tunnel-warrens beneath rough country, the sort of place where every other
+    corridor has a deadfall, a pit, or a cord of rocks ready to swing down. Kobolds detest gnomes for
+    reasons none of them remember.
 
+    '
 - name: Lizardman
-  hit_dice: "2+1"
+  hit_dice: 2+1
   hp_typical: 10
   ac: 15
-  movement: 20
+  movement_modes:
+    land: 30
+    swim: 40
   attacks:
-    - {name: weapon, damage: "1d6+1"}
-    - {name: bite, damage: "1d4"}
-  no_appearing: "2d4 (6d6)"
+  - name: weapon
+    damage: 1d6+1
+  - name: bite
+    damage: 1d4
+  no_appearing: 2d4 (6d6)
   save_as: F2
   morale: 12
   alignment: neutral
-  treasure_type: "(D) lair"
+  treasure_type: (D) lair
   xp: 100
-  description: >
-    Six-foot bipedal reptiles, broad-tailed and broad-shouldered, with
-    the patient eyes of crocodiles. They speak a hissing tongue of
-    their own and rarely bother with surface trade. A lizardman
-    village watches strangers as a heron watches a fish: with quiet
-    interest in whether they will be edible.
-  ecology: >
-    Build reed lodges in swamps and rivers; expert swimmers who can
-    hold breath underwater for ten minutes or more. Eat anything that
-    moves, including, occasionally, careless adventurers.
-  special_abilities:
-    - "Swim 40 ft; hold breath up to 1 turn underwater"
+  description: 'Six-foot bipedal reptiles, broad-tailed and broad-shouldered, with the patient eyes of
+    crocodiles. They speak a hissing tongue of their own and rarely bother with surface trade. A lizardman
+    village watches strangers as a heron watches a fish: with quiet interest in whether they will be edible.
 
+    '
+  ecology: 'Build reed lodges in swamps and rivers; expert swimmers who can hold breath underwater for
+    ten minutes or more. Eat anything that moves, including, occasionally, careless adventurers.
+
+    '
+  special_abilities: null
 - name: Ogre
-  hit_dice: "4+1"
+  hit_dice: 4+1
   hp_typical: 19
   ac: 14
-  movement: 30
+  movement_modes:
+    land: 30
   attacks:
-    - {name: club, damage: "1d10"}
-  no_appearing: "1d6 (2d6)"
+  - name: club
+    damage: 1d10
+  no_appearing: 1d6 (2d6)
   save_as: F4
   morale: 10
   alignment: chaotic
-  treasure_type: "(M) each, C lair"
+  treasure_type: (M) each, C lair
   xp: 240
-  description: >
-    Nine to ten feet of brute mass crammed into vaguely human shape:
-    knotted muscle, sloping forehead, slabby jaw, and a club that
-    used to be most of a small tree. An ogre is not stupid in the
-    sense of being slow-witted — it is stupid in the sense of being
-    uninterested in any thought beyond the next meal.
-  ecology: >
-    Solitary or in small bands; sometimes hire on as muscle for
-    larger humanoid armies. A captured ogre's coin pouch is invariably
-    far heavier than its owner's intelligence justifies, the
-    accumulated take from many one-sided robberies.
+  description: "Nine to ten feet of brute mass crammed into vaguely human shape: knotted muscle, sloping\
+    \ forehead, slabby jaw, and a club that used to be most of a small tree. An ogre is not stupid in\
+    \ the sense of being slow-witted \u2014 it is stupid in the sense of being uninterested in any thought\
+    \ beyond the next meal.\n"
+  ecology: 'Solitary or in small bands; sometimes hire on as muscle for larger humanoid armies. A captured
+    ogre''s coin pouch is invariably far heavier than its owner''s intelligence justifies, the accumulated
+    take from many one-sided robberies.
 
+    '
 - name: Troll
-  hit_dice: "6+3"
+  hit_dice: 6+3
   hp_typical: 30
   ac: 16
-  movement: 40
+  movement_modes:
+    land: 40
   attacks:
-    - {name: claw, damage: "1d6"}
-    - {name: claw, damage: "1d6"}
-    - {name: bite, damage: "1d10"}
-  no_appearing: "1d8 (1d8)"
+  - name: claw
+    damage: 1d6
+  - name: claw
+    damage: 1d6
+  - name: bite
+    damage: 1d10
+  no_appearing: 1d8 (1d8)
   save_as: F6
   morale: 10
   alignment: chaotic
-  treasure_type: "(D)"
+  treasure_type: (D)
   xp: 555
-  description: >
-    Lean, rubbery giants with sallow skin and joints that bend
-    slightly more than they should. A troll's most feared trait is
-    not strength but recovery: any wound that does not kill it begins
+  description: 'Lean, rubbery giants with sallow skin and joints that bend slightly more than they should.
+    A troll''s most feared trait is not strength but recovery: any wound that does not kill it begins
     to knit shut almost at once. Severed limbs crawl back to the body.
-  ecology: >
-    Always cut the head off; then burn it. A troll "killed" by anything
-    other than fire or acid revives at full hit points within minutes.
-  special_abilities:
-    - "Regenerates 3 hp per round starting the round after damage is taken"
-    - "Only fire and acid prevent regeneration; without those, a 'killed' troll revives in 1d10 turns at full hp"
 
+    '
+  ecology: 'Always cut the head off; then burn it. A troll "killed" by anything other than fire or acid
+    revives at full hit points within minutes.
+
+    '
+  special_abilities:
+  - Regenerates 3 hp per round starting the round after damage is taken
+  - Only fire and acid prevent regeneration; without those, a 'killed' troll revives in 1d10 turns at
+    full hp
 - name: Hill Giant
-  hit_dice: "8"
+  hit_dice: '8'
   hp_typical: 36
   ac: 14
-  movement: 40
+  movement_modes:
+    land: 40
   attacks:
-    - {name: club, damage: "2d8"}
-    - {name: thrown rock, damage: "3d6", range: [60, 120, 200]}
-  no_appearing: "1d4 (2d8)"
+  - name: club
+    damage: 2d8
+  - name: thrown rock
+    damage: 3d6
+    range:
+    - 60
+    - 120
+    - 200
+  no_appearing: 1d4 (2d8)
   save_as: F8
   morale: 8
   alignment: chaotic
-  treasure_type: "(E)"
+  treasure_type: (E)
   xp: 945
-  description: >
-    Twelve to fourteen feet of unwashed brutality, dressed in poorly
-    cured furs and carrying a tree trunk like an oversized shillelagh.
-    Hill giants are stupid even by giant standards but make up for
-    it with arms long enough to pulp a horse and a temper that takes
-    very little to set off.
-  ecology: >
-    Live in caves at the edge of foothill country, raid lowland farms
-    for cattle and grain. A hill giant lair always reeks; the bone-
-    pile outside often contains gear from previous foolish parties.
+  description: 'Twelve to fourteen feet of unwashed brutality, dressed in poorly cured furs and carrying
+    a tree trunk like an oversized shillelagh. Hill giants are stupid even by giant standards but make
+    up for it with arms long enough to pulp a horse and a temper that takes very little to set off.
 
+    '
+  ecology: 'Live in caves at the edge of foothill country, raid lowland farms for cattle and grain. A
+    hill giant lair always reeks; the bone- pile outside often contains gear from previous foolish parties.
+
+    '
 - name: Bandit
-  hit_dice: "1"
+  hit_dice: '1'
   hp_typical: 4
   ac: 13
-  movement: 40
+  movement_modes:
+    land: 40
   attacks:
-    - {name: weapon, damage: "1d8"}
-  no_appearing: "1d8 (3d10)"
+  - name: weapon
+    damage: 1d8
+  no_appearing: 1d8 (3d10)
   save_as: F1
   morale: 8
   alignment: neutral
-  treasure_type: "(U) each, A lair"
+  treasure_type: (U) each, A lair
   xp: 25
-  description: >
-    Common roadside robbers, deserters, and ne'er-do-wells. A bandit
-    is not necessarily evil — most are simply hungry — but a hungry
-    archer behind a tree is hungry-archer-shaped trouble whatever
-    the alignment.
-  ecology: >
-    Operate from forest camps along well-travelled roads. A bandit
-    troop typically includes a leader of higher level (Fighter 4+),
-    several lieutenants, and perhaps a captive scribe or blacksmith.
+  description: "Common roadside robbers, deserters, and ne'er-do-wells. A bandit is not necessarily evil\
+    \ \u2014 most are simply hungry \u2014 but a hungry archer behind a tree is hungry-archer-shaped trouble\
+    \ whatever the alignment.\n"
+  ecology: 'Operate from forest camps along well-travelled roads. A bandit troop typically includes a
+    leader of higher level (Fighter 4+), several lieutenants, and perhaps a captive scribe or blacksmith.
 
+    '
 - name: Cultist
-  hit_dice: "1"
+  hit_dice: '1'
   hp_typical: 4
   ac: 11
-  movement: 40
+  movement_modes:
+    land: 40
   attacks:
-    - {name: dagger, damage: "1d4"}
-  no_appearing: "2d6 (3d10)"
+  - name: dagger
+    damage: 1d4
+  no_appearing: 2d6 (3d10)
   save_as: NM
   morale: 8
   alignment: chaotic
-  treasure_type: "(P) each, M lair"
+  treasure_type: (P) each, M lair
   xp: 25
-  description: >
-    Robed initiates of some unsavoury power, more devoted than
-    competent. A cultist's individual menace is small; a cultist
-    chanting in a circle of fifty, with the right thing waking up
-    in the middle, is a problem that's hard to solve in time.
-  ecology: >
-    Hidden temples in cellars, ruins, or under wholly respectable
-    inns. Their leaders are Clerics of opposed alignment with
-    appropriate spell loadouts; cultists themselves rarely wield
-    real magic.
+  description: 'Robed initiates of some unsavoury power, more devoted than competent. A cultist''s individual
+    menace is small; a cultist chanting in a circle of fifty, with the right thing waking up in the middle,
+    is a problem that''s hard to solve in time.
 
+    '
+  ecology: 'Hidden temples in cellars, ruins, or under wholly respectable inns. Their leaders are Clerics
+    of opposed alignment with appropriate spell loadouts; cultists themselves rarely wield real magic.
+
+    '
 - name: Acolyte
-  hit_dice: "1"
+  hit_dice: '1'
   hp_typical: 4
   ac: 11
-  movement: 40
+  movement_modes:
+    land: 40
   attacks:
-    - {name: mace, damage: "1d6"}
-  no_appearing: "1d4 (1d12)"
+  - name: mace
+    damage: 1d6
+  no_appearing: 1d4 (1d12)
   save_as: C1
   morale: 9
   alignment: lawful
-  treasure_type: "(P) each"
+  treasure_type: (P) each
   xp: 25
-  description: >
-    A junior cleric — apprenticed to a temple, still earning their
-    holy symbol. Acolytes can cast one first-level spell per day
-    once they reach 2nd level (BFRPG progression), but most are
-    encountered fresh from training.
-  ecology: >
-    Travel in pairs or small groups, often escorting a senior cleric.
-    Available as henchmen to lawful parties at the GM's discretion.
+  description: "A junior cleric \u2014 apprenticed to a temple, still earning their holy symbol. Acolytes\
+    \ can cast one first-level spell per day once they reach 2nd level (BFRPG progression), but most are\
+    \ encountered fresh from training.\n"
+  ecology: 'Travel in pairs or small groups, often escorting a senior cleric. Available as henchmen to
+    lawful parties at the GM''s discretion.
 
+    '
 - name: Veteran
-  hit_dice: "1"
+  hit_dice: '1'
   hp_typical: 5
   ac: 15
-  movement: 40
+  movement_modes:
+    land: 40
   attacks:
-    - {name: weapon, damage: "1d8"}
-  no_appearing: "1d8 (3d10)"
+  - name: weapon
+    damage: 1d8
+  no_appearing: 1d8 (3d10)
   save_as: F1
   morale: 8
   alignment: neutral
-  treasure_type: "(U) each"
+  treasure_type: (U) each
   xp: 25
-  description: >
-    A trained soldier — mercenary, town watch, militia veteran — in
-    chain mail and shield. Veterans are not heroes but they are
-    professionals; they fight in formation and break only when
-    the formation does.
-  ecology: >
-    Found garrisoning towns, escorting caravans, manning fortifications.
-    Hire-able by adventurers as henchmen at standard rates.
+  description: "A trained soldier \u2014 mercenary, town watch, militia veteran \u2014 in chain mail and\
+    \ shield. Veterans are not heroes but they are professionals; they fight in formation and break only\
+    \ when the formation does.\n"
+  ecology: 'Found garrisoning towns, escorting caravans, manning fortifications. Hire-able by adventurers
+    as henchmen at standard rates.
 
+    '
 - name: Berserker
-  hit_dice: "1+2"
+  hit_dice: 1+2
   hp_typical: 6
   ac: 13
-  movement: 40
+  movement_modes:
+    land: 40
   attacks:
-    - {name: weapon, damage: "1d8+2", to_hit_bonus: 2, notes: "+2 to-hit reflects raging berserk fury"}
-  no_appearing: "1d6 (3d10)"
+  - name: weapon
+    damage: 1d8+2
+    to_hit_bonus: 2
+    notes: +2 to-hit reflects raging berserk fury
+  no_appearing: 1d6 (3d10)
   save_as: F1
   morale: 12
   alignment: neutral
-  treasure_type: "(U) each"
+  treasure_type: (U) each
   xp: 50
-  description: >
-    Wild-eyed, screaming combatants who fight until killed. A
-    berserker's morale never breaks; they bite through pain, ignore
-    most wounds, and don't always remember whose side they were
-    supposed to be on by the end of the fight.
-  ecology: >
-    Found among certain tribal peoples, usually as a sworn warband
-    rather than a class. Refuse to wear armour heavier than leather,
-    on the theory that it slows the rage.
+  description: 'Wild-eyed, screaming combatants who fight until killed. A berserker''s morale never breaks;
+    they bite through pain, ignore most wounds, and don''t always remember whose side they were supposed
+    to be on by the end of the fight.
+
+    '
+  ecology: 'Found among certain tribal peoples, usually as a sworn warband rather than a class. Refuse
+    to wear armour heavier than leather, on the theory that it slows the rage.
+
+    '
   special_abilities:
-    - "Morale never breaks; fights until killed"
-
-# --------------------------------------------------------------------------
-# UNDEAD
-# --------------------------------------------------------------------------
-
+  - Morale never breaks; fights until killed
 - name: Skeleton
-  hit_dice: "1"
+  hit_dice: '1'
   hp_typical: 4
   ac: 12
-  movement: 20
+  movement_modes:
+    land: 20
   attacks:
-    - {name: weapon, damage: "1d6"}
-  no_appearing: "3d4 (3d10)"
+  - name: weapon
+    damage: 1d6
+  no_appearing: 3d4 (3d10)
   save_as: F1
   morale: 12
   alignment: chaotic
   treasure_type: none
   xp: 25
-  description: >
-    Animated bones, held together by the leftovers of a wicked spell.
-    A skeleton has no muscles to grow tired and no nerves to feel
-    fear; it stops only when its bones are broken into pieces too
+  description: 'Animated bones, held together by the leftovers of a wicked spell. A skeleton has no muscles
+    to grow tired and no nerves to feel fear; it stops only when its bones are broken into pieces too
     small to function.
-  ecology: >
-    Servitor undead, raised to guard tombs and patrol cursed places.
-    Almost always under another creature's command — a free-willed
-    skeleton is a sign that something has gone very wrong nearby.
-  special_abilities:
-    - "Edged weapons deal half damage; blunt weapons deal full damage"
-    - "Immune to sleep, charm, hold, and other mind-affecting magic"
 
+    '
+  ecology: "Servitor undead, raised to guard tombs and patrol cursed places. Almost always under another\
+    \ creature's command \u2014 a free-willed skeleton is a sign that something has gone very wrong nearby.\n"
+  special_abilities:
+  - Edged weapons deal half damage; blunt weapons deal full damage
+  - Immune to sleep, charm, hold, and other mind-affecting magic
 - name: Zombie
-  hit_dice: "2"
+  hit_dice: '2'
   hp_typical: 9
   ac: 12
-  movement: 20
+  movement_modes:
+    land: 20
   attacks:
-    - {name: weapon or slam, damage: "1d8"}
-  no_appearing: "2d4 (4d6)"
+  - name: weapon or slam
+    damage: 1d8
+  no_appearing: 2d4 (4d6)
   save_as: F1
   morale: 12
   alignment: chaotic
   treasure_type: none
   xp: 75
-  description: >
-    Reanimated corpses that move with a slow, lurching gait but bite
-    and strike with surprising force. The smell precedes them by a
-    corridor or two.
-  ecology: >
-    Created by clerics or wizards of evil bent. Tend to congregate
-    in graveyards, barrows, and abandoned battlefields where the
-    ground has known too much death.
-  special_abilities:
-    - "Always loses initiative"
-    - "Immune to sleep, charm, hold, and other mind-affecting magic"
+  description: 'Reanimated corpses that move with a slow, lurching gait but bite and strike with surprising
+    force. The smell precedes them by a corridor or two.
 
+    '
+  ecology: 'Created by clerics or wizards of evil bent. Tend to congregate in graveyards, barrows, and
+    abandoned battlefields where the ground has known too much death.
+
+    '
+  special_abilities:
+  - Always loses initiative
+  - Immune to sleep, charm, hold, and other mind-affecting magic
 - name: Ghoul
-  hit_dice: "2"
+  hit_dice: '2'
   hp_typical: 9
   ac: 13
-  movement: 30
+  movement_modes:
+    land: 30
   attacks:
-    - {name: claw, damage: "1d3", notes: "save vs paralysis or paralysed 2d4 turns"}
-    - {name: claw, damage: "1d3", notes: "save vs paralysis or paralysed 2d4 turns"}
-    - {name: bite, damage: "1d4", notes: "save vs paralysis or paralysed 2d4 turns"}
-  no_appearing: "1d6 (2d8)"
+  - name: claw
+    damage: 1d3
+    notes: save vs paralysis or paralysed 2d4 turns
+  - name: claw
+    damage: 1d3
+    notes: save vs paralysis or paralysed 2d4 turns
+  - name: bite
+    damage: 1d4
+    notes: save vs paralysis or paralysed 2d4 turns
+  no_appearing: 1d6 (2d8)
   save_as: F2
   morale: 9
   alignment: chaotic
-  treasure_type: "(B)"
+  treasure_type: (B)
   xp: 100
-  description: >
-    Cunning, wiry undead — once human, now something hungrier. Ghouls
-    feed on dead flesh by preference but settle for living. Elves are
-    wholly immune to the paralysis.
-  ecology: >
-    Pack hunters in graveyards, ruins, and the sewers of older cities.
-    Where one ghoul appears, there are usually several within a few
-    minutes' walk.
-  special_abilities:
-    - "Touch causes paralysis (save vs paralysis or freeze 2d4 turns)"
-    - "Elves are immune to the paralysis"
+  description: "Cunning, wiry undead \u2014 once human, now something hungrier. Ghouls feed on dead flesh\
+    \ by preference but settle for living. Elves are wholly immune to the paralysis.\n"
+  ecology: 'Pack hunters in graveyards, ruins, and the sewers of older cities. Where one ghoul appears,
+    there are usually several within a few minutes'' walk.
 
+    '
+  special_abilities:
+  - Touch causes paralysis (save vs paralysis or freeze 2d4 turns)
+  - Elves are immune to the paralysis
 - name: Wight
-  hit_dice: "3"
+  hit_dice: '3'
   hp_typical: 14
   ac: 14
-  movement: 30
+  movement_modes:
+    land: 30
   attacks:
-    - {name: claw, damage: "1d4", notes: "drains 1 level on a successful hit (no save in BFRPG core)"}
-  no_appearing: "1d6 (1d8)"
+  - name: claw
+    damage: 1d4
+    notes: drains 1 level on a successful hit (no save in BFRPG core)
+  no_appearing: 1d6 (1d8)
   save_as: F3
   morale: 12
   alignment: chaotic
-  treasure_type: "(B)"
+  treasure_type: (B)
   xp: 175
-  description: >
-    Dessicated, hollow-eyed undead haunting battlefield barrows and
-    fallen halls. A victim drained to nothing rises in 1d4 days as
-    a wight under the original's command.
-  ecology: >
-    Tied to a specific tomb or grave, rarely venturing far. The
-    cleverer ones command lesser undead; the cleverest sometimes
-    bargain.
-  special_abilities:
-    - "Drains 1 level per hit"
-    - "Hit only by silver or magical weapons"
+  description: 'Dessicated, hollow-eyed undead haunting battlefield barrows and fallen halls. A victim
+    drained to nothing rises in 1d4 days as a wight under the original''s command.
 
+    '
+  ecology: 'Tied to a specific tomb or grave, rarely venturing far. The cleverer ones command lesser undead;
+    the cleverest sometimes bargain.
+
+    '
+  special_abilities:
+  - Drains 1 level per hit
+  - Hit only by silver or magical weapons
 - name: Wraith
-  hit_dice: "4*"
+  hit_dice: 4*
   hp_typical: 18
   ac: 15
-  movement: 80
+  movement_modes:
+    fly: 80
   attacks:
-    - {name: incorporeal touch, damage: "1d6", notes: "drains 1 level on a successful hit"}
-  no_appearing: "1d4 (1d6)"
+  - name: incorporeal touch
+    damage: 1d6
+    notes: drains 1 level on a successful hit
+  no_appearing: 1d4 (1d6)
   save_as: F4
   morale: 12
   alignment: chaotic
-  treasure_type: "(E)"
+  treasure_type: (E)
   xp: 320
-  description: >
-    Drifting black-shrouded spirits that pass through walls and stop
-    only at silver or magic. Visible in daylight only as faintly cold
-    shadows; at night their forms cohere into something that wants
-    very badly to be unseen.
-  ecology: >
-    Haunt tombs, deep dungeons, sealed undercrofts where some grievous
-    oath was broken.
-  special_abilities:
-    - "Flies at 80 ft; cannot be hit by normal weapons"
-    - "Silver weapons deal half damage, magic weapons full damage"
-    - "Drains 1 level per hit"
+  description: 'Drifting black-shrouded spirits that pass through walls and stop only at silver or magic.
+    Visible in daylight only as faintly cold shadows; at night their forms cohere into something that
+    wants very badly to be unseen.
 
+    '
+  ecology: 'Haunt tombs, deep dungeons, sealed undercrofts where some grievous oath was broken.
+
+    '
+  special_abilities:
+  - Flies at 80 ft; cannot be hit by normal weapons
+  - Silver weapons deal half damage, magic weapons full damage
+  - Drains 1 level per hit
 - name: Spectre
-  hit_dice: "6*"
+  hit_dice: 6*
   hp_typical: 27
   ac: 16
-  movement: 100
+  movement_modes:
+    fly: 100
   attacks:
-    - {name: incorporeal touch, damage: "1d8", notes: "drains 2 levels on a successful hit"}
-  no_appearing: "1d4 (1d8)"
+  - name: incorporeal touch
+    damage: 1d8
+    notes: drains 2 levels on a successful hit
+  no_appearing: 1d4 (1d8)
   save_as: F6
   morale: 11
   alignment: chaotic
-  treasure_type: "(E)"
+  treasure_type: (E)
   xp: 610
-  description: >
-    Greater incorporeal undead, intelligent and patient. A victim
-    fully drained rises as a half-strength spectre bound to the
-    original.
-  ecology: >
-    Custodians of cursed places — sealed crypts, fallen towers, the
-    deepest galleries of dungeons that should have been left buried.
-    Often serve a single liege or guard a single object.
-  special_abilities:
-    - "Flies at 100 ft"
-    - "Hit only by magical weapons (silver does not affect)"
-    - "Drains 2 levels per hit"
+  description: 'Greater incorporeal undead, intelligent and patient. A victim fully drained rises as a
+    half-strength spectre bound to the original.
 
+    '
+  ecology: "Custodians of cursed places \u2014 sealed crypts, fallen towers, the deepest galleries of\
+    \ dungeons that should have been left buried. Often serve a single liege or guard a single object.\n"
+  special_abilities:
+  - Flies at 100 ft
+  - Hit only by magical weapons (silver does not affect)
+  - Drains 2 levels per hit
 - name: Vampire
-  hit_dice: "7-9*"
+  hit_dice: 7-9*
   hp_typical: 35
   ac: 16
-  movement: 40
+  movement_modes:
+    land: 40
   attacks:
-    - {name: bite, damage: "1d10", notes: "drains 2 levels on a successful hit"}
-  no_appearing: "1 (1d4)"
+  - name: bite
+    damage: 1d10
+    notes: drains 2 levels on a successful hit
+  no_appearing: 1 (1d4)
   save_as: F7
   morale: 11
   alignment: chaotic
-  treasure_type: "(F)"
+  treasure_type: (F)
   xp: 1320
-  description: >
-    Once human, now lord of corpses — pale, glamour-eyed, possessed
-    of strength enough to crush a man and patience enough to wait
-    a century. Garlic, holy symbols, mirrors, and direct sunlight
-    repel them; running water and a stake through the heart are
-    decisive.
-  ecology: >
-    Each vampire keeps a coffin of native earth, to which it must
-    return at dawn. Reduced to zero hit points, a vampire returns to
-    mist and flees to its coffin to recover; only finding and
-    destroying the coffined body ends the threat for good.
+  description: "Once human, now lord of corpses \u2014 pale, glamour-eyed, possessed of strength enough\
+    \ to crush a man and patience enough to wait a century. Garlic, holy symbols, mirrors, and direct\
+    \ sunlight repel them; running water and a stake through the heart are decisive.\n"
+  ecology: 'Each vampire keeps a coffin of native earth, to which it must return at dawn. Reduced to zero
+    hit points, a vampire returns to mist and flees to its coffin to recover; only finding and destroying
+    the coffined body ends the threat for good.
+
+    '
   special_abilities:
-    - "Flies at 60 ft (bat form)"
-    - "Charm gaze (save vs spells at -2 or be charmed)"
-    - "Assumes mist, wolf, or bat form at will"
-    - "Regenerates 3 hp per round"
-    - "Repelled by garlic, holy symbols, mirrors, running water, and direct sunlight"
-    - "Reduced to 0 hp returns to mist and flees to coffin"
-    - "Drains 2 levels per bite"
-
-# --------------------------------------------------------------------------
-# ANIMALS / VERMIN
-# --------------------------------------------------------------------------
-
+  - Flies at 60 ft (bat form)
+  - Charm gaze (save vs spells at -2 or be charmed)
+  - Assumes mist, wolf, or bat form at will
+  - Regenerates 3 hp per round
+  - Repelled by garlic, holy symbols, mirrors, running water, and direct sunlight
+  - Reduced to 0 hp returns to mist and flees to coffin
+  - Drains 2 levels per bite
 - name: Giant Rat
-  hit_dice: "1d4 hp"
+  hit_dice: 1d4 hp
   hp_typical: 2
   ac: 13
-  movement: 40
+  movement_modes:
+    land: 40
+    swim: 20
   attacks:
-    - {name: bite, damage: "1d3", notes: "5% chance per bite of disease (save vs poison or fall ill in 1d6 days)"}
-  no_appearing: "3d6 (3d10)"
+  - name: bite
+    damage: 1d3
+    notes: 5% chance per bite of disease (save vs poison or fall ill in 1d6 days)
+  no_appearing: 3d6 (3d10)
   save_as: NM
   morale: 8
   alignment: neutral
-  treasure_type: "(L)"
+  treasure_type: (L)
   xp: 5
-  description: >
-    Knee-high rats with patchy fur and yellow incisors. Individually
-    no threat to a healthy adult; in numbers, a serious nuisance,
-    and one bite in twenty carries a wasting disease.
-  ecology: >
-    Sewers, basements, ship holds, anywhere humans store grain
-    badly. Often used as guard animals by larger humanoids.
-  special_abilities:
-    - "Swim 20 ft"
+  description: 'Knee-high rats with patchy fur and yellow incisors. Individually no threat to a healthy
+    adult; in numbers, a serious nuisance, and one bite in twenty carries a wasting disease.
 
+    '
+  ecology: 'Sewers, basements, ship holds, anywhere humans store grain badly. Often used as guard animals
+    by larger humanoids.
+
+    '
+  special_abilities: null
 - name: Giant Centipede
-  hit_dice: "1/2"
+  hit_dice: 1/2
   hp_typical: 2
   ac: 11
-  movement: 20
+  movement_modes:
+    land: 20
   attacks:
-    - {name: bite, damage: "0", notes: "save vs poison or sick for 10 days at half movement, no combat"}
-  no_appearing: "2d4 (1d8)"
+  - name: bite
+    damage: '0'
+    notes: save vs poison or sick for 10 days at half movement, no combat
+  no_appearing: 2d4 (1d8)
   save_as: NM
   morale: 7
   alignment: neutral
   treasure_type: none
   xp: 6
-  description: >
-    Eighteen inches of segmented horror, scuttling along walls and
-    ceilings. Their venom is rarely fatal but reliably miserable —
-    a failed save means a fortnight of fever and useless limbs.
-  ecology: >
-    Damp places, ruins, the underside of woodpiles. Drawn to body
-    heat; often the first thing to greet sleeping adventurers.
+  description: "Eighteen inches of segmented horror, scuttling along walls and ceilings. Their venom is\
+    \ rarely fatal but reliably miserable \u2014 a failed save means a fortnight of fever and useless\
+    \ limbs.\n"
+  ecology: 'Damp places, ruins, the underside of woodpiles. Drawn to body heat; often the first thing
+    to greet sleeping adventurers.
 
+    '
 - name: Giant Spider
-  hit_dice: "4*"
+  hit_dice: 4*
   hp_typical: 18
   ac: 14
-  movement: 20
+  movement_modes:
+    land: 30
+    climb: 30
   attacks:
-    - {name: bite, damage: "1d8", notes: "save vs poison or die"}
-  no_appearing: "1d4 (1d6)"
+  - name: bite
+    damage: 1d8
+    notes: save vs poison or die
+  no_appearing: 1d4 (1d6)
   save_as: F2
   morale: 8
   alignment: neutral
-  treasure_type: "(U) in web"
+  treasure_type: (U) in web
   xp: 320
-  description: >
-    Four feet across at the body, with eight glistening eyes and a
-    venom that kills in minutes. Some build sheet-webs across
-    dungeon corridors; some hunt by ambush; all are quick enough to
-    cross a room before most adventurers can react.
-  ecology: >
-    Web-builders in dungeon ceilings; ambush hunters in temperate
-    forest. Victims wrapped in silk are often still alive but
-    paralysed for the spider's later return.
-  special_abilities:
-    - "Climb 30 ft"
-    - "Venomous bite (save vs poison or die)"
+  description: 'Four feet across at the body, with eight glistening eyes and a venom that kills in minutes.
+    Some build sheet-webs across dungeon corridors; some hunt by ambush; all are quick enough to cross
+    a room before most adventurers can react.
 
+    '
+  ecology: 'Web-builders in dungeon ceilings; ambush hunters in temperate forest. Victims wrapped in silk
+    are often still alive but paralysed for the spider''s later return.
+
+    '
+  special_abilities:
+  - Venomous bite (save vs poison or die)
 - name: Wolf
-  hit_dice: "2+2"
+  hit_dice: 2+2
   hp_typical: 11
   ac: 13
-  movement: 50
+  movement_modes:
+    land: 50
   attacks:
-    - {name: bite, damage: "1d6"}
-  no_appearing: "2d6 (3d6)"
+  - name: bite
+    damage: 1d6
+  no_appearing: 2d6 (3d6)
   save_as: F1
   morale: 8
   alignment: neutral
   treasure_type: none
   xp: 75
-  description: >
-    Common grey wolves, lean and hungry. A pack hunts by exhausting
-    prey before closing — wolves seldom bother attacking armed
-    adults unless winter has been particularly cruel.
-  ecology: >
-    Boreal and temperate forests, mountains. Pack of 2d6 led by a
-    dominant pair; will fight harder near a den (+2 morale).
+  description: "Common grey wolves, lean and hungry. A pack hunts by exhausting prey before closing \u2014\
+    \ wolves seldom bother attacking armed adults unless winter has been particularly cruel.\n"
+  ecology: 'Boreal and temperate forests, mountains. Pack of 2d6 led by a dominant pair; will fight harder
+    near a den (+2 morale).
 
+    '
 - name: Dire Wolf
-  hit_dice: "4+1"
+  hit_dice: 4+1
   hp_typical: 19
   ac: 14
-  movement: 50
+  movement_modes:
+    land: 50
   attacks:
-    - {name: bite, damage: "2d4"}
-  no_appearing: "1d4 (2d4)"
+  - name: bite
+    damage: 2d4
+  no_appearing: 1d4 (2d4)
   save_as: F2
   morale: 8
   alignment: neutral
   treasure_type: none
   xp: 240
-  description: >
-    A wolf the size of a small horse, capable of dragging a fully
-    armoured warrior off their feet. Some hobgoblin and goblin
-    tribes ride them; others worship them.
-  ecology: >
-    Cold mountain country, deep forest. Solitary or small packs;
-    occasional cooperation with humanoid handlers.
+  description: 'A wolf the size of a small horse, capable of dragging a fully armoured warrior off their
+    feet. Some hobgoblin and goblin tribes ride them; others worship them.
 
+    '
+  ecology: 'Cold mountain country, deep forest. Solitary or small packs; occasional cooperation with humanoid
+    handlers.
+
+    '
 - name: Bear (Brown)
-  hit_dice: "5"
+  hit_dice: '5'
   hp_typical: 22
   ac: 14
-  movement: 40
+  movement_modes:
+    land: 40
   attacks:
-    - {name: claw, damage: "1d6"}
-    - {name: claw, damage: "1d6"}
-    - {name: bite, damage: "1d8"}
-  no_appearing: "1d4 (1d4)"
+  - name: claw
+    damage: 1d6
+  - name: claw
+    damage: 1d6
+  - name: bite
+    damage: 1d8
+  no_appearing: 1d4 (1d4)
   save_as: F3
   morale: 9
   alignment: neutral
   treasure_type: none
   xp: 320
-  description: >
-    Eight feet of muscle, hide, and bad temper. Brown bears are
-    generally indifferent to humans unless cornered, hungry, or
-    surprised — but "cornered, hungry, or surprised" describes most
-    bear encounters in the wild.
-  ecology: >
-    Mountain forests, foothills. Mostly omnivorous; raids beehives,
-    berry patches, salmon runs. Solitary except for sows with cubs.
+  description: "Eight feet of muscle, hide, and bad temper. Brown bears are generally indifferent to humans\
+    \ unless cornered, hungry, or surprised \u2014 but \"cornered, hungry, or surprised\" describes most\
+    \ bear encounters in the wild.\n"
+  ecology: 'Mountain forests, foothills. Mostly omnivorous; raids beehives, berry patches, salmon runs.
+    Solitary except for sows with cubs.
+
+    '
   special_abilities:
-    - "If both claw attacks hit the same target, hugs for an extra 2d4 crushing damage"
-
-# --------------------------------------------------------------------------
-# MONSTERS
-# --------------------------------------------------------------------------
-
+  - If both claw attacks hit the same target, hugs for an extra 2d4 crushing damage
 - name: Owlbear
-  hit_dice: "5"
+  hit_dice: '5'
   hp_typical: 22
   ac: 14
-  movement: 40
+  movement_modes:
+    land: 40
   attacks:
-    - {name: claw, damage: "1d8"}
-    - {name: claw, damage: "1d8"}
-    - {name: bite, damage: "1d8"}
-  no_appearing: "1d4 (1d4)"
+  - name: claw
+    damage: 1d8
+  - name: claw
+    damage: 1d8
+  - name: bite
+    damage: 1d8
+  no_appearing: 1d4 (1d4)
   save_as: F3
   morale: 9
   alignment: neutral
-  treasure_type: "(C)"
+  treasure_type: (C)
   xp: 320
-  description: >
-    Improbable forest predator: head and beak of a giant owl on the
-    body of a brown bear, the whole package shrieking in a register
-    that turns spines to water.
-  ecology: >
-    Old-growth forest, in a den of bones and shed feathers. Probably
-    a mage's mistake from centuries past; whatever its origin, the
-    species now breeds true and is here to stay.
-  special_abilities:
-    - "If both claw attacks hit the same target, hugs for an extra 2d8 crushing damage"
+  description: 'Improbable forest predator: head and beak of a giant owl on the body of a brown bear,
+    the whole package shrieking in a register that turns spines to water.
 
+    '
+  ecology: 'Old-growth forest, in a den of bones and shed feathers. Probably a mage''s mistake from centuries
+    past; whatever its origin, the species now breeds true and is here to stay.
+
+    '
+  special_abilities:
+  - If both claw attacks hit the same target, hugs for an extra 2d8 crushing damage
 - name: Wyvern
-  hit_dice: "7*"
+  hit_dice: 7*
   hp_typical: 31
   ac: 15
-  movement: 80
+  movement_modes:
+    fly: 80
+    land: 30
   attacks:
-    - {name: bite, damage: "2d8"}
-    - {name: sting, damage: "1d6", notes: "save vs poison or die"}
-  no_appearing: "1d2 (1d6)"
+  - name: bite
+    damage: 2d8
+  - name: sting
+    damage: 1d6
+    notes: save vs poison or die
+  no_appearing: 1d2 (1d6)
   save_as: F4
   morale: 9
   alignment: chaotic
-  treasure_type: "(E)"
+  treasure_type: (E)
   xp: 670
-  description: >
-    A two-legged dragon-cousin with leather wings and a barbed tail
-    tipped in lethal venom. Stupider than a true dragon and far
-    less talkative — a wyvern goes for the largest moving target,
-    plants its tail in something soft, and circles to wait out the
-    poison.
-  ecology: >
-    Mountain country, broken terrain. Hunts by gliding over rocky
-    valleys at dusk. A wyvern's lair often contains armour and
-    weapons digested out of past meals.
-  special_abilities:
-    - "Flies at 80 ft (primary movement); ground movement 30 ft"
+  description: "A two-legged dragon-cousin with leather wings and a barbed tail tipped in lethal venom.\
+    \ Stupider than a true dragon and far less talkative \u2014 a wyvern goes for the largest moving target,\
+    \ plants its tail in something soft, and circles to wait out the poison.\n"
+  ecology: 'Mountain country, broken terrain. Hunts by gliding over rocky valleys at dusk. A wyvern''s
+    lair often contains armour and weapons digested out of past meals.
 
+    '
+  special_abilities: null
 - name: Young Red Dragon
-  hit_dice: "9*"
+  hit_dice: 9*
   hp_typical: 40
   ac: 17
-  movement: 80
+  movement_modes:
+    fly: 80
+    land: 30
   attacks:
-    - {name: claw, damage: "1d8"}
-    - {name: claw, damage: "1d8"}
-    - {name: bite, damage: "3d10"}
-    - {name: fire breath, damage: "9d8", notes: "90 ft cone, save vs dragon breath halves, 3x/day"}
-  no_appearing: "1 (1)"
+  - name: claw
+    damage: 1d8
+  - name: claw
+    damage: 1d8
+  - name: bite
+    damage: 3d10
+  - name: fire breath
+    damage: 9d8
+    notes: 90 ft cone, save vs dragon breath halves, 3x/day
+  no_appearing: 1 (1)
   save_as: F9
   morale: 10
   alignment: chaotic
-  treasure_type: "(H)"
+  treasure_type: (H)
   xp: 1700
-  description: >
-    Crimson-scaled, fork-tongued, and arrogant past all sense. A
-    young red dragon is no larger than two horses, but its breath
-    weapon is a 90-foot cone of furnace-flame and its conversation
-    is uniformly cruel.
-  ecology: >
-    Lairs in volcanic caves, ruined towers, anywhere with a defensible
-    entrance and a southern exposure. Eats sheep, cattle, knights,
-    in roughly that order of preference.
-  special_abilities:
-    - "Flies at 80 ft (primary); ground movement 30 ft"
-    - "Fire breath 3x per day, 9d8 damage in a 90 ft cone"
-    - "Speaks Common and Draconic; usually willing to negotiate from a position of presumed superiority"
+  description: 'Crimson-scaled, fork-tongued, and arrogant past all sense. A young red dragon is no larger
+    than two horses, but its breath weapon is a 90-foot cone of furnace-flame and its conversation is
+    uniformly cruel.
 
+    '
+  ecology: 'Lairs in volcanic caves, ruined towers, anywhere with a defensible entrance and a southern
+    exposure. Eats sheep, cattle, knights, in roughly that order of preference.
+
+    '
+  special_abilities:
+  - Fire breath 3x per day, 9d8 damage in a 90 ft cone
+  - Speaks Common and Draconic; usually willing to negotiate from a position of presumed superiority
 - name: Stirge
-  hit_dice: "1*"
+  hit_dice: 1*
   hp_typical: 4
   ac: 13
-  movement: 60
+  movement_modes:
+    fly: 60
   attacks:
-    - {name: proboscis, damage: "1d3", to_hit_bonus: 2, notes: "after first hit, drains 1d3 hp/round automatically until killed or sated"}
-  no_appearing: "1d10 (3d12)"
+  - name: proboscis
+    damage: 1d3
+    to_hit_bonus: 2
+    notes: after first hit, drains 1d3 hp/round automatically until killed or sated
+  no_appearing: 1d10 (3d12)
   save_as: F2
   morale: 9
   alignment: neutral
   treasure_type: none
   xp: 37
-  description: >
-    A bird-shaped horror the size of a fat pigeon, with a red bristly
-    body and a needle-fine proboscis longer than its head. Approaches
-    in flocks; the first wave latches, the second feeds.
-  ecology: >
-    Swamps, ruins, dungeons with high ceilings. Roosts in clusters
-    on the underside of arches; drops on warm-blooded prey passing
-    below.
-  special_abilities:
-    - "Flies at 60 ft (primary); walks 10 ft"
-    - "First hit attaches; thereafter drains 1d3 hp per round automatically"
+  description: 'A bird-shaped horror the size of a fat pigeon, with a red bristly body and a needle-fine
+    proboscis longer than its head. Approaches in flocks; the first wave latches, the second feeds.
 
+    '
+  ecology: 'Swamps, ruins, dungeons with high ceilings. Roosts in clusters on the underside of arches;
+    drops on warm-blooded prey passing below.
+
+    '
+  special_abilities:
+  - Flies at 60 ft (primary); walks 10 ft
+  - First hit attaches; thereafter drains 1d3 hp per round automatically
 - name: Carrion Crawler
-  hit_dice: "3+1*"
+  hit_dice: 3+1*
   hp_typical: 14
   ac: 13
-  movement: 40
+  movement_modes:
+    land: 30
+    climb: 30
   attacks:
-    - {name: tentacles, damage: "0", notes: "8 tentacles per round; save vs paralysis or paralysed 2d4 turns"}
-    - {name: bite, damage: "1d3"}
-  no_appearing: "1d3 (1d6)"
+  - name: tentacles
+    damage: '0'
+    notes: 8 tentacles per round; save vs paralysis or paralysed 2d4 turns
+  - name: bite
+    damage: 1d3
+  no_appearing: 1d3 (1d6)
   save_as: F2
   morale: 9
   alignment: neutral
-  treasure_type: "(B)"
+  treasure_type: (B)
   xp: 175
-  description: >
-    Centipede-like scavenger, nine feet long, with eight feathery
-    tentacles drooping from its head. A crawler feeds preferentially
-    on carrion but will gladly create some.
-  ecology: >
-    Dungeon corridors, sewers, anywhere bodies pile up. Climbs walls
-    and ceilings effortlessly; ambush is its preferred opening.
-  special_abilities:
-    - "Climbs walls and ceilings as easily as floors"
-    - "Each tentacle hit forces a save vs paralysis or freeze for 2d4 turns"
+  description: 'Centipede-like scavenger, nine feet long, with eight feathery tentacles drooping from
+    its head. A crawler feeds preferentially on carrion but will gladly create some.
 
+    '
+  ecology: 'Dungeon corridors, sewers, anywhere bodies pile up. Climbs walls and ceilings effortlessly;
+    ambush is its preferred opening.
+
+    '
+  special_abilities:
+  - Each tentacle hit forces a save vs paralysis or freeze for 2d4 turns
 - name: Rust Monster
-  hit_dice: "5"
+  hit_dice: '5'
   hp_typical: 22
   ac: 16
-  movement: 40
+  movement_modes:
+    land: 40
   attacks:
-    - {name: antennae touch, damage: "0", notes: "rusts non-magical metal instantly; magical metal saves vs spells per +1, losing enchantment on failure"}
-  no_appearing: "1d4 (1d4)"
+  - name: antennae touch
+    damage: '0'
+    notes: rusts non-magical metal instantly; magical metal saves vs spells per +1, losing enchantment
+      on failure
+  no_appearing: 1d4 (1d4)
   save_as: F3
   morale: 7
   alignment: neutral
   treasure_type: none
   xp: 320
-  description: >
-    A four-foot armadillo-like creature, dirty rust in colour, with
-    feathery antennae and a stubby tail. Touches metal and dissolves
-    it in seconds. A rust monster's only goal in any encounter is to
-    graze, and it has no fight in it once it starts eating.
-  ecology: >
-    Underground, near old battlefields and dungeons full of weapons.
-    Magical metals save (vs spells per plus) but lose their enchantment
-    if they fail.
+  description: 'A four-foot armadillo-like creature, dirty rust in colour, with feathery antennae and
+    a stubby tail. Touches metal and dissolves it in seconds. A rust monster''s only goal in any encounter
+    is to graze, and it has no fight in it once it starts eating.
 
+    '
+  ecology: 'Underground, near old battlefields and dungeons full of weapons. Magical metals save (vs spells
+    per plus) but lose their enchantment if they fail.
+
+    '
 - name: Shrieker
-  hit_dice: "3"
+  hit_dice: '3'
   hp_typical: 14
   ac: 13
-  movement: 1
+  movement_modes:
+    land: 1
   attacks:
-    - {name: shriek, damage: "0", notes: "non-damaging; alerts every dungeon resident in earshot for 1d3 rounds"}
-  no_appearing: "1d8 (1d8)"
+  - name: shriek
+    damage: '0'
+    notes: non-damaging; alerts every dungeon resident in earshot for 1d3 rounds
+  no_appearing: 1d8 (1d8)
   save_as: NM
   morale: 12
   alignment: neutral
   treasure_type: none
   xp: 145
-  description: >
-    A man-sized dungeon fungus, purple and rubbery, that emits a
-    piercing wail when light or movement comes within 30 feet. The
-    shriek itself does nothing — but it lasts 1d3 rounds and carries
-    far enough to summon every dungeon resident in earshot.
-  ecology: >
-    Damp underground caverns, often near violet fungi (which prey on
-    things drawn in by the shriek). Symbiosis or coincidence: hard
-    to tell with mushrooms.
-  special_abilities:
-    - "Shrieks for 1d3 rounds when light or movement comes within 30 ft"
-    - "Wandering monster check is effectively guaranteed within 1 turn of a shriek"
+  description: "A man-sized dungeon fungus, purple and rubbery, that emits a piercing wail when light\
+    \ or movement comes within 30 feet. The shriek itself does nothing \u2014 but it lasts 1d3 rounds\
+    \ and carries far enough to summon every dungeon resident in earshot.\n"
+  ecology: 'Damp underground caverns, often near violet fungi (which prey on things drawn in by the shriek).
+    Symbiosis or coincidence: hard to tell with mushrooms.
 
+    '
+  special_abilities:
+  - Shrieks for 1d3 rounds when light or movement comes within 30 ft
+  - Wandering monster check is effectively guaranteed within 1 turn of a shriek
 - name: Violet Fungus
-  hit_dice: "3"
+  hit_dice: '3'
   hp_typical: 14
   ac: 12
-  movement: 1
+  movement_modes:
+    land: 1
   attacks:
-    - {name: tendril, damage: "1d4", notes: "1d4 tendrils per round; save vs poison or take 1d4 hp/round rot for 4 rounds (cure required)"}
-  no_appearing: "1d4 (1d8)"
+  - name: tendril
+    damage: 1d4
+    notes: 1d4 tendrils per round; save vs poison or take 1d4 hp/round rot for 4 rounds (cure required)
+  no_appearing: 1d4 (1d8)
   save_as: F3
   morale: 12
   alignment: neutral
   treasure_type: none
   xp: 145
-  description: >
-    A man-high purple fungus tipped with several whip-thin tendrils
-    that flail at anything coming close. The tendrils' touch causes
-    flesh to rot away.
-  ecology: >
-    Slow-moving — practically a feature of the dungeon, not a wandering
-    monster. Often paired with shriekers, which alert it to coming
-    food.
-  special_abilities:
-    - "Touched victims save vs poison or rot at 1d4 hp/round for 4 rounds"
-    - "Removed only by Cure Disease or Neutralise Poison"
+  description: 'A man-high purple fungus tipped with several whip-thin tendrils that flail at anything
+    coming close. The tendrils'' touch causes flesh to rot away.
 
+    '
+  ecology: "Slow-moving \u2014 practically a feature of the dungeon, not a wandering monster. Often paired\
+    \ with shriekers, which alert it to coming food.\n"
+  special_abilities:
+  - Touched victims save vs poison or rot at 1d4 hp/round for 4 rounds
+  - Removed only by Cure Disease or Neutralise Poison
 - name: Gelatinous Cube
-  hit_dice: "4*"
+  hit_dice: 4*
   hp_typical: 18
   ac: 12
-  movement: 20
+  movement_modes:
+    land: 20
   attacks:
-    - {name: slam, damage: "2d4", notes: "save vs paralysis or paralysed 2d4 turns; if engulfed, dissolved over hours"}
-  no_appearing: "1 (0)"
+  - name: slam
+    damage: 2d4
+    notes: save vs paralysis or paralysed 2d4 turns; if engulfed, dissolved over hours
+  no_appearing: 1 (0)
   save_as: F2
   morale: 12
   alignment: neutral
-  treasure_type: "(V)"
+  treasure_type: (V)
   xp: 280
-  description: >
-    A ten-foot transparent cube of acidic jelly, drifting through
-    dungeon corridors and hoovering up everything organic in its
-    path. Almost invisible against the wall.
-  ecology: >
-    Always found in dungeons of regular geometry — corridors and rooms
-    of ten feet square or its multiples. Fits these tunnels exactly,
-    which is more than coincidence to most folklorists.
-  special_abilities:
-    - "Surprises on 1-4 on 1d6 due to transparency"
-    - "Immune to lightning and cold; takes normal damage from fire and weapons"
-    - "Engulfed bodies digest slowly; non-organic gear inside is preserved"
+  description: 'A ten-foot transparent cube of acidic jelly, drifting through dungeon corridors and hoovering
+    up everything organic in its path. Almost invisible against the wall.
 
+    '
+  ecology: "Always found in dungeons of regular geometry \u2014 corridors and rooms of ten feet square\
+    \ or its multiples. Fits these tunnels exactly, which is more than coincidence to most folklorists.\n"
+  special_abilities:
+  - Surprises on 1-4 on 1d6 due to transparency
+  - Immune to lightning and cold; takes normal damage from fire and weapons
+  - Engulfed bodies digest slowly; non-organic gear inside is preserved
 - name: Black Pudding
-  hit_dice: "10*"
+  hit_dice: 10*
   hp_typical: 45
   ac: 12
-  movement: 20
+  movement_modes:
+    land: 20
+    climb: 20
   attacks:
-    - {name: pseudopod, damage: "3d8", notes: "dissolves wood, cloth, leather in 1 round; metal in 2 rounds"}
-  no_appearing: "1 (0)"
+  - name: pseudopod
+    damage: 3d8
+    notes: dissolves wood, cloth, leather in 1 round; metal in 2 rounds
+  no_appearing: 1 (0)
   save_as: F5
   morale: 12
   alignment: neutral
   treasure_type: none
   xp: 1320
-  description: >
-    A featureless black ooze, six to ten feet across, that flows
-    along walls and ceilings looking for prey.
-  ecology: >
-    Older dungeons, sewers, and places where drains lead nowhere.
-    Survives indefinitely on whatever falls in; some are older
-    than the buildings around them.
+  description: 'A featureless black ooze, six to ten feet across, that flows along walls and ceilings
+    looking for prey.
+
+    '
+  ecology: 'Older dungeons, sewers, and places where drains lead nowhere. Survives indefinitely on whatever
+    falls in; some are older than the buildings around them.
+
+    '
   special_abilities:
-    - "Climbs walls and ceilings"
-    - "Splits when struck by edged or piercing weapons (5+ HD pudding becomes two 2-HD puddings)"
-    - "Immune to cold and lightning; only fire and acid harm without splitting"
+  - Splits when struck by edged or piercing weapons (5+ HD pudding becomes two 2-HD puddings)
+  - Immune to cold and lightning; only fire and acid harm without splitting

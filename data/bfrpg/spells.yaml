@@ -1,1552 +1,1449 @@
-# Basic Fantasy RPG core spells.
-#
-# Cleric spells: levels 1–5 (BFRPG cleric tops out at 5th-level spells).
-# Magic-User spells: levels 1–6 (BFRPG core).
-#
-# Mechanics — ranges, durations, dice — match the BFRPG 4th edition rules
-# (CC BY-SA, Basic Fantasy Project). Descriptions are paraphrased to keep
-# our content distinct.
-#
-# Conventions:
-#   range:        descriptive ("touch", "self", or "120 ft" etc.)
-#   duration:     descriptive ("instant", "1 turn/level", "permanent" …)
-#   damage_or_heal: dice expression if the spell deals/heals fixed amounts;
-#                   null otherwise
-#   reversed_form: name of the reversed spell, or null
-#
-# A spell entry may include caster_class as either a single string
-# ("cleric" / "magic_user") or — for spells that appear on both lists —
-# a list. BFRPG core has very few overlapping spells, so this is rare.
-
-# --------------------------------------------------------------------------
-# CLERIC SPELLS
-# --------------------------------------------------------------------------
-
-# === LEVEL 1 ===
 - name: Cure Light Wounds
   level: 1
-  caster_class: cleric
   range: touch
   duration: instant
-  description: >
-    The cleric channels divine healing into a wounded creature, mending
-    1d6+1 hit points of damage. The spell never raises a creature above
-    its normal hit-point maximum and has no effect on the undead — the
-    reversed form, however, hurts them readily.
-  damage_or_heal: "1d6+1"
+  description: "The cleric channels divine healing into a wounded creature, mending 1d6+1 hit points of\
+    \ damage. The spell never raises a creature above its normal hit-point maximum and has no effect on\
+    \ the undead \u2014 the reversed form, however, hurts them readily.\n"
+  damage_or_heal: 1d6+1
   reversed_form: Cause Light Wounds
-
+  caster_classes:
+  - cleric
 - name: Cause Light Wounds
   level: 1
-  caster_class: cleric
   range: touch
   duration: instant
-  description: >
-    The reversed form of Cure Light Wounds. On a successful melee touch
-    attack the cleric inflicts 1d6+1 hit points of damage. Used most
-    often by evil clerics, though any cleric may invoke it.
-  damage_or_heal: "1d6+1"
-  reversed_form: Cure Light Wounds
+  description: 'The reversed form of Cure Light Wounds. On a successful melee touch attack the cleric
+    inflicts 1d6+1 hit points of damage. Used most often by evil clerics, though any cleric may invoke
+    it.
 
+    '
+  damage_or_heal: 1d6+1
+  reversed_form: Cure Light Wounds
+  caster_classes:
+  - cleric
 - name: Detect Evil
   level: 1
-  caster_class: cleric
   range: 120 ft
   duration: 6 turns
-  description: >
-    The cleric perceives any creature, place, or object actively
-    radiating evil intent within range. A merely unpleasant person
-    does not register; a cursed altar or a charmed assassin does.
+  description: 'The cleric perceives any creature, place, or object actively radiating evil intent within
+    range. A merely unpleasant person does not register; a cursed altar or a charmed assassin does.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
 - name: Detect Magic
   level: 1
-  caster_class: cleric
   range: 60 ft
   duration: 2 turns
-  description: >
-    Magical auras within range glow softly to the caster's sight,
-    distinguishing enchanted items, lingering spell effects, and
-    invisible spellcasting in progress. The spell does not identify
-    what magic is at work — only that magic is present.
+  description: "Magical auras within range glow softly to the caster's sight, distinguishing enchanted\
+    \ items, lingering spell effects, and invisible spellcasting in progress. The spell does not identify\
+    \ what magic is at work \u2014 only that magic is present.\n"
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
+  - magic_user
 - name: Light
   level: 1
-  caster_class: cleric
   range: 120 ft
   duration: 12 turns (cleric) / 6 turns + 1/level (magic-user)
-  description: >
-    Causes an object or area roughly 30 feet in radius to shine with
-    the brightness of a torch. May be cast on a held item or on a
-    creature's eyes — the latter requires a save vs spells; failure
-    blinds the target for the duration.
+  description: "Causes an object or area roughly 30 feet in radius to shine with the brightness of a torch.\
+    \ May be cast on a held item or on a creature's eyes \u2014 the latter requires a save vs spells;\
+    \ failure blinds the target for the duration.\n"
   damage_or_heal: null
   reversed_form: Darkness
-
+  caster_classes:
+  - cleric
+  - magic_user
 - name: Darkness
   level: 1
-  caster_class: cleric
   range: 120 ft
   duration: 12 turns (cleric) / 6 turns + 1/level (magic-user)
-  description: >
-    The reverse of Light. Cloaks an area in unnatural darkness no
-    ordinary lantern can pierce; even darkvision is reduced. May be
-    used to blind a creature with a failed save vs spells.
+  description: 'The reverse of Light. Cloaks an area in unnatural darkness no ordinary lantern can pierce;
+    even darkvision is reduced. May be used to blind a creature with a failed save vs spells.
+
+    '
   damage_or_heal: null
   reversed_form: Light
-
+  caster_classes:
+  - cleric
 - name: Protection from Evil
   level: 1
-  caster_class: cleric
   range: touch
   duration: 12 turns (cleric) / 2 turns + 1/level (magic-user, but BFRPG cleric uses 12 turns)
-  description: >
-    The recipient gains a magical ward against evil-aligned creatures:
-    -1 to attack rolls made by such enemies and a +1 bonus on saves
-    against their attacks. Summoned, conjured, and undead creatures
-    of evil alignment cannot make melee attacks against the warded
-    creature, though they may still cast spells or fire missiles.
+  description: 'The recipient gains a magical ward against evil-aligned creatures: -1 to attack rolls
+    made by such enemies and a +1 bonus on saves against their attacks. Summoned, conjured, and undead
+    creatures of evil alignment cannot make melee attacks against the warded creature, though they may
+    still cast spells or fire missiles.
+
+    '
   damage_or_heal: null
   reversed_form: Protection from Good
-
+  caster_classes:
+  - cleric
+  - magic_user
 - name: Protection from Good
   level: 1
-  caster_class: cleric
   range: touch
   duration: 12 turns
-  description: >
-    The reverse of Protection from Evil. Wards the recipient against
-    good-aligned creatures with the same -1/+1 mechanic and bars
-    summoned good-aligned creatures from melee contact.
+  description: 'The reverse of Protection from Evil. Wards the recipient against good-aligned creatures
+    with the same -1/+1 mechanic and bars summoned good-aligned creatures from melee contact.
+
+    '
   damage_or_heal: null
   reversed_form: Protection from Evil
-
+  caster_classes:
+  - cleric
 - name: Purify Food and Water
   level: 1
-  caster_class: cleric
   range: 10 ft
   duration: instant
-  description: >
-    Renders enough food and drink for a dozen people fit to eat —
-    cleansing rot, mould, or mundane poison. Magical poisons and
-    venoms are not affected.
+  description: "Renders enough food and drink for a dozen people fit to eat \u2014 cleansing rot, mould,\
+    \ or mundane poison. Magical poisons and venoms are not affected.\n"
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
 - name: Remove Fear
   level: 1
-  caster_class: cleric
   range: touch
   duration: 2 turns
-  description: >
-    The cleric's touch steadies a frightened ally. The recipient is
-    cured of any magical fear effect already on them and gains +1
-    on subsequent saves against fear for the duration. Cast on
-    several recipients in quick succession only by spending the
-    spell separately each time.
+  description: 'The cleric''s touch steadies a frightened ally. The recipient is cured of any magical
+    fear effect already on them and gains +1 on subsequent saves against fear for the duration. Cast on
+    several recipients in quick succession only by spending the spell separately each time.
+
+    '
   damage_or_heal: null
   reversed_form: Cause Fear
-
+  caster_classes:
+  - cleric
 - name: Cause Fear
   level: 1
-  caster_class: cleric
   range: 120 ft
   duration: 2 turns
-  description: >
-    The reverse of Remove Fear. The target must save vs spells or
-    flee in panic for the duration, dropping anything held that
-    impedes flight.
+  description: 'The reverse of Remove Fear. The target must save vs spells or flee in panic for the duration,
+    dropping anything held that impedes flight.
+
+    '
   damage_or_heal: null
   reversed_form: Remove Fear
-
+  caster_classes:
+  - cleric
 - name: Resist Cold
   level: 1
-  caster_class: cleric
   range: touch
   duration: 6 turns
-  description: >
-    The recipient becomes comfortable in temperatures down to roughly
-    zero degrees Fahrenheit and gains +2 on saves against cold-based
-    attacks. Damage from cold sources is reduced by 1 per die.
+  description: 'The recipient becomes comfortable in temperatures down to roughly zero degrees Fahrenheit
+    and gains +2 on saves against cold-based attacks. Damage from cold sources is reduced by 1 per die.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
-# === LEVEL 2 ===
+  caster_classes:
+  - cleric
 - name: Bless
   level: 2
-  caster_class: cleric
   range: 60 ft
   duration: 6 rounds
-  description: >
-    Allies within a 20-foot square area gain +1 to attack rolls and
-    +1 on saves against fear. The spell affects only those who are
-    not already in combat at the moment of casting; once swords are
+  description: 'Allies within a 20-foot square area gain +1 to attack rolls and +1 on saves against fear.
+    The spell affects only those who are not already in combat at the moment of casting; once swords are
     drawn, Bless cannot be invoked on a unit already engaged.
+
+    '
   damage_or_heal: null
   reversed_form: Blight
-
+  caster_classes:
+  - cleric
 - name: Blight
   level: 2
-  caster_class: cleric
   range: 60 ft
   duration: 6 rounds
-  description: >
-    The reverse of Bless. Enemies within the area suffer -1 to
-    attack rolls and -1 on morale checks. Same restriction on
-    pre-combat application.
+  description: 'The reverse of Bless. Enemies within the area suffer -1 to attack rolls and -1 on morale
+    checks. Same restriction on pre-combat application.
+
+    '
   damage_or_heal: null
   reversed_form: Bless
-
+  caster_classes:
+  - cleric
 - name: Find Traps
   level: 2
-  caster_class: cleric
   range: 30 ft
   duration: 3 turns
-  description: >
-    Magical or mechanical traps within a 30-foot path of the cleric
-    glow in the cleric's sight. The spell reveals the trap's
-    presence but not necessarily how to disarm it.
+  description: 'Magical or mechanical traps within a 30-foot path of the cleric glow in the cleric''s
+    sight. The spell reveals the trap''s presence but not necessarily how to disarm it.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
 - name: Hold Person
   level: 2
-  caster_class: cleric
   range: 180 ft
   duration: 9 turns (cleric) / 1 turn + 1/level (magic-user)
-  description: >
-    One human, demi-human, or humanoid creature of roughly human
-    size must save vs paralysis or be frozen in place, helpless,
-    for the duration. Up to four targets may be affected at once;
-    each saves separately, and grouped targets save at +1.
+  description: 'One human, demi-human, or humanoid creature of roughly human size must save vs paralysis
+    or be frozen in place, helpless, for the duration. Up to four targets may be affected at once; each
+    saves separately, and grouped targets save at +1.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
 - name: Resist Fire
   level: 2
-  caster_class: cleric
   range: touch
   duration: 6 turns
-  description: >
-    The recipient becomes immune to ordinary fire and gains +2 on
-    saves against magical fire effects, with damage reduced by 1
-    per die rolled.
+  description: 'The recipient becomes immune to ordinary fire and gains +2 on saves against magical fire
+    effects, with damage reduced by 1 per die rolled.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
 - name: Silence 15 ft Radius
   level: 2
-  caster_class: cleric
   range: 180 ft
   duration: 12 turns
-  description: >
-    A 15-foot-radius area is wholly silent — no sound enters or
-    leaves. Targets cast spells with verbal components fail to
-    function. The silence may be anchored to a moving creature;
-    that creature may save vs spells to refuse the effect.
+  description: "A 15-foot-radius area is wholly silent \u2014 no sound enters or leaves. Targets cast\
+    \ spells with verbal components fail to function. The silence may be anchored to a moving creature;\
+    \ that creature may save vs spells to refuse the effect.\n"
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
 - name: Snake Charm
   level: 2
-  caster_class: cleric
   range: 60 ft
   duration: variable
-  description: >
-    The cleric calms snakes equal in hit dice to their own caster
-    level. The snakes sway hypnotically and will not attack the
-    cleric or their party for the duration: 1d4+1 rounds against
-    snakes already attacking, 1d4+1 turns against snakes at rest.
+  description: 'The cleric calms snakes equal in hit dice to their own caster level. The snakes sway hypnotically
+    and will not attack the cleric or their party for the duration: 1d4+1 rounds against snakes already
+    attacking, 1d4+1 turns against snakes at rest.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
 - name: Speak with Animals
   level: 2
-  caster_class: cleric
   range: 30 ft
   duration: 6 rounds
-  description: >
-    The cleric converses with one type of normal animal (chosen at
-    casting). The animal regards the cleric as a friend and answers
-    questions to the best of its understanding — which is rarely
-    deep, but often surprising.
+  description: "The cleric converses with one type of normal animal (chosen at casting). The animal regards\
+    \ the cleric as a friend and answers questions to the best of its understanding \u2014 which is rarely\
+    \ deep, but often surprising.\n"
   damage_or_heal: null
   reversed_form: null
-
-# === LEVEL 3 ===
+  caster_classes:
+  - cleric
 - name: Continual Light
   level: 3
-  caster_class: cleric
   range: 120 ft
   duration: permanent (until dispelled)
-  description: >
-    Like Light, but the radiance does not fade with time. May be
-    cast onto a small object as a permanent torch or onto a foe's
-    eyes as long-term blindness (save vs spells negates).
+  description: 'Like Light, but the radiance does not fade with time. May be cast onto a small object
+    as a permanent torch or onto a foe''s eyes as long-term blindness (save vs spells negates).
+
+    '
   damage_or_heal: null
   reversed_form: Continual Darkness
-
+  caster_classes:
+  - cleric
 - name: Continual Darkness
   level: 3
-  caster_class: cleric
   range: 120 ft
   duration: permanent (until dispelled)
-  description: >
-    The reverse of Continual Light. Drowns a roughly 30-foot
-    radius in lasting unnatural shadow.
+  description: 'The reverse of Continual Light. Drowns a roughly 30-foot radius in lasting unnatural shadow.
+
+    '
   damage_or_heal: null
   reversed_form: Continual Light
-
+  caster_classes:
+  - cleric
 - name: Cure Blindness
   level: 3
-  caster_class: cleric
   range: touch
   duration: instant
-  description: >
-    Removes any natural or magical blindness afflicting the touched
-    creature. Works on disease, curse, and spell-induced blindness
-    alike, but cannot regrow lost or removed eyes.
+  description: 'Removes any natural or magical blindness afflicting the touched creature. Works on disease,
+    curse, and spell-induced blindness alike, but cannot regrow lost or removed eyes.
+
+    '
   damage_or_heal: null
   reversed_form: Cause Blindness
-
+  caster_classes:
+  - cleric
 - name: Cause Blindness
   level: 3
-  caster_class: cleric
   range: touch
   duration: until cured
-  description: >
-    The reverse of Cure Blindness. The target must save vs spells
-    or be permanently blinded; the affliction persists until lifted
-    by Cure Blindness, Remove Curse, or similar magic.
+  description: 'The reverse of Cure Blindness. The target must save vs spells or be permanently blinded;
+    the affliction persists until lifted by Cure Blindness, Remove Curse, or similar magic.
+
+    '
   damage_or_heal: null
   reversed_form: Cure Blindness
-
+  caster_classes:
+  - cleric
 - name: Cure Disease
   level: 3
-  caster_class: cleric
   range: touch
   duration: instant
-  description: >
-    Cures one disease afflicting the touched creature, including
-    the rotting touch of mummies and lycanthropy in its early
-    stages. Already-transformed lycanthropes are unaffected.
+  description: 'Cures one disease afflicting the touched creature, including the rotting touch of mummies
+    and lycanthropy in its early stages. Already-transformed lycanthropes are unaffected.
+
+    '
   damage_or_heal: null
   reversed_form: Cause Disease
-
+  caster_classes:
+  - cleric
 - name: Cause Disease
   level: 3
-  caster_class: cleric
   range: touch
   duration: until cured
-  description: >
-    The reverse of Cure Disease. A successful melee touch and a
-    failed save vs spells inflict a wasting disease: the target
-    cannot heal naturally, loses 1 hit point per day, and suffers
-    -2 on attack rolls until cured.
+  description: 'The reverse of Cure Disease. A successful melee touch and a failed save vs spells inflict
+    a wasting disease: the target cannot heal naturally, loses 1 hit point per day, and suffers -2 on
+    attack rolls until cured.
+
+    '
   damage_or_heal: null
   reversed_form: Cure Disease
-
+  caster_classes:
+  - cleric
 - name: Locate Object
   level: 3
-  caster_class: cleric
   range: 120 ft + 10 ft/level (cleric)
   duration: 6 rounds
-  description: >
-    The cleric senses the direction (but not distance) to a
-    specific object known by description, or to the nearest object
-    of a general kind ("a silver chalice", "a stairway down").
+  description: 'The cleric senses the direction (but not distance) to a specific object known by description,
+    or to the nearest object of a general kind ("a silver chalice", "a stairway down").
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
 - name: Remove Curse
   level: 3
-  caster_class: cleric
   range: touch
   duration: instant
-  description: >
-    Removes one curse afflicting the touched creature or item.
-    Some powerful curses may resist a low-level cleric; the GM
-    may rule that a curse of higher level than the caster has a
-    chance to persist.
+  description: 'Removes one curse afflicting the touched creature or item. Some powerful curses may resist
+    a low-level cleric; the GM may rule that a curse of higher level than the caster has a chance to persist.
+
+    '
   damage_or_heal: null
   reversed_form: Bestow Curse
-
+  caster_classes:
+  - cleric
 - name: Bestow Curse
   level: 3
-  caster_class: cleric
   range: touch
   duration: until removed
-  description: >
-    The reverse of Remove Curse. The target must save vs spells
-    or suffer a curse chosen by the cleric: -2 on a single ability
-    score, -2 to attack rolls, or a similar persistent affliction
-    of comparable weight.
+  description: 'The reverse of Remove Curse. The target must save vs spells or suffer a curse chosen by
+    the cleric: -2 on a single ability score, -2 to attack rolls, or a similar persistent affliction of
+    comparable weight.
+
+    '
   damage_or_heal: null
   reversed_form: Remove Curse
-
+  caster_classes:
+  - cleric
 - name: Striking
   level: 3
-  caster_class: cleric
   range: touch
   duration: 1 turn
-  description: >
-    A weapon touched by the cleric deals an additional 1d6 damage
-    on each successful hit. Treats the weapon as magical for the
-    duration for purposes of striking creatures struck only by
-    enchanted arms.
-  damage_or_heal: "+1d6 per hit"
-  reversed_form: null
+  description: 'A weapon touched by the cleric deals an additional 1d6 damage on each successful hit.
+    Treats the weapon as magical for the duration for purposes of striking creatures struck only by enchanted
+    arms.
 
-# === LEVEL 4 ===
+    '
+  damage_or_heal: +1d6 per hit
+  reversed_form: null
+  caster_classes:
+  - cleric
 - name: Create Water
   level: 4
-  caster_class: cleric
   range: 10 ft
   duration: instant
-  description: >
-    The cleric calls forth clean water — enough for a dozen people
-    and their mounts for a day. The water does not vanish; once
-    created it persists like any other.
+  description: "The cleric calls forth clean water \u2014 enough for a dozen people and their mounts for\
+    \ a day. The water does not vanish; once created it persists like any other.\n"
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
 - name: Cure Serious Wounds
   level: 4
-  caster_class: cleric
   range: touch
   duration: instant
-  description: >
-    Restores 2d6+2 hit points to a wounded creature. As with Cure
-    Light Wounds, undead are unaffected by the healing form and
-    take damage from the reverse.
-  damage_or_heal: "2d6+2"
-  reversed_form: Cause Serious Wounds
+  description: 'Restores 2d6+2 hit points to a wounded creature. As with Cure Light Wounds, undead are
+    unaffected by the healing form and take damage from the reverse.
 
+    '
+  damage_or_heal: 2d6+2
+  reversed_form: Cause Serious Wounds
+  caster_classes:
+  - cleric
 - name: Cause Serious Wounds
   level: 4
-  caster_class: cleric
   range: touch
   duration: instant
-  description: >
-    The reverse of Cure Serious Wounds. A successful melee touch
-    inflicts 2d6+2 damage.
-  damage_or_heal: "2d6+2"
-  reversed_form: Cure Serious Wounds
+  description: 'The reverse of Cure Serious Wounds. A successful melee touch inflicts 2d6+2 damage.
 
+    '
+  damage_or_heal: 2d6+2
+  reversed_form: Cure Serious Wounds
+  caster_classes:
+  - cleric
 - name: Neutralise Poison
   level: 4
-  caster_class: cleric
   range: touch
   duration: instant
-  description: >
-    Counters poison in the touched creature's body — magical or
-    mundane — and may revive a victim who died from poison within
-    the previous 10 rounds. Cannot restore a creature that died
-    of poisoning longer ago.
+  description: "Counters poison in the touched creature's body \u2014 magical or mundane \u2014 and may\
+    \ revive a victim who died from poison within the previous 10 rounds. Cannot restore a creature that\
+    \ died of poisoning longer ago.\n"
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
 - name: Protection from Evil 10 ft Radius
   level: 4
-  caster_class: cleric
   range: touch
   duration: 12 turns (cleric)
-  description: >
-    As Protection from Evil, but the warding extends in a 10-foot
-    radius around the recipient and protects all allies within it.
+  description: 'As Protection from Evil, but the warding extends in a 10-foot radius around the recipient
+    and protects all allies within it.
+
+    '
   damage_or_heal: null
   reversed_form: Protection from Good 10 ft Radius
-
+  caster_classes:
+  - cleric
 - name: Protection from Good 10 ft Radius
   level: 4
-  caster_class: cleric
   range: touch
   duration: 12 turns
-  description: >
-    The reverse of the previous, with the same area effect.
+  description: 'The reverse of the previous, with the same area effect.
+
+    '
   damage_or_heal: null
   reversed_form: Protection from Evil 10 ft Radius
-
+  caster_classes:
+  - cleric
 - name: Speak with Plants
   level: 4
-  caster_class: cleric
   range: 30 ft
   duration: 6 rounds
-  description: >
-    The cleric communicates with normal plant-life and the various
-    plant-creatures of the world. Plants are slow conversationalists
-    and remember little, but may report what passed nearby in the
-    last day or so.
+  description: 'The cleric communicates with normal plant-life and the various plant-creatures of the
+    world. Plants are slow conversationalists and remember little, but may report what passed nearby in
+    the last day or so.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
 - name: Sticks to Snakes
   level: 4
-  caster_class: cleric
   range: 30 ft
   duration: 6 rounds
-  description: >
-    The cleric transforms 2d8 ordinary sticks within range into
-    snakes that obey simple commands. Roughly half the snakes
-    will be venomous (GM's discretion). At the spell's end the
-    snakes return to inanimate wood wherever they happen to be.
+  description: 'The cleric transforms 2d8 ordinary sticks within range into snakes that obey simple commands.
+    Roughly half the snakes will be venomous (GM''s discretion). At the spell''s end the snakes return
+    to inanimate wood wherever they happen to be.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
-# === LEVEL 5 ===
+  caster_classes:
+  - cleric
 - name: Commune
   level: 5
-  caster_class: cleric
   range: self
   duration: 3 questions
-  description: >
-    The cleric petitions their deity for guidance. The cleric may
-    ask three yes-or-no questions; the answers are short and
-    truthful within the limits of the deity's knowledge. May be
-    used at most once per week without provoking divine displeasure.
+  description: 'The cleric petitions their deity for guidance. The cleric may ask three yes-or-no questions;
+    the answers are short and truthful within the limits of the deity''s knowledge. May be used at most
+    once per week without provoking divine displeasure.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
 - name: Create Food
   level: 5
-  caster_class: cleric
   range: 10 ft
   duration: instant
-  description: >
-    The cleric calls forth a day's worth of plain food for up to
-    a dozen people. The food is wholesome and filling but rarely
-    interesting.
+  description: 'The cleric calls forth a day''s worth of plain food for up to a dozen people. The food
+    is wholesome and filling but rarely interesting.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
 - name: Dispel Evil
   level: 5
-  caster_class: cleric
   range: touch
   duration: 1 turn or instant
-  description: >
-    Drives off summoned, conjured, or extra-planar evil creatures
-    on a successful save vs spells (against the cleric, made by
-    the creature). Against undead, the spell instead grants the
-    cleric +2 to attack and damage rolls against them for the
-    duration.
+  description: 'Drives off summoned, conjured, or extra-planar evil creatures on a successful save vs
+    spells (against the cleric, made by the creature). Against undead, the spell instead grants the cleric
+    +2 to attack and damage rolls against them for the duration.
+
+    '
   damage_or_heal: null
   reversed_form: Dispel Good
-
+  caster_classes:
+  - cleric
 - name: Dispel Good
   level: 5
-  caster_class: cleric
   range: touch
   duration: 1 turn or instant
-  description: >
-    The reverse of Dispel Evil — drives off summoned good creatures
-    or grants the cleric advantage in striking holy guardians.
+  description: "The reverse of Dispel Evil \u2014 drives off summoned good creatures or grants the cleric\
+    \ advantage in striking holy guardians.\n"
   damage_or_heal: null
   reversed_form: Dispel Evil
-
+  caster_classes:
+  - cleric
 - name: Insect Plague
   level: 5
-  caster_class: cleric
   range: 480 ft
   duration: 1 day
-  description: >
-    The cleric calls down a roiling swarm of biting and stinging
-    insects in a 60-foot diameter cloud. Creatures of fewer than
-    3 hit dice flee on sight; those caught inside take 1 hp damage
-    per round and cannot effectively cast spells or fire missiles.
-  damage_or_heal: "1 per round"
-  reversed_form: null
+  description: 'The cleric calls down a roiling swarm of biting and stinging insects in a 60-foot diameter
+    cloud. Creatures of fewer than 3 hit dice flee on sight; those caught inside take 1 hp damage per
+    round and cannot effectively cast spells or fire missiles.
 
+    '
+  damage_or_heal: 1 per round
+  reversed_form: null
+  caster_classes:
+  - cleric
 - name: Quest
   level: 5
-  caster_class: cleric
   range: 30 ft
   duration: until completed
-  description: >
-    The cleric lays a holy charge upon the target, who must save
-    vs spells or be compelled to undertake the named task. Refusing
-    the quest brings progressive misfortune at the GM's discretion;
+  description: 'The cleric lays a holy charge upon the target, who must save vs spells or be compelled
+    to undertake the named task. Refusing the quest brings progressive misfortune at the GM''s discretion;
     completion lifts the geas naturally.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - cleric
 - name: Raise Dead
   level: 5
-  caster_class: cleric
   range: touch
   duration: instant
-  description: >
-    Restores life to a humanoid creature dead no more than 4 days
-    per cleric level. The recipient returns at 1 hit point, must
-    rest a fortnight to recover, and must succeed on a save vs
-    death ray to actually be raised — the older the corpse, the
-    harder the saving throw.
+  description: "Restores life to a humanoid creature dead no more than 4 days per cleric level. The recipient\
+    \ returns at 1 hit point, must rest a fortnight to recover, and must succeed on a save vs death ray\
+    \ to actually be raised \u2014 the older the corpse, the harder the saving throw.\n"
   damage_or_heal: null
   reversed_form: Finger of Death
-
+  caster_classes:
+  - cleric
 - name: Finger of Death
   level: 5
-  caster_class: cleric
   range: 120 ft
   duration: instant
-  description: >
-    The reverse of Raise Dead. The target must save vs death ray
-    or perish on the spot. Even on a successful save the target
-    takes 2d8+1 damage from the failed strike.
-  damage_or_heal: "2d8+1 on save"
-  reversed_form: Raise Dead
+  description: 'The reverse of Raise Dead. The target must save vs death ray or perish on the spot. Even
+    on a successful save the target takes 2d8+1 damage from the failed strike.
 
+    '
+  damage_or_heal: 2d8+1 on save
+  reversed_form: Raise Dead
+  caster_classes:
+  - cleric
 - name: Restore
   level: 5
-  caster_class: cleric
   range: touch
   duration: instant
-  description: >
-    Reverses one level of energy drain (such as that of a wight or
-    wraith), restoring lost levels and hit dice. The cleric is
-    drained of 2d4 hit points by the casting and cannot cast the
-    spell again that day.
+  description: 'Reverses one level of energy drain (such as that of a wight or wraith), restoring lost
+    levels and hit dice. The cleric is drained of 2d4 hit points by the casting and cannot cast the spell
+    again that day.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
-# --------------------------------------------------------------------------
-# MAGIC-USER SPELLS
-# --------------------------------------------------------------------------
-
-# === LEVEL 1 ===
+  caster_classes:
+  - cleric
 - name: Charm Person
   level: 1
-  caster_class: magic_user
   range: 120 ft
   duration: until dispelled or save renews
-  description: >
-    A single human or humanoid of fewer than 5 hit dice must save
-    vs spells or regard the caster as a trusted friend. The target
-    obeys reasonable requests, but never orders that obviously
-    threaten its life. A new save is permitted periodically — daily
-    for low-Int creatures, more often for sharp ones.
+  description: "A single human or humanoid of fewer than 5 hit dice must save vs spells or regard the\
+    \ caster as a trusted friend. The target obeys reasonable requests, but never orders that obviously\
+    \ threaten its life. A new save is permitted periodically \u2014 daily for low-Int creatures, more\
+    \ often for sharp ones.\n"
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Floating Disc
   level: 1
-  caster_class: magic_user
   range: self
   duration: 6 turns
-  description: >
-    A flat disc of force, three feet across, hovers at waist height
-    behind the caster and follows them. It can carry roughly 500
-    pounds of gear and dissolves harmlessly at the spell's end —
-    items on it fall the short distance to the floor.
+  description: "A flat disc of force, three feet across, hovers at waist height behind the caster and\
+    \ follows them. It can carry roughly 500 pounds of gear and dissolves harmlessly at the spell's end\
+    \ \u2014 items on it fall the short distance to the floor.\n"
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Hold Portal
   level: 1
-  caster_class: magic_user
   range: 10 ft
   duration: 2d6 turns
-  description: >
-    Holds shut one door, gate, or window of normal size and weight
-    against intrusion. A creature with magical strength or a
-    Knock spell can override the effect; otherwise force is the
-    only recourse, and the GM may rule a sustained ramming
-    eventually splinters the bound portal.
+  description: 'Holds shut one door, gate, or window of normal size and weight against intrusion. A creature
+    with magical strength or a Knock spell can override the effect; otherwise force is the only recourse,
+    and the GM may rule a sustained ramming eventually splinters the bound portal.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Magic Missile
   level: 1
-  caster_class: magic_user
   range: 150 ft
   duration: instant
-  description: >
-    A glowing dart of force leaps from the caster's hand and unerringly
-    strikes a visible target for 1d6+1 damage. No attack roll is
-    required and the missile cannot miss, though invisible or wholly
-    obscured targets cannot be aimed at. At every fifth caster level
-    (5th, 10th, 15th, 20th) the spell produces one additional missile.
-  damage_or_heal: "1d6+1 per missile"
-  reversed_form: null
+  description: 'A glowing dart of force leaps from the caster''s hand and unerringly strikes a visible
+    target for 1d6+1 damage. No attack roll is required and the missile cannot miss, though invisible
+    or wholly obscured targets cannot be aimed at. At every fifth caster level (5th, 10th, 15th, 20th)
+    the spell produces one additional missile.
 
+    '
+  damage_or_heal: 1d6+1 per missile
+  reversed_form: null
+  caster_classes:
+  - magic_user
 - name: Read Languages
   level: 1
-  caster_class: magic_user
   range: self
   duration: 2 turns
-  description: >
-    For the duration the caster understands any non-magical script,
-    cipher, or language. The spell does not transcribe what is
-    read; the caster must remember or copy by hand.
+  description: 'For the duration the caster understands any non-magical script, cipher, or language. The
+    spell does not transcribe what is read; the caster must remember or copy by hand.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Read Magic
   level: 1
-  caster_class: magic_user
   range: self
   duration: 2 turns
-  description: >
-    The caster reads spells in another magic-user's spellbook, on
-    a scroll, or scribed on an object — without this spell, magical
-    writing is impenetrable to anyone but its author. Once read,
-    the spell remains intelligible to the caster permanently.
+  description: "The caster reads spells in another magic-user's spellbook, on a scroll, or scribed on\
+    \ an object \u2014 without this spell, magical writing is impenetrable to anyone but its author. Once\
+    \ read, the spell remains intelligible to the caster permanently.\n"
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Shield
   level: 1
-  caster_class: magic_user
   range: self
   duration: 2 turns
-  description: >
-    A nearly invisible barrier of force surrounds the caster, granting
-    AC 17 against missile attacks and AC 15 against melee attacks
-    (regardless of any worse base AC). Stacks with Dexterity bonuses
+  description: 'A nearly invisible barrier of force surrounds the caster, granting AC 17 against missile
+    attacks and AC 15 against melee attacks (regardless of any worse base AC). Stacks with Dexterity bonuses
     but not with worn armour, which the magic-user typically lacks.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Sleep
   level: 1
-  caster_class: magic_user
   range: 240 ft
   duration: 4d4 turns
-  description: >
-    Targets within a 30-foot diameter area fall into a magical
-    slumber, no save permitted. The spell affects up to 2d8 hit
-    dice of creatures, taking the lowest-HD targets first; nothing
-    of 4+1 hit dice or higher is affected. Sleeping creatures may
-    be slain or bound trivially.
+  description: 'Targets within a 30-foot diameter area fall into a magical slumber, no save permitted.
+    The spell affects up to 2d8 hit dice of creatures, taking the lowest-HD targets first; nothing of
+    4+1 hit dice or higher is affected. Sleeping creatures may be slain or bound trivially.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Ventriloquism
   level: 1
-  caster_class: magic_user
   range: 60 ft
   duration: 2 turns
-  description: >
-    The caster's voice issues from any visible object or creature
-    within range. Onlookers may save vs spells to recognise the
-    deception; clever phrasing improves or worsens the chance at
-    the GM's call.
+  description: 'The caster''s voice issues from any visible object or creature within range. Onlookers
+    may save vs spells to recognise the deception; clever phrasing improves or worsens the chance at the
+    GM''s call.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
-# === LEVEL 2 ===
+  caster_classes:
+  - magic_user
 - name: Continual Light (Magic-User)
   level: 2
-  caster_class: magic_user
   range: 60 ft
   duration: permanent
-  description: >
-    As the cleric spell of the same name, but cast as a 2nd-level
-    magic-user spell with a shorter range. Conjures a permanent
-    light bright as full sunlight in a 30-foot radius.
+  description: 'As the cleric spell of the same name, but cast as a 2nd-level magic-user spell with a
+    shorter range. Conjures a permanent light bright as full sunlight in a 30-foot radius.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Detect Evil (Magic-User)
   level: 2
-  caster_class: magic_user
   range: 60 ft
   duration: 2 turns
-  description: >
-    As the cleric Detect Evil, with a shorter range and duration.
+  description: 'As the cleric Detect Evil, with a shorter range and duration.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Detect Invisibility
   level: 2
-  caster_class: magic_user
   range: 10 ft/level
   duration: 6 turns
-  description: >
-    The caster sees invisible creatures, objects, and outlines of
-    illusory effects within range. The spell pierces ordinary
-    invisibility and most lesser disguises but does not reveal
-    creatures actively dimensionally elsewhere.
+  description: 'The caster sees invisible creatures, objects, and outlines of illusory effects within
+    range. The spell pierces ordinary invisibility and most lesser disguises but does not reveal creatures
+    actively dimensionally elsewhere.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: ESP
   level: 2
-  caster_class: magic_user
   range: 60 ft
   duration: 12 turns
-  description: >
-    The caster reads surface thoughts of one creature in line of
-    sight per round of concentration. Stone walls block the
-    effect; even thin metal foils it; mindless creatures and
-    most undead present no thoughts to read.
+  description: 'The caster reads surface thoughts of one creature in line of sight per round of concentration.
+    Stone walls block the effect; even thin metal foils it; mindless creatures and most undead present
+    no thoughts to read.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Invisibility
   level: 2
-  caster_class: magic_user
   range: touch
   duration: until attack or dispelled
-  description: >
-    The recipient (and what they wear or carry) becomes
-    invisible. The spell ends the moment the recipient makes
-    an attack — including casting a damaging spell — but
-    unrelated activity such as moving, hiding, or talking does
-    not break it.
+  description: "The recipient (and what they wear or carry) becomes invisible. The spell ends the moment\
+    \ the recipient makes an attack \u2014 including casting a damaging spell \u2014 but unrelated activity\
+    \ such as moving, hiding, or talking does not break it.\n"
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Knock
   level: 2
-  caster_class: magic_user
   range: 60 ft
   duration: instant
-  description: >
-    Opens any one stuck, locked, barred, or magically held portal
-    within range. A particularly strong magical lock (greater
-    than the caster's level) may resist; otherwise the door,
-    chest, or gate springs open at once.
+  description: 'Opens any one stuck, locked, barred, or magically held portal within range. A particularly
+    strong magical lock (greater than the caster''s level) may resist; otherwise the door, chest, or gate
+    springs open at once.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Levitate
   level: 2
-  caster_class: magic_user
   range: self
   duration: 1 turn/level
-  description: >
-    The caster rises and descends vertically at will, up to 60
-    feet per round. Horizontal movement requires a wall or rope
-    to push off from. Cannot be cast on others.
+  description: 'The caster rises and descends vertically at will, up to 60 feet per round. Horizontal
+    movement requires a wall or rope to push off from. Cannot be cast on others.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Locate Object (Magic-User)
   level: 2
-  caster_class: magic_user
   range: 60 ft + 10 ft/level
   duration: 6 rounds
-  description: >
-    As the cleric Locate Object spell, but learned by magic-users
-    at 2nd level.
+  description: 'As the cleric Locate Object spell, but learned by magic-users at 2nd level.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Mirror Image
   level: 2
-  caster_class: magic_user
   range: self
   duration: 6 turns
-  description: >
-    1d4 illusory duplicates of the caster appear and shift
-    positions with them. Each missed attack first determines
-    whether it would have struck a duplicate (which then
-    dissipates) or the caster proper.
+  description: '1d4 illusory duplicates of the caster appear and shift positions with them. Each missed
+    attack first determines whether it would have struck a duplicate (which then dissipates) or the caster
+    proper.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Phantasmal Force
   level: 2
-  caster_class: magic_user
   range: 240 ft
   duration: concentration
-  description: >
-    The caster creates a vivid illusion of size up to a
-    20-foot cube that responds to their concentration. Creatures
-    who believe the illusion may be harmed by it (damage as if
-    the depicted threat were real, save vs spells halves);
-    creatures who disbelieve see through it. Breaking
-    concentration ends the effect.
+  description: 'The caster creates a vivid illusion of size up to a 20-foot cube that responds to their
+    concentration. Creatures who believe the illusion may be harmed by it (damage as if the depicted threat
+    were real, save vs spells halves); creatures who disbelieve see through it. Breaking concentration
+    ends the effect.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Web
   level: 2
-  caster_class: magic_user
   range: 10 ft
   duration: 48 turns
-  description: >
-    Strands of sticky, magical webbing fill a 10-foot cube.
-    Creatures caught in the web are immobilised; a creature
-    with normal strength escapes in 2d4 turns, a strong creature
-    in 4 rounds, a giant or stronger in 2 rounds. The webs burn
-    fiercely if torched, dealing 1d6 damage to those caught.
-  damage_or_heal: "1d6 if burned"
-  reversed_form: null
+  description: 'Strands of sticky, magical webbing fill a 10-foot cube. Creatures caught in the web are
+    immobilised; a creature with normal strength escapes in 2d4 turns, a strong creature in 4 rounds,
+    a giant or stronger in 2 rounds. The webs burn fiercely if torched, dealing 1d6 damage to those caught.
 
-# === LEVEL 3 ===
+    '
+  damage_or_heal: 1d6 if burned
+  reversed_form: null
+  caster_classes:
+  - magic_user
 - name: Clairvoyance
   level: 3
-  caster_class: magic_user
   range: 60 ft
   duration: 12 turns
-  description: >
-    The caster perceives sound or sight (caster's choice at
-    casting) at a single point within range, as if standing
-    there. Stone walls, lead, and certain magical wards block
-    the perception.
+  description: 'The caster perceives sound or sight (caster''s choice at casting) at a single point within
+    range, as if standing there. Stone walls, lead, and certain magical wards block the perception.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Dispel Magic
   level: 3
-  caster_class: magic_user
   range: 120 ft
   duration: instant
-  description: >
-    Cancels ongoing magical effects within a 20-foot cube.
-    Each effect tests against the caster's level: an effect of
-    equal or lower level dispels automatically; higher-level
-    effects may resist on a percentage chance equal to 5% per
-    level of difference.
+  description: 'Cancels ongoing magical effects within a 20-foot cube. Each effect tests against the caster''s
+    level: an effect of equal or lower level dispels automatically; higher-level effects may resist on
+    a percentage chance equal to 5% per level of difference.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Fire Ball
   level: 3
-  caster_class: magic_user
   range: 240 ft
   duration: instant
-  description: >
-    A bead of fire streaks from the caster and bursts into a
-    20-foot radius sphere of flame, dealing 1d6 damage per
-    caster level (save vs spells halves). The blast follows
-    line-of-sight from the impact point and may surge into
-    side passages — careful aiming is the caster's responsibility.
-  damage_or_heal: "1d6 per level"
+  description: "A bead of fire streaks from the caster and bursts into a 20-foot radius sphere of flame,\
+    \ dealing 1d6 damage per caster level (save vs spells halves). The blast follows line-of-sight from\
+    \ the impact point and may surge into side passages \u2014 careful aiming is the caster's responsibility.\n"
+  damage_or_heal: 1d6 per level
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Fly
   level: 3
-  caster_class: magic_user
   range: touch
   duration: 1 turn/level + 1d6 turns (secret)
-  description: >
-    The recipient flies at 120 feet per round in any direction.
-    The exact duration is rolled secretly by the GM and not
-    revealed; the recipient feels themselves growing tired
-    only in the last few rounds.
+  description: 'The recipient flies at 120 feet per round in any direction. The exact duration is rolled
+    secretly by the GM and not revealed; the recipient feels themselves growing tired only in the last
+    few rounds.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Haste
   level: 3
-  caster_class: magic_user
   range: 240 ft
   duration: 3 turns
-  description: >
-    Up to 24 creatures within a 60-foot diameter area double
-    their movement and gain a second melee attack each round.
-    The spell does not stack with itself.
+  description: 'Up to 24 creatures within a 60-foot diameter area double their movement and gain a second
+    melee attack each round. The spell does not stack with itself.
+
+    '
   damage_or_heal: null
   reversed_form: Slow
-
+  caster_classes:
+  - magic_user
 - name: Slow
   level: 3
-  caster_class: magic_user
   range: 240 ft
   duration: 3 turns
-  description: >
-    The reverse of Haste. Up to 24 creatures within a 60-foot
-    diameter area must save vs spells or have movement halved
-    and attacks reduced to one every other round.
+  description: 'The reverse of Haste. Up to 24 creatures within a 60-foot diameter area must save vs spells
+    or have movement halved and attacks reduced to one every other round.
+
+    '
   damage_or_heal: null
   reversed_form: Haste
-
+  caster_classes:
+  - magic_user
 - name: Hold Person (Magic-User)
   level: 3
-  caster_class: magic_user
   range: 120 ft
   duration: 1 turn + 1/level
-  description: >
-    As the cleric spell of the same name; magic-users learn it
-    one level later.
+  description: 'As the cleric spell of the same name; magic-users learn it one level later.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Infravision
   level: 3
-  caster_class: magic_user
   range: touch
   duration: 1 day
-  description: >
-    The recipient sees warm-bodied creatures by their own heat
-    in darkness, out to 60 feet. Cold objects and creatures
-    register only by reflected warmth, and bright firelight
-    blinds the user as long as it remains in view.
+  description: 'The recipient sees warm-bodied creatures by their own heat in darkness, out to 60 feet.
+    Cold objects and creatures register only by reflected warmth, and bright firelight blinds the user
+    as long as it remains in view.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Invisibility 10 ft Radius
   level: 3
-  caster_class: magic_user
   range: touch
   duration: until attack or dispelled
-  description: >
-    As Invisibility, but the effect extends to all within 10
-    feet of the recipient. Any character who attacks becomes
-    visible; the rest remain unseen so long as they keep
-    within range.
+  description: 'As Invisibility, but the effect extends to all within 10 feet of the recipient. Any character
+    who attacks becomes visible; the rest remain unseen so long as they keep within range.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Lightning Bolt
   level: 3
-  caster_class: magic_user
   range: 180 ft
   duration: instant
-  description: >
-    A 60-foot line of crackling lightning leaps from the caster's
-    fingers, dealing 1d6 damage per caster level (save vs spells
-    halves). The bolt rebounds off solid barriers; an over-aimed
-    bolt can return on the caster's own party.
-  damage_or_heal: "1d6 per level"
-  reversed_form: null
+  description: 'A 60-foot line of crackling lightning leaps from the caster''s fingers, dealing 1d6 damage
+    per caster level (save vs spells halves). The bolt rebounds off solid barriers; an over-aimed bolt
+    can return on the caster''s own party.
 
+    '
+  damage_or_heal: 1d6 per level
+  reversed_form: null
+  caster_classes:
+  - magic_user
 - name: Protection from Evil 10 ft Radius (Magic-User)
   level: 3
-  caster_class: magic_user
   range: touch
   duration: 2 turns + 1/level
-  description: >
-    As the cleric spell, available to magic-users at 3rd level.
+  description: 'As the cleric spell, available to magic-users at 3rd level.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Protection from Normal Missiles
   level: 3
-  caster_class: magic_user
   range: touch
   duration: 12 turns
-  description: >
-    The recipient is wholly immune to non-magical thrown weapons,
-    arrows, sling stones, and crossbow bolts. Magical missiles
-    (such as a +1 arrow, or a Magic Missile spell) bypass the
-    protection unimpaired.
+  description: 'The recipient is wholly immune to non-magical thrown weapons, arrows, sling stones, and
+    crossbow bolts. Magical missiles (such as a +1 arrow, or a Magic Missile spell) bypass the protection
+    unimpaired.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Water Breathing
   level: 3
-  caster_class: magic_user
   range: touch
   duration: 1 day
-  description: >
-    The recipient draws breath underwater as easily as in air.
-    The spell does not aid swimming, vision, or speech beneath
-    the surface.
+  description: 'The recipient draws breath underwater as easily as in air. The spell does not aid swimming,
+    vision, or speech beneath the surface.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
-# === LEVEL 4 ===
+  caster_classes:
+  - magic_user
 - name: Charm Monster
   level: 4
-  caster_class: magic_user
   range: 120 ft
   duration: until save renews
-  description: >
-    Like Charm Person, but works on any one creature regardless
-    of type, or on 3d6 hit dice worth of creatures of 3 hit dice
-    or fewer. Affected creatures regard the caster as a trusted
-    ally; periodic saves are permitted as for Charm Person.
+  description: 'Like Charm Person, but works on any one creature regardless of type, or on 3d6 hit dice
+    worth of creatures of 3 hit dice or fewer. Affected creatures regard the caster as a trusted ally;
+    periodic saves are permitted as for Charm Person.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Confusion
   level: 4
-  caster_class: magic_user
   range: 120 ft
   duration: 12 rounds
-  description: >
-    2d6 creatures within a 60-foot diameter area must save vs
-    spells; those who fail behave erratically each round, rolling
-    on a confusion table — wandering off, attacking the nearest
-    creature (friend or foe), babbling, or standing still.
+  description: "2d6 creatures within a 60-foot diameter area must save vs spells; those who fail behave\
+    \ erratically each round, rolling on a confusion table \u2014 wandering off, attacking the nearest\
+    \ creature (friend or foe), babbling, or standing still.\n"
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Dimension Door
   level: 4
-  caster_class: magic_user
   range: 10 ft
   duration: instant
-  description: >
-    The caster (and up to 1500 coins of weight carried) teleports
-    to a chosen point up to 360 feet away. Line of sight is not
-    required, but the destination must be known or accurately
-    described — guesswork carries the usual teleport hazards.
+  description: "The caster (and up to 1500 coins of weight carried) teleports to a chosen point up to\
+    \ 360 feet away. Line of sight is not required, but the destination must be known or accurately described\
+    \ \u2014 guesswork carries the usual teleport hazards.\n"
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Growth of Plants
   level: 4
-  caster_class: magic_user
   range: 120 ft
   duration: permanent
-  description: >
-    A 20-foot square area of normal vegetation thickens into
-    near-impassable undergrowth, blocking line of sight and
-    halving movement. The growth is permanent until cleared
-    by hand or fire.
+  description: 'A 20-foot square area of normal vegetation thickens into near-impassable undergrowth,
+    blocking line of sight and halving movement. The growth is permanent until cleared by hand or fire.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Hallucinatory Terrain
   level: 4
-  caster_class: magic_user
   range: 240 ft
   duration: until dispelled or touched
-  description: >
-    A natural area up to 40-foot square per caster level appears
-    different — hill becomes pond, forest becomes barren plain.
-    The illusion is as durable as Phantasmal Force but does not
-    deal damage; touching the disguised feature reveals it.
+  description: "A natural area up to 40-foot square per caster level appears different \u2014 hill becomes\
+    \ pond, forest becomes barren plain. The illusion is as durable as Phantasmal Force but does not deal\
+    \ damage; touching the disguised feature reveals it.\n"
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Ice Storm
   level: 4
-  caster_class: magic_user
   range: 120 ft
   duration: 1 round
-  description: >
-    Hailstones the size of fists fall in a 20-foot radius column,
-    dealing 3d10 damage to all caught beneath (save vs spells
-    halves). The ground is left coated with slick ice that halves
-    movement for the next turn.
-  damage_or_heal: "3d10"
-  reversed_form: null
+  description: 'Hailstones the size of fists fall in a 20-foot radius column, dealing 3d10 damage to all
+    caught beneath (save vs spells halves). The ground is left coated with slick ice that halves movement
+    for the next turn.
 
+    '
+  damage_or_heal: 3d10
+  reversed_form: null
+  caster_classes:
+  - magic_user
 - name: Massmorph
   level: 4
-  caster_class: magic_user
   range: 240 ft
   duration: until dispelled
-  description: >
-    Up to 100 human-sized creatures become indistinguishable from
-    a thicket or copse of trees. The disguised group may move
-    slowly without breaking the illusion; running or fighting
-    ends the spell at once.
+  description: 'Up to 100 human-sized creatures become indistinguishable from a thicket or copse of trees.
+    The disguised group may move slowly without breaking the illusion; running or fighting ends the spell
+    at once.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Plant Growth
   level: 4
-  caster_class: magic_user
   range: 120 ft
   duration: permanent
-  description: >
-    A duplicate name historically used for Growth of Plants in
-    BFRPG; included here to disambiguate edition variations. A
-    GM may treat the two entries as the same spell.
+  description: 'A duplicate name historically used for Growth of Plants in BFRPG; included here to disambiguate
+    edition variations. A GM may treat the two entries as the same spell.
+
+    '
   damage_or_heal: null
   reversed_form: null
   source: variant
-
+  caster_classes:
+  - magic_user
 - name: Polymorph Other
   level: 4
-  caster_class: magic_user
   range: 60 ft
   duration: until dispelled
-  description: >
-    The caster transforms a single living creature into another
-    creature of choice (save vs spells negates). The new form's
-    physical statistics replace the target's; the target's mind
-    and hit points remain. A polymorphed creature must save vs
-    spells per day to keep its own personality, lest it lose
-    itself in the new shape.
+  description: 'The caster transforms a single living creature into another creature of choice (save vs
+    spells negates). The new form''s physical statistics replace the target''s; the target''s mind and
+    hit points remain. A polymorphed creature must save vs spells per day to keep its own personality,
+    lest it lose itself in the new shape.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Polymorph Self
   level: 4
-  caster_class: magic_user
   range: self
   duration: 6 turns + 1/level
-  description: >
-    The caster assumes the shape of any animal they have studied,
-    of size up to that of a horse. Hit points and mental ability
-    remain the caster's own, but physical capabilities are those
+  description: 'The caster assumes the shape of any animal they have studied, of size up to that of a
+    horse. Hit points and mental ability remain the caster''s own, but physical capabilities are those
     of the new form. The caster may shift back at will.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Remove Curse (Magic-User)
   level: 4
-  caster_class: magic_user
   range: touch
   duration: instant
-  description: >
-    As the cleric spell, available to magic-users at 4th level.
+  description: 'As the cleric spell, available to magic-users at 4th level.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Wall of Fire
   level: 4
-  caster_class: magic_user
   range: 60 ft
   duration: concentration or 1 turn
-  description: >
-    A sheet of flame springs into being, opaque and impassable
-    to creatures of fewer than 4 hit dice. Crossing the wall
-    deals 2d6 damage; undead and cold-using creatures take 4d6.
-  damage_or_heal: "2d6 (4d6 vs undead/cold)"
-  reversed_form: null
+  description: 'A sheet of flame springs into being, opaque and impassable to creatures of fewer than
+    4 hit dice. Crossing the wall deals 2d6 damage; undead and cold-using creatures take 4d6.
 
+    '
+  damage_or_heal: 2d6 (4d6 vs undead/cold)
+  reversed_form: null
+  caster_classes:
+  - magic_user
 - name: Wall of Ice
   level: 4
-  caster_class: magic_user
   range: 60 ft
   duration: 12 turns
-  description: >
-    A sheet of solid ice 6 inches per caster level thick rises
-    in a chosen plane. May be carved through, but each square
-    foot has 30 hit points and resists fire damage at half
-    effect. Fire and cold creatures find passage especially
-    unpleasant.
+  description: 'A sheet of solid ice 6 inches per caster level thick rises in a chosen plane. May be carved
+    through, but each square foot has 30 hit points and resists fire damage at half effect. Fire and cold
+    creatures find passage especially unpleasant.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
-# === LEVEL 5 ===
+  caster_classes:
+  - magic_user
 - name: Animate Dead
   level: 5
-  caster_class: magic_user
   range: 60 ft
   duration: permanent
-  description: >
-    The caster raises 1 hit die of skeletons or zombies per
-    caster level from corpses on hand. The undead obey simple
-    commands and serve until destroyed. Use of this spell is
-    almost universally regarded as evil; even neutral
-    spellcasters who employ it draw scrutiny.
+  description: 'The caster raises 1 hit die of skeletons or zombies per caster level from corpses on hand.
+    The undead obey simple commands and serve until destroyed. Use of this spell is almost universally
+    regarded as evil; even neutral spellcasters who employ it draw scrutiny.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Cloudkill
   level: 5
-  caster_class: magic_user
   range: 30 ft
   duration: 6 turns
-  description: >
-    A 30-foot diameter cloud of yellow-green poisonous vapour
-    drifts away from the caster at 6 feet per round. Creatures
-    of 5 hit dice or fewer caught in it die without a save;
-    those of more hit dice save vs death ray to escape with
-    only 1d6 damage. The cloud moves with the wind.
-  damage_or_heal: "1d6 (save halves) or death"
-  reversed_form: null
+  description: 'A 30-foot diameter cloud of yellow-green poisonous vapour drifts away from the caster
+    at 6 feet per round. Creatures of 5 hit dice or fewer caught in it die without a save; those of more
+    hit dice save vs death ray to escape with only 1d6 damage. The cloud moves with the wind.
 
+    '
+  damage_or_heal: 1d6 (save halves) or death
+  reversed_form: null
+  caster_classes:
+  - magic_user
 - name: Conjure Elemental
   level: 5
-  caster_class: magic_user
   range: 240 ft
   duration: concentration
-  description: >
-    The caster summons one 8-HD elemental of chosen type
-    (air, earth, fire, water). The elemental obeys the
-    caster only so long as concentration is maintained;
-    breaking concentration causes the elemental to turn on
-    the caster and attack until destroyed or dismissed.
-    May be cast once per day per type.
+  description: 'The caster summons one 8-HD elemental of chosen type (air, earth, fire, water). The elemental
+    obeys the caster only so long as concentration is maintained; breaking concentration causes the elemental
+    to turn on the caster and attack until destroyed or dismissed. May be cast once per day per type.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Contact Other Plane
   level: 5
-  caster_class: magic_user
   range: self
   duration: variable
-  description: >
-    The caster reaches out to an outer-planar intelligence
-    and asks 1d3 questions per minute spent in contact, up to
-    a number determined by the plane chosen and the caster's
-    level. Higher planes give better answers but risk insanity
-    or worse on a failed Intelligence check.
+  description: 'The caster reaches out to an outer-planar intelligence and asks 1d3 questions per minute
+    spent in contact, up to a number determined by the plane chosen and the caster''s level. Higher planes
+    give better answers but risk insanity or worse on a failed Intelligence check.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Feeblemind
   level: 5
-  caster_class: magic_user
   range: 240 ft
   duration: until dispelled
-  description: >
-    The target's mind is reduced to that of a small child
-    (save vs spells, with -4 penalty for magic-users).
-    Speech, spellcasting, and complex thought become
-    impossible. Only Dispel Magic, Heal, or Wish restores
-    the victim.
+  description: 'The target''s mind is reduced to that of a small child (save vs spells, with -4 penalty
+    for magic-users). Speech, spellcasting, and complex thought become impossible. Only Dispel Magic,
+    Heal, or Wish restores the victim.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Hold Monster
   level: 5
-  caster_class: magic_user
   range: 120 ft
   duration: 1 turn + 1/level
-  description: >
-    As Hold Person, but works on any creature regardless of
-    type, including one large monster or up to four medium
-    ones.
+  description: 'As Hold Person, but works on any creature regardless of type, including one large monster
+    or up to four medium ones.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Magic Jar
   level: 5
-  caster_class: magic_user
   range: 30 ft
   duration: until dispelled
-  description: >
-    The caster's spirit transfers into a prepared receptacle
-    (a gem of at least 100 gp value), then leaps to inhabit
-    the body of any creature within 120 feet of the jar.
-    The host saves vs spells; failure means the caster takes
-    over for as long as desired. The caster's body must
-    remain near the jar; if either is destroyed while the
-    caster is elsewhere, the spirit is lost.
+  description: 'The caster''s spirit transfers into a prepared receptacle (a gem of at least 100 gp value),
+    then leaps to inhabit the body of any creature within 120 feet of the jar. The host saves vs spells;
+    failure means the caster takes over for as long as desired. The caster''s body must remain near the
+    jar; if either is destroyed while the caster is elsewhere, the spirit is lost.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Pass-Wall
   level: 5
-  caster_class: magic_user
   range: 30 ft
   duration: 3 turns
-  description: >
-    A passage 5 feet wide, 8 feet high, and 10 feet deep
-    opens in any non-magical stone or earth wall. The caster
-    and others may pass through; at duration's end the
-    opening seals, harming any creature still within.
+  description: 'A passage 5 feet wide, 8 feet high, and 10 feet deep opens in any non-magical stone or
+    earth wall. The caster and others may pass through; at duration''s end the opening seals, harming
+    any creature still within.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Telekinesis
   level: 5
-  caster_class: magic_user
   range: 120 ft
   duration: 6 rounds
-  description: >
-    The caster moves objects (or willing creatures) by
-    thought alone. Total weight moved is 200 coins per
-    caster level. Hostile creatures resist with a save vs
-    spells; success negates the effect on them entirely.
+  description: 'The caster moves objects (or willing creatures) by thought alone. Total weight moved is
+    200 coins per caster level. Hostile creatures resist with a save vs spells; success negates the effect
+    on them entirely.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Teleport
   level: 5
-  caster_class: magic_user
   range: touch
   duration: instant
-  description: >
-    The caster (or one willing creature) is transported
-    instantly to a chosen location. Familiarity affects
-    accuracy: well-known places almost never miss, briefly-
-    visited places risk arriving too high or too low (with
-    consequences), and merely-described places carry real
-    risk of catastrophic miss.
+  description: 'The caster (or one willing creature) is transported instantly to a chosen location. Familiarity
+    affects accuracy: well-known places almost never miss, briefly- visited places risk arriving too high
+    or too low (with consequences), and merely-described places carry real risk of catastrophic miss.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Transmute Rock to Mud
   level: 5
-  caster_class: magic_user
   range: 120 ft
   duration: 3d6 days
-  description: >
-    Up to a 30-foot cube of stone becomes thick, treacherous
-    mud. Creatures in the cube sink and are slowed. After
-    the duration ends, the mud reverts to stone, with
-    obvious hazard for anything still standing in it.
+  description: 'Up to a 30-foot cube of stone becomes thick, treacherous mud. Creatures in the cube sink
+    and are slowed. After the duration ends, the mud reverts to stone, with obvious hazard for anything
+    still standing in it.
+
+    '
   damage_or_heal: null
   reversed_form: Transmute Mud to Rock
-
+  caster_classes:
+  - magic_user
 - name: Transmute Mud to Rock
   level: 5
-  caster_class: magic_user
   range: 120 ft
   duration: permanent
-  description: >
-    The reverse of Transmute Rock to Mud. Up to a 30-foot
-    cube of mud or quicksand hardens into solid stone,
-    trapping anything within.
+  description: 'The reverse of Transmute Rock to Mud. Up to a 30-foot cube of mud or quicksand hardens
+    into solid stone, trapping anything within.
+
+    '
   damage_or_heal: null
   reversed_form: Transmute Rock to Mud
-
+  caster_classes:
+  - magic_user
 - name: Wall of Stone
   level: 5
-  caster_class: magic_user
   range: 60 ft
   duration: permanent
-  description: >
-    A wall of solid stone, 2 feet thick and up to 1000
-    square feet in area, springs into being. The wall is
-    permanent — useful for sealing tunnels, walling off
-    rooms, or constructing impromptu fortifications.
+  description: "A wall of solid stone, 2 feet thick and up to 1000 square feet in area, springs into being.\
+    \ The wall is permanent \u2014 useful for sealing tunnels, walling off rooms, or constructing impromptu\
+    \ fortifications.\n"
   damage_or_heal: null
   reversed_form: null
-
-# === LEVEL 6 ===
+  caster_classes:
+  - magic_user
 - name: Anti-Magic Shell
   level: 6
-  caster_class: magic_user
   range: self
   duration: 12 turns
-  description: >
-    A spherical barrier 10 feet across springs up around
-    the caster. No spell or spell-like effect crosses the
-    barrier — including the caster's own. Magical creatures
-    cannot enter; those already inside are not expelled but
-    cannot use their innate magic until the shell ends.
+  description: "A spherical barrier 10 feet across springs up around the caster. No spell or spell-like\
+    \ effect crosses the barrier \u2014 including the caster's own. Magical creatures cannot enter; those\
+    \ already inside are not expelled but cannot use their innate magic until the shell ends.\n"
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Death Spell
   level: 6
-  caster_class: magic_user
   range: 240 ft
   duration: instant
-  description: >
-    Within a 60-foot cube, 4d8 hit dice of creatures of 7
-    hit dice or fewer are slain outright (no save). Higher-HD
-    creatures are unaffected. The spell has no effect on
-    the undead, constructs, or extraplanar entities.
+  description: 'Within a 60-foot cube, 4d8 hit dice of creatures of 7 hit dice or fewer are slain outright
+    (no save). Higher-HD creatures are unaffected. The spell has no effect on the undead, constructs,
+    or extraplanar entities.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Disintegrate
   level: 6
-  caster_class: magic_user
   range: 60 ft
   duration: instant
-  description: >
-    A grey-green ray reduces a single living creature or
-    object up to 10x10x10 feet to fine dust on a failed save
-    vs spells. Magical items receive a save at the GM's
-    call. Lifeless creatures (such as undead and golems) are
-    unaffected.
+  description: 'A grey-green ray reduces a single living creature or object up to 10x10x10 feet to fine
+    dust on a failed save vs spells. Magical items receive a save at the GM''s call. Lifeless creatures
+    (such as undead and golems) are unaffected.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Geas
   level: 6
-  caster_class: magic_user
   range: touch
   duration: until completed
-  description: >
-    The arcane equivalent of the cleric's Quest. The target
-    must save vs spells or be compelled to undertake the
-    named task. Refusal brings progressive weakening — loss
-    of Strength, Constitution, eventually death — until the
-    geas is fulfilled or removed by Wish.
+  description: "The arcane equivalent of the cleric's Quest. The target must save vs spells or be compelled\
+    \ to undertake the named task. Refusal brings progressive weakening \u2014 loss of Strength, Constitution,\
+    \ eventually death \u2014 until the geas is fulfilled or removed by Wish.\n"
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Invisible Stalker
   level: 6
-  caster_class: magic_user
   range: 10 ft
   duration: until task complete
-  description: >
-    Summons an 8-HD invisible elemental servitor from the
-    air planes. The stalker pursues a single chosen task
-    relentlessly until completion, however long that takes.
-    Stalkers resent extended service and may pervert poorly
-    worded orders.
+  description: 'Summons an 8-HD invisible elemental servitor from the air planes. The stalker pursues
+    a single chosen task relentlessly until completion, however long that takes. Stalkers resent extended
+    service and may pervert poorly worded orders.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Lower Water
   level: 6
-  caster_class: magic_user
   range: 240 ft
   duration: 10 turns
-  description: >
-    The water in a 10-foot per level square area drops to
-    half its depth. Useful for fording rivers or exposing
-    sunken passages. Reverse not formally listed in BFRPG
-    core, though many GMs treat Part Water as effectively
-    equivalent.
+  description: 'The water in a 10-foot per level square area drops to half its depth. Useful for fording
+    rivers or exposing sunken passages. Reverse not formally listed in BFRPG core, though many GMs treat
+    Part Water as effectively equivalent.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Move Earth
   level: 6
-  caster_class: magic_user
   range: 240 ft
   duration: 6 turns
-  description: >
-    The caster shifts up to a 60-foot cube of earth (no
-    stone) per turn, slowly forming hills, ditches,
-    embankments, or mounds. Useful for siegework or
-    landscaping; not fast enough to bury foes in melee.
+  description: 'The caster shifts up to a 60-foot cube of earth (no stone) per turn, slowly forming hills,
+    ditches, embankments, or mounds. Useful for siegework or landscaping; not fast enough to bury foes
+    in melee.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Part Water
   level: 6
-  caster_class: magic_user
   range: 120 ft
   duration: 6 turns
-  description: >
-    A path of dry seabed up to 10 feet wide and 100 feet
-    long opens through any standing body of water. Creatures
-    may walk the path freely; aquatic creatures may not
-    cross the parted channel.
+  description: 'A path of dry seabed up to 10 feet wide and 100 feet long opens through any standing body
+    of water. Creatures may walk the path freely; aquatic creatures may not cross the parted channel.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Projected Image
   level: 6
-  caster_class: magic_user
   range: 240 ft
   duration: 6 rounds
-  description: >
-    A perfect duplicate of the caster appears at any chosen
-    point within range. The caster casts spells through the
-    image and speaks through it, but the image is intangible
-    and dissipates if struck or dispelled.
+  description: 'A perfect duplicate of the caster appears at any chosen point within range. The caster
+    casts spells through the image and speaks through it, but the image is intangible and dissipates if
+    struck or dispelled.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Reincarnate
   level: 6
-  caster_class: magic_user
   range: touch
   duration: instant
-  description: >
-    Brings the spirit of one creature dead no more than a
-    week back into a new body, randomly determined. The
-    new form may be of any race or species the GM rolls;
-    the recipient retains memories but must adapt to a
-    body not their own.
+  description: 'Brings the spirit of one creature dead no more than a week back into a new body, randomly
+    determined. The new form may be of any race or species the GM rolls; the recipient retains memories
+    but must adapt to a body not their own.
+
+    '
   damage_or_heal: null
   reversed_form: null
-
+  caster_classes:
+  - magic_user
 - name: Stone to Flesh
   level: 6
-  caster_class: magic_user
   range: 120 ft
   duration: instant
-  description: >
-    Returns a petrified creature (or any normal stone
-    object up to a 10-foot cube) to flesh. Petrified
-    creatures restored this way must save vs death ray
-    to survive the shock.
+  description: 'Returns a petrified creature (or any normal stone object up to a 10-foot cube) to flesh.
+    Petrified creatures restored this way must save vs death ray to survive the shock.
+
+    '
   damage_or_heal: null
   reversed_form: Flesh to Stone
-
+  caster_classes:
+  - magic_user
 - name: Flesh to Stone
   level: 6
-  caster_class: magic_user
   range: 120 ft
   duration: instant
-  description: >
-    The reverse of Stone to Flesh. The target must save vs
-    petrification or be turned wholly to lifeless stone.
+  description: 'The reverse of Stone to Flesh. The target must save vs petrification or be turned wholly
+    to lifeless stone.
+
+    '
   damage_or_heal: null
   reversed_form: Stone to Flesh
+  caster_classes:
+  - magic_user

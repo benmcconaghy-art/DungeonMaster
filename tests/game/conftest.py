@@ -193,7 +193,7 @@ def monsters_yaml(tmp_path: Path) -> Path:
           hit_dice: "1-1"
           hp_typical: 3
           ac: 14
-          movement: 20
+          movement_modes: {land: 20}
           attacks:
             - {name: scimitar, damage: "1d6", to_hit_bonus: 0}
           no_appearing: "2d4 (6d10)"
@@ -207,7 +207,7 @@ def monsters_yaml(tmp_path: Path) -> Path:
           hit_dice: "1"
           hp_typical: 4
           ac: 12
-          movement: 20
+          movement_modes: {land: 20}
           attacks:
             - {name: claw, damage: "1d6"}
           save_as: F1

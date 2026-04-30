@@ -1,8 +1,11 @@
 """Pydantic schema for ``data/bfrpg/spells.yaml``.
 
-Mirrors the shape in ``.claude/agents/bfrpg-data.md``: a top-level list
-of spells with name, level, caster class, range, duration, description,
-optional damage / heal expression, and optional reversed form.
+A top-level list of spells. ``caster_classes`` is a list because several
+BFRPG spells appear on both the cleric and magic-user lists at the same
+or different levels (e.g. Light, Hold Person, Detect Magic). Storing the
+caster eligibility as a list collapses what would otherwise be duplicate
+entries with disambiguating names; lookup helpers in
+:mod:`app.game.classes` filter to a single class at query time.
 """
 
 from __future__ import annotations
@@ -23,7 +26,7 @@ class SpellDefinition(_Strict):
 
     name: str
     level: Annotated[int, Field(ge=1, le=9)]
-    caster_class: CasterClass
+    caster_classes: Annotated[list[CasterClass], Field(min_length=1)]
     range: str
     duration: str
     description: str
