@@ -146,13 +146,21 @@ DmEvent = (
 # ---------------------------------------------------------------------------
 
 # Bound the tool-call ping-pong so a misbehaving model can't loop forever.
-# A single combat round legitimately spends multiple tool calls: attack
-# roll, damage roll, apply_damage, save roll, etc. The spec mentions "5
-# iterations" but that count was set before we'd seen real Nemotron
-# traffic — phase 2 integration tests show ~6-8 calls per attack-and-
-# counterattack turn. 10 leaves headroom; if a turn legitimately needs
-# more we're probably modelling combat wrong (the LLM should pause for
-# the player rather than driving the entire round itself).
+# A single combat round legitimately spends multiple tool calls.
+#
+# History:
+#   - Spec §7 originally proposed 5; that proved too tight before any
+#     Nemotron traffic was observed.
+#   - Phase 2 raised it to 10 because real combat turns chained 6-10
+#     calls when Nemotron drove both sides of a round end-to-end.
+#   - Phase 4 prep #1 added pacing language to the system prompt and
+#     re-evaluated the cap. Cap=7 tripped iteration_cap (real combat
+#     legitimately uses ~6-8 calls); cap=8 tripped empty_completion
+#     mid-round in one run (Nemotron's run-to-run variance at the
+#     0.85 stream temperature). Holding 10 as the safety net so it
+#     fires only on genuine runaways, not on the legitimate upper
+#     end of normal-round variance. The pacing prompt is the real
+#     prep-#1 deliverable; the cap stays as the canary it was.
 _MAX_TOOL_ITERATIONS = 10
 
 # Defensive JSON-block fallback parser: matches a fenced ``json`` block.

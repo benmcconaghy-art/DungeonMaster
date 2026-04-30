@@ -341,7 +341,11 @@ async def test_json_block_fallback_parser(db_session, patch_client) -> None:  # 
 
 @pytest.mark.asyncio
 async def test_iteration_cap_breaks_runaway(db_session, patch_client) -> None:  # type: ignore[no-untyped-def]
-    """Ten tool calls in a row -> orchestrator gives up at 5 with dm_error."""
+    """Ten tool calls in a row -> orchestrator gives up at the cap with
+    dm_error. The cap is :data:`_MAX_TOOL_ITERATIONS` (currently 10;
+    Phase 4 prep #1 re-evaluated and held it). The test feeds 10
+    streams of tool calls and just asserts the cap-error fires, so the
+    exact number can drift without breaking this test."""
 
     _, _, session, _ = await _setup_session(db_session)
 
