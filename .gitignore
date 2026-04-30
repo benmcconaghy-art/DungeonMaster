@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# SQLite
+*.db
+*.db-wal
+*.db-shm
+
+# Local secrets / config
+.env
+.env.local
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Claude Code worktrees and local-only settings
+.claude/worktrees/
+.claude/settings.local.json
+
+# Deployment-host paths (referenced in scripts but never tracked)
+/var/lib/dungeon-master
