@@ -1,6 +1,0 @@
-{
-  "hooks": {
-    "WorktreeCreate": "git worktree add .claude/worktrees/$WORKTREE_NAME -b worktree-$WORKTREE_NAME",
-    "WorktreeRemove": "git worktree remove .claude/worktrees/$WORKTREE_NAME --force"
-  }
-}
