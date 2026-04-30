@@ -16,6 +16,7 @@ Per-tool modules:
   - ``whisper`` — DM-to-one-player private message.
   - ``start_encounter`` — create an active encounter, roll initiative.
   - ``end_encounter`` — close an encounter, record the outcome.
+  - ``spawn_npc`` — introduce a new NPC; optional canonical portrait.
 
 The dispatcher calls each handler inside its own tight transaction
 block (AGENTS.md invariant #2 — the streaming call must not happen
@@ -43,6 +44,7 @@ from app.orchestrator.handlers import (  # noqa: E402
     end_encounter,
     heal,
     request_dice_roll,
+    spawn_npc,
     start_encounter,
     transition_location,
     whisper,
@@ -53,6 +55,7 @@ __all__ = [
     "end_encounter",
     "heal",
     "request_dice_roll",
+    "spawn_npc",
     "start_encounter",
     "transition_location",
     "whisper",

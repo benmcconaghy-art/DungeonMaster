@@ -26,12 +26,15 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.api.auth import router as auth_router
 from app.api.campaigns import router as campaigns_router
 from app.api.characters import router as characters_router
+from app.api.portraits import router as portraits_router
 from app.api.sessions import router as sessions_router
 from app.api.ws import router as ws_router
 from app.config import get_settings
 from app.db import models
 from app.db.session import engine
 from app.deps import CurrentUser, CurrentUserOrNone, DbSession
+from app.images.portrait import get_queue_client
+from app.images.portrait import reset_for_tests as reset_queue_client
 from app.llm.client import DmClientError, get_dm_client
 from app.realtime.pubsub import DmPubsubError, get_pubsub
 
@@ -94,11 +97,19 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     except DmPubsubError as exc:
         log.warning("Valkey health check failed at boot: %s", exc)
 
+    # Pre-build the image queue client so portrait endpoints don't
+    # pay the connection-establishment cost on first request. The
+    # Valkey URL is the same as pubsub's, but we keep a separate
+    # connection pool — image-queue traffic and session pub/sub
+    # have different timeout / retry profiles.
+    get_queue_client()
+
     try:
         yield
     finally:
         await client.aclose()
         await pubsub.aclose()
+        await reset_queue_client()
         await engine.dispose()
 
 
@@ -128,6 +139,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(campaigns_router)
     app.include_router(characters_router)
+    app.include_router(portraits_router)
     app.include_router(sessions_router)
     app.include_router(ws_router)
 

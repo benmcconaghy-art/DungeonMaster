@@ -116,6 +116,15 @@ class SpawnNpc(_ToolArgs):
     name: str
     stats: dict[str, Any] = Field(default_factory=dict)
     description: str = ""
+    auto_portrait: bool = Field(
+        default=True,
+        description=(
+            "If true (default), enqueue a canonical portrait so the NPC stays"
+            " visually consistent across later scene edits. Set false for"
+            " transient walk-ons (a guard, a stable hand) where the image"
+            " cost is wasted."
+        ),
+    )
 
 
 class GenerateSceneImage(_ToolArgs):
@@ -232,9 +241,13 @@ TOOLS: dict[str, ToolSpec] = {
     ),
     "spawn_npc": ToolSpec(
         name="spawn_npc",
-        description="Introduce a new NPC into the current scene.",
+        description=(
+            "Introduce a new NPC into the current scene. Recurring NPCs get a"
+            " canonical portrait by default; pass auto_portrait=false for"
+            " transient walk-ons."
+        ),
         args_model=SpawnNpc,
-        implemented=False,
+        implemented=True,
     ),
     "generate_scene_image": ToolSpec(
         name="generate_scene_image",

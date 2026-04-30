@@ -16,7 +16,9 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from app.db.models import Character, DiceRoll, Encounter, SessionMessage
+from app.db.models import Character, DiceRoll, Encounter, Npc, SessionMessage
+from app.images.portrait import reset_for_tests as reset_queue_client
+from app.images.portrait import set_queue_client_for_tests
 from app.llm.tools import (
     ApplyDamage,
     DiceTarget,
@@ -24,6 +26,7 @@ from app.llm.tools import (
     EndEncounter,
     Heal,
     RequestDiceRoll,
+    SpawnNpc,
     StartEncounter,
     TransitionLocation,
     Whisper,
@@ -546,3 +549,168 @@ class TestEncounters:
         with with_dispatch_context(_ctx(session_a.id)):
             result = await handler.fn(db_session, args)
         assert result.side_effects.get("kind") == "error"
+
+
+# ---------------------------------------------------------------------------
+# spawn_npc
+# ---------------------------------------------------------------------------
+
+
+class _FakeQueueClient:
+    """Captures rpush calls so spawn_npc tests can assert (or assert
+    absence of) a portrait enqueue without speaking to a real Valkey."""
+
+    def __init__(self, *, raise_on_push: bool = False) -> None:
+        self.pushed: list[tuple[str, bytes]] = []
+        self.raise_on_push = raise_on_push
+
+    async def rpush(self, key: str, value: bytes) -> int:
+        if self.raise_on_push:
+            raise RuntimeError("simulated valkey transport error")
+        self.pushed.append((key, value))
+        return len(self.pushed)
+
+    async def aclose(self) -> None:
+        return None
+
+
+class TestSpawnNpc:
+    @pytest.mark.asyncio
+    async def test_creates_npc_row_and_enqueues_portrait(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """Default ``auto_portrait=True``: row lands, portrait job
+        appears on the queue with the NPC id as the subject FK target."""
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        fake_queue = _FakeQueueClient()
+        set_queue_client_for_tests(fake_queue)
+        try:
+            handler = get_handler("spawn_npc")
+            assert handler is not None
+            args = SpawnNpc(
+                name="Castellan Thorvald",
+                description="Greying veteran, missing two fingers.",
+            )
+            with with_dispatch_context(_ctx(session.id)):
+                result = await handler.fn(db_session, args)
+            await db_session.commit()
+        finally:
+            await reset_queue_client()
+
+        # NPC row landed in the campaign.
+        rows = list((await db_session.scalars(select(Npc))).all())
+        assert len(rows) == 1
+        npc = rows[0]
+        assert npc.name == "Castellan Thorvald"
+        assert npc.campaign_id == campaign.id
+        assert npc.description and "Greying veteran" in npc.description
+
+        # Portrait job pushed with subject_npc_id pointing at this NPC.
+        assert len(fake_queue.pushed) == 1
+        import json
+
+        payload = json.loads(fake_queue.pushed[0][1])
+        assert payload["subject_npc_id"] == npc.id
+        assert payload["kind"] == "npc"
+        assert payload["session_id"] == session.id
+
+        # Side effects expose the new ids so the WS layer can render
+        # an image_pending placeholder card.
+        assert result.side_effects["kind"] == "npc_spawned"
+        assert result.side_effects["npc_id"] == npc.id
+        assert "portrait_image_id" in result.side_effects
+
+    @pytest.mark.asyncio
+    async def test_auto_portrait_false_skips_enqueue(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """The LLM should be able to opt out for transient walk-ons
+        (a guard, a stable hand) where 17s of FLUX time on a portrait
+        is wasted. ``auto_portrait=False`` must not push to the queue."""
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        fake_queue = _FakeQueueClient()
+        set_queue_client_for_tests(fake_queue)
+        try:
+            handler = get_handler("spawn_npc")
+            assert handler is not None
+            args = SpawnNpc(name="Stable Hand", auto_portrait=False)
+            with with_dispatch_context(_ctx(session.id)):
+                result = await handler.fn(db_session, args)
+            await db_session.commit()
+        finally:
+            await reset_queue_client()
+
+        # NPC row still lands.
+        rows = list((await db_session.scalars(select(Npc))).all())
+        assert len(rows) == 1
+
+        # No portrait job pushed.
+        assert fake_queue.pushed == []
+        assert "portrait_image_id" not in result.side_effects
+
+    @pytest.mark.asyncio
+    async def test_queue_failure_keeps_npc_row(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """If the queue push fails (Valkey down, transport error),
+        the NPC row must still survive — the LLM has already narrated
+        the introduction. The portrait can be re-requested via the API
+        endpoint after the operator fixes the transport.
+
+        Critical: a queue-side failure must not roll back the DB row.
+        That would be a worse outcome than a missing portrait."""
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        fake_queue = _FakeQueueClient(raise_on_push=True)
+        set_queue_client_for_tests(fake_queue)
+        try:
+            handler = get_handler("spawn_npc")
+            assert handler is not None
+            args = SpawnNpc(name="Lyra")
+            with with_dispatch_context(_ctx(session.id)):
+                result = await handler.fn(db_session, args)
+            await db_session.commit()
+        finally:
+            await reset_queue_client()
+
+        # NPC row still landed despite the queue failure.
+        rows = list((await db_session.scalars(select(Npc))).all())
+        assert len(rows) == 1
+        assert rows[0].name == "Lyra"
+
+        # Side effects don't claim a portrait when none was queued.
+        assert "portrait_image_id" not in result.side_effects
+        assert result.side_effects["kind"] == "npc_spawned"
+
+    @pytest.mark.asyncio
+    async def test_unknown_session_returns_clean_error(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """Defensive: if the dispatch context names a session that
+        doesn't exist, return a structured error rather than crashing.
+        The orchestrator validates session before dispatch, so this is
+        belt-and-braces."""
+
+        fake_queue = _FakeQueueClient()
+        set_queue_client_for_tests(fake_queue)
+        try:
+            handler = get_handler("spawn_npc")
+            assert handler is not None
+            args = SpawnNpc(name="X")
+            with with_dispatch_context(_ctx("does-not-exist")):
+                result = await handler.fn(db_session, args)
+        finally:
+            await reset_queue_client()
+
+        assert result.side_effects.get("kind") == "error"
+        assert result.side_effects.get("reason") == "unknown_session"
+        # No NPC row inserted, no portrait pushed.
+        rows = list((await db_session.scalars(select(Npc))).all())
+        assert rows == []
+        assert fake_queue.pushed == []
