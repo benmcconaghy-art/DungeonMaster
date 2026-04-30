@@ -28,11 +28,13 @@ from app.api.campaigns import router as campaigns_router
 from app.api.characters import router as characters_router
 from app.api.sessions import router as sessions_router
 from app.api.sse import router as sse_router
+from app.api.ws import router as ws_router
 from app.config import get_settings
 from app.db import models
 from app.db.session import engine
 from app.deps import CurrentUser, CurrentUserOrNone, DbSession
 from app.llm.client import DmClientError, get_dm_client
+from app.realtime.pubsub import DmPubsubError, get_pubsub
 
 log = logging.getLogger(__name__)
 
@@ -68,15 +70,15 @@ class HealthResponse(BaseModel):
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Process-level setup/teardown.
 
-    Boot: probe the vLLM endpoint and resolve the served model id (so a
-    misconfigured endpoint fails the worker startup loudly rather than
-    on first DM turn). Failure is non-fatal — the rest of the app
-    starts; ``/health`` will reflect the broken DM client and the
-    orchestrator will surface ``dm_error`` events when a turn is
-    attempted.
+    Boot: probe vLLM (resolve the served model id) and Valkey (confirm
+    the KV store is reachable). Both failures are logged but non-fatal
+    so the rest of the app starts and the WS hub / orchestrator surface
+    typed errors when first hit. The boot log is the canonical place
+    operators see whether the dependencies came up.
 
-    Shutdown: dispose the engine and the openai client so the gunicorn
-    worker shuts down cleanly under systemd.
+    Shutdown: dispose the engine, the openai client, and the Valkey
+    connection pool so the gunicorn worker shuts down cleanly under
+    systemd.
     """
 
     client = get_dm_client()
@@ -86,10 +88,18 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     except DmClientError as exc:
         log.warning("DM client health check failed at boot: %s", exc)
 
+    pubsub = get_pubsub()
+    try:
+        await pubsub.health()
+        log.info("Valkey pubsub healthy at %s", pubsub.url)
+    except DmPubsubError as exc:
+        log.warning("Valkey health check failed at boot: %s", exc)
+
     try:
         yield
     finally:
         await client.aclose()
+        await pubsub.aclose()
         await engine.dispose()
 
 
@@ -121,6 +131,7 @@ def create_app() -> FastAPI:
     app.include_router(characters_router)
     app.include_router(sessions_router)
     app.include_router(sse_router)
+    app.include_router(ws_router)
 
     app.mount(
         "/static",
