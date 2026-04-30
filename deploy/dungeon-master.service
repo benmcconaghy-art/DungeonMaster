@@ -1,7 +1,7 @@
 [Unit]
 Description=Dungeon Master web app
-After=network.target redis.service
-Wants=redis.service
+After=network.target valkey.service
+Wants=valkey.service
 
 [Service]
 Type=notify

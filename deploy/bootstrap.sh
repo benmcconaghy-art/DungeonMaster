@@ -59,16 +59,21 @@ log() { printf '\n[bootstrap] %s\n' "$*"; }
 # ---------- §13 Packages -------------------------------------------------------
 
 log "Installing system packages"
+# Valkey replaces Redis on AlmaLinux 10 — Redis was dropped from the base
+# repos after the 2024 SSPL relicensing. Valkey is the Linux Foundation
+# fork and is wire-protocol-compatible: redis-py and redis://... URLs work
+# unchanged. Service name and config path differ (valkey.service,
+# /etc/valkey/valkey.conf) but the runtime contract is identical.
 dnf install -y \
     python3.12 python3.12-devel \
-    redis nginx \
+    valkey nginx \
     sqlite \
     gcc git \
     openssl \
     firewalld \
     curl tar
 
-systemctl enable --now redis
+systemctl enable --now valkey
 systemctl enable --now firewalld
 
 # uv is not in the AppStream; install from the official script if absent.

@@ -1204,9 +1204,14 @@ If the deployment surface ever expands beyond the trusted LAN, all four of these
 
 ```bash
 sudo dnf install -y python3.12 python3.12-devel \
-    redis nginx \
+    valkey nginx \
     sqlite \
     gcc git
+# Valkey replaces Redis on AlmaLinux 10 — Redis was dropped from the
+# base repos after the 2024 SSPL relicensing. Valkey is the Linux
+# Foundation fork, wire-compatible: redis-py and redis://... URLs
+# work unchanged. Service unit is valkey.service, config at
+# /etc/valkey/valkey.conf, default port 6379, default bind 127.0.0.1.
 # No PostgreSQL, no pgvector. SQLite ships with Python's stdlib;
 # the `sqlite` CLI package is for manual inspection / backups.
 ```
@@ -1249,7 +1254,7 @@ sudo -u dungeonmaster bash -lc 'cd /opt/dungeon-master && uv run alembic upgrade
 ```ini
 [Unit]
 Description=Dungeon Master web app
-After=network.target redis.service
+After=network.target valkey.service
 
 [Service]
 Type=notify

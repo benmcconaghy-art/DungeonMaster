@@ -1,7 +1,7 @@
 [Unit]
 Description=Dungeon Master image worker (FLUX.1 queue consumer)
-After=network.target redis.service dungeon-master.service
-Wants=redis.service
+After=network.target valkey.service dungeon-master.service
+Wants=valkey.service
 
 [Service]
 Type=simple

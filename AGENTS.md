@@ -58,7 +58,7 @@ modules. Single-server deployment on AlmaLinux 10.1, trusted internal LAN.
 - FastAPI (async)
 - SQLAlchemy 2.x async + Alembic
 - SQLite 3.45+ (WAL)
-- Redis 7 (pub/sub + queue for image worker)
+- Valkey 7+ (Redis-compatible fork; pub/sub + queue for image worker)
 - httpx for outbound HTTP
 - openai client (pointed at vLLM)
 - numpy for vector retrieval
