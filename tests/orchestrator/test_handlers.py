@@ -459,9 +459,7 @@ class TestEncounters:
         assert "Goblins!" in result.content
 
     @pytest.mark.asyncio
-    async def test_start_encounter_merges_alive_pcs_into_initiative(
-        self, db_session
-    ) -> None:  # type: ignore[no-untyped-def]
+    async def test_start_encounter_merges_alive_pcs_into_initiative(self, db_session) -> None:  # type: ignore[no-untyped-def]
         """Phase 4: alive PCs in the campaign join initiative
         automatically. The PC's ``participant_id`` is the character row
         id so the WS hub's gate can match a player's character_id

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from typing import Any, cast
 
 import pytest
 
@@ -46,11 +47,15 @@ async def test_get_pubsub_returns_singleton(monkeypatch: pytest.MonkeyPatch) -> 
     """The factory caches; two callers see the same instance."""
 
     # Reset and force the singleton to be a FakePubsub so we don't open
-    # a real Valkey connection during this unit test.
+    # a real Valkey connection during this unit test. ``set_pubsub_for_tests``
+    # is intentionally typed ``Any`` so production code can be tested
+    # against duck-compatible doubles.
     await reset_for_tests()
     fake = FakePubsub()
     set_pubsub_for_tests(fake)
-    assert get_pubsub() is fake
+    # ``is`` works at runtime; the cast silences mypy's narrow-type
+    # complaint about Pubsub vs FakePubsub identity.
+    assert cast(Any, get_pubsub()) is fake
 
 
 @pytest.mark.asyncio
@@ -62,8 +67,8 @@ async def test_reset_for_tests_drops_singleton(monkeypatch: pytest.MonkeyPatch) 
     await reset_for_tests()
     fake_b = FakePubsub()
     set_pubsub_for_tests(fake_b)
-    assert get_pubsub() is fake_b
-    assert get_pubsub() is not fake_a
+    assert cast(Any, get_pubsub()) is fake_b
+    assert cast(Any, get_pubsub()) is not fake_a
 
 
 # ---------------------------------------------------------------------------
