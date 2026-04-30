@@ -1,0 +1,104 @@
+# Basic Fantasy RPG core equipment — weapons, armour, gear.
+# Mechanics conform to BFRPG 4th edition (CC BY-SA, Basic Fantasy Project).
+#
+# Conventions:
+#   weight in pounds (BFRPG uses pounds, not the older "coins" abstraction).
+#   cost_gp / cost_sp / cost_cp — choose whichever matches the canonical
+#     price most cleanly. 1 gp = 10 sp = 100 cp.
+#   damage uses standard dice notation; ranged weapons list a `range`
+#     triple [short, medium, long] in feet.
+#   two_handed: true for weapons that always require two hands.
+#   type: "melee", "ranged", or "thrown".
+
+weapons:
+  # --- light melee ---
+  - {name: "dagger",            damage: "1d4",  weight: 1,  cost_gp: 3,   type: melee}
+  - {name: "club",              damage: "1d4",  weight: 3,  cost_sp: 3,   type: melee}
+  - {name: "mace",              damage: "1d6",  weight: 3,  cost_gp: 5,   type: melee}
+  - {name: "war hammer",        damage: "1d6",  weight: 6,  cost_gp: 5,   type: melee}
+  - {name: "hand axe",          damage: "1d6",  weight: 5,  cost_gp: 4,   type: melee}
+  - {name: "shortsword",        damage: "1d6",  weight: 3,  cost_gp: 7,   type: melee}
+  - {name: "scimitar",          damage: "1d8",  weight: 4,  cost_gp: 25,  type: melee}
+  - {name: "spear",             damage: "1d6",  weight: 5,  cost_gp: 3,   type: melee}
+  - {name: "staff",             damage: "1d4",  weight: 4,  cost_gp: 2,   type: melee, two_handed: true}
+
+  # --- heavier melee ---
+  - {name: "longsword",         damage: "1d8",  weight: 4,  cost_gp: 30,  type: melee}
+  - {name: "battle axe",        damage: "1d8",  weight: 7,  cost_gp: 7,   type: melee}
+  - {name: "two-handed axe",    damage: "1d10", weight: 15, cost_gp: 7,   type: melee, two_handed: true}
+  - {name: "two-handed sword",  damage: "1d10", weight: 10, cost_gp: 50,  type: melee, two_handed: true}
+  - {name: "polearm",           damage: "1d10", weight: 15, cost_gp: 7,   type: melee, two_handed: true}
+
+  # --- thrown ---
+  - {name: "thrown dagger",     damage: "1d4",  weight: 1,  cost_gp: 3,   type: thrown, range: [10, 20, 30]}
+  - {name: "thrown hand axe",   damage: "1d6",  weight: 5,  cost_gp: 4,   type: thrown, range: [10, 20, 30]}
+  - {name: "thrown spear",      damage: "1d6",  weight: 5,  cost_gp: 3,   type: thrown, range: [20, 40, 60]}
+
+  # --- ranged ---
+  - {name: "sling",             damage: "1d4",  weight: 0,  cost_gp: 2,   type: ranged, range: [40, 80, 160]}
+  - {name: "shortbow",          damage: "1d6",  weight: 2,  cost_gp: 25,  type: ranged, range: [50, 100, 150], two_handed: true}
+  - {name: "longbow",           damage: "1d6",  weight: 3,  cost_gp: 60,  type: ranged, range: [70, 140, 210], two_handed: true}
+  - {name: "light crossbow",    damage: "1d6",  weight: 7,  cost_gp: 30,  type: ranged, range: [60, 120, 180], two_handed: true}
+  - {name: "heavy crossbow",    damage: "1d8",  weight: 14, cost_gp: 50,  type: ranged, range: [80, 160, 240], two_handed: true}
+
+armour:
+  # ac_bonus is the bonus over base AC 10 (no armour) under BFRPG ascending AC.
+  # A character in chain mail (+5) and a shield (+1) at Dex 13 has AC 10 + 5 + 1 + 1 = 17.
+  - {name: "leather",         ac_bonus: 2, weight: 15, cost_gp: 20}
+  - {name: "studded leather", ac_bonus: 3, weight: 20, cost_gp: 30}
+  - {name: "scale mail",      ac_bonus: 4, weight: 30, cost_gp: 50}
+  - {name: "chain mail",      ac_bonus: 5, weight: 40, cost_gp: 60}
+  - {name: "plate mail",      ac_bonus: 7, weight: 50, cost_gp: 250}
+  - {name: "shield",          ac_bonus: 1, weight: 5,  cost_gp: 10, is_shield: true}
+
+gear:
+  # Adventuring kit. Weights in pounds. Costs are BFRPG core values.
+  # Names with commas/parentheses are quoted to keep the YAML inline-mapping
+  # parser from mistaking them for additional keys.
+  - {name: "rope (50 ft, hemp)",       weight: 5,  cost_gp: 1,  description: "standard adventuring rope"}
+  - {name: "rope (50 ft, silk)",       weight: 3,  cost_gp: 10, description: "lighter, harder to fray"}
+  - {name: "torch",                    weight: 1,  cost_sp: 1,  description: "burns for 1 hour, lights a 30 ft radius"}
+  - {name: "lantern (hooded)",         weight: 2,  cost_gp: 7,  description: "lights 30 ft; one oil flask burns 4 hours"}
+  - {name: "lantern (bullseye)",       weight: 2,  cost_gp: 12, description: "60 ft beam in a 20 ft cone"}
+  - {name: "oil flask",                weight: 1,  cost_gp: 2,  description: "lantern fuel; thrown weapon does 1d8 fire over 2 rounds"}
+  - {name: "rations (standard, week)", weight: 7,  cost_gp: 5,  description: "one week of trail food, mixed grain and dried meat"}
+  - {name: "rations (iron, week)",     weight: 7,  cost_gp: 15, description: "preserved indefinitely; tastes like leather"}
+  - {name: "bedroll",                  weight: 5,  cost_sp: 2,  description: "blanket and groundsheet"}
+  - {name: "backpack",                 weight: 2,  cost_gp: 5,  description: "holds 30 lb of gear"}
+  - {name: "waterskin",                weight: 2,  cost_gp: 1,  description: "holds one day's water"}
+  - {name: "holy symbol (wooden)",     weight: 0,  cost_gp: 1,  description: "cleric focus"}
+  - {name: "holy symbol (silver)",     weight: 0,  cost_gp: 25, description: "cleric focus; useful against undead"}
+  - {name: "holy water (vial)",        weight: 0,  cost_gp: 25, description: "thrown vial; 1d8 damage to undead within 5 ft"}
+  - {name: "spellbook (blank, full)",  weight: 1,  cost_gp: 100, description: "200 pages; magic-user equipment"}
+  - {name: "spellbook (travelling)",   weight: 1,  cost_gp: 50,  description: "100 pages; lighter binding"}
+  - {name: "thieves' tools",           weight: 1,  cost_gp: 25,  description: "required for Pick Locks and Find/Remove Traps"}
+  - {name: "10 ft pole",               weight: 8,  cost_sp: 1,   description: "for prodding suspicious floors"}
+  - {name: "grappling hook",           weight: 4,  cost_gp: 25,  description: "iron hook with three prongs"}
+  - {name: "pitons (10)",              weight: 2,  cost_gp: 1,   description: "iron spikes for climbing"}
+  - {name: "hammer (small)",           weight: 2,  cost_gp: 2,   description: "for driving pitons"}
+  - {name: "mirror (small steel)",     weight: 0,  cost_gp: 5,   description: "useful around medusae and hostile reflections"}
+  - {name: "garlic (bunch)",           weight: 0,  cost_sp: 5,   description: "wards off vampires; lasts one day fresh"}
+  - {name: "wolfsbane",                weight: 0,  cost_gp: 10,  description: "wards off lycanthropes when held aloft"}
+  - {name: "candles (12)",             weight: 0,  cost_sp: 1,   description: "each burns 1 hour, lights 5 ft"}
+  - {name: "tinderbox",                weight: 1,  cost_gp: 3,   description: "flint, steel, and tinder; 1 round to light a torch in calm conditions"}
+  - {name: "sack (small)",             weight: 0,  cost_sp: 1,   description: "holds 10 lb"}
+  - {name: "sack (large)",             weight: 0,  cost_sp: 2,   description: "holds 30 lb"}
+  - {name: "chalk (10 sticks)",        weight: 0,  cost_sp: 1,   description: "trail-marking and door-marking"}
+  - {name: "ink (vial)",               weight: 0,  cost_gp: 8,   description: "for scribing scrolls and notes"}
+  - {name: "parchment (sheet)",        weight: 0,  cost_sp: 2,   description: "scribing surface"}
+  - {name: "quill",                    weight: 0,  cost_sp: 1,   description: "writing implement"}
+  - {name: "lockbox (small)",          weight: 1,  cost_gp: 20,  description: "with key; resists casual theft"}
+  - {name: "caltrops (bag of 12)",     weight: 2,  cost_gp: 1,   description: "1d2 damage to anyone moving over them; halves movement"}
+  - {name: "signal whistle",           weight: 0,  cost_sp: 5,   description: "shrill at distance"}
+  - {name: "bandages (10 strips)",     weight: 0,  cost_sp: 5,   description: "stop bleeding; +1 hp to first aid (GM call)"}
+  - {name: "belt pouch",               weight: 0,  cost_sp: 5,   description: "holds 5 lb of small items"}
+  - {name: "bell",                     weight: 0,  cost_gp: 1,   description: "tied to ropes for tripwire alarms"}
+  - {name: "incense (block)",          weight: 0,  cost_gp: 1,   description: "useful for some rituals and trail-marking"}
+  - {name: "signal flag (small)",      weight: 0,  cost_sp: 5,   description: "for distance signalling"}
+  # --- ammunition (gear since the schema reserves type to weapons) ---
+  - {name: "arrows (20)",                weight: 1,  cost_gp: 5,   description: "ammunition for shortbows and longbows"}
+  - {name: "silver-tipped arrow",        weight: 0,  cost_gp: 5,   description: "single arrow; useful vs lycanthropes and certain undead"}
+  - {name: "crossbow bolts (20)",        weight: 1,  cost_gp: 5,   description: "ammunition for crossbows"}
+  - {name: "sling stones (10)",          weight: 1,  cost_sp: 1,   description: "shaped lead bullets; common stones often work as well"}
+  # --- homebrew / custom ---
+  - {name: "collapsible 12 ft pole",     weight: 5,  cost_gp: 5,   description: "folds for travel; alternative to the 10 ft pole", source: custom}

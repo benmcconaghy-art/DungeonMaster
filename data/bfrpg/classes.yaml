@@ -1,0 +1,462 @@
+# Basic Fantasy RPG core classes — Fighter, Cleric, Magic-User, Thief.
+# Mechanics conform to BFRPG 4th edition (CC BY-SA, Basic Fantasy Project).
+# Saves are target numbers on d20: roll the listed value or higher to succeed.
+# attack_bonus_progression is added to the d20 attack roll under ascending AC.
+# xp_progression is the cumulative XP required to reach the listed level.
+
+- name: Fighter
+  hit_die: d8
+  prime_requisite: STR
+  prime_req_bonus_threshold: 13
+  weapon_restrictions: any
+  armour_restrictions: any
+  saves:
+    1:  {death_ray: 12, magic_wand: 13, paralysis: 14, dragon_breath: 15, spells: 17}
+    2:  {death_ray: 12, magic_wand: 13, paralysis: 14, dragon_breath: 15, spells: 17}
+    3:  {death_ray: 12, magic_wand: 13, paralysis: 14, dragon_breath: 15, spells: 17}
+    4:  {death_ray: 10, magic_wand: 11, paralysis: 12, dragon_breath: 13, spells: 15}
+    5:  {death_ray: 10, magic_wand: 11, paralysis: 12, dragon_breath: 13, spells: 15}
+    6:  {death_ray: 10, magic_wand: 11, paralysis: 12, dragon_breath: 13, spells: 15}
+    7:  {death_ray: 8,  magic_wand: 9,  paralysis: 10, dragon_breath: 10, spells: 12}
+    8:  {death_ray: 8,  magic_wand: 9,  paralysis: 10, dragon_breath: 10, spells: 12}
+    9:  {death_ray: 8,  magic_wand: 9,  paralysis: 10, dragon_breath: 10, spells: 12}
+    10: {death_ray: 6,  magic_wand: 7,  paralysis: 8,  dragon_breath: 8,  spells: 10}
+    11: {death_ray: 6,  magic_wand: 7,  paralysis: 8,  dragon_breath: 8,  spells: 10}
+    12: {death_ray: 6,  magic_wand: 7,  paralysis: 8,  dragon_breath: 8,  spells: 10}
+    13: {death_ray: 4,  magic_wand: 5,  paralysis: 6,  dragon_breath: 5,  spells: 8}
+    14: {death_ray: 4,  magic_wand: 5,  paralysis: 6,  dragon_breath: 5,  spells: 8}
+    15: {death_ray: 4,  magic_wand: 5,  paralysis: 6,  dragon_breath: 5,  spells: 8}
+    16: {death_ray: 3,  magic_wand: 4,  paralysis: 5,  dragon_breath: 4,  spells: 7}
+    17: {death_ray: 3,  magic_wand: 4,  paralysis: 5,  dragon_breath: 4,  spells: 7}
+    18: {death_ray: 3,  magic_wand: 4,  paralysis: 5,  dragon_breath: 4,  spells: 7}
+    19: {death_ray: 2,  magic_wand: 3,  paralysis: 4,  dragon_breath: 3,  spells: 6}
+    20: {death_ray: 2,  magic_wand: 3,  paralysis: 4,  dragon_breath: 3,  spells: 6}
+  attack_bonus_progression:
+    1: 1
+    2: 2
+    3: 3
+    4: 4
+    5: 5
+    6: 6
+    7: 7
+    8: 8
+    9: 9
+    10: 10
+    11: 10
+    12: 11
+    13: 11
+    14: 12
+    15: 12
+    16: 13
+    17: 13
+    18: 14
+    19: 14
+    20: 15
+  xp_progression:
+    1: 0
+    2: 2000
+    3: 4000
+    4: 8000
+    5: 16000
+    6: 32000
+    7: 64000
+    8: 120000
+    9: 240000
+    10: 360000
+    11: 480000
+    12: 600000
+    13: 720000
+    14: 840000
+    15: 960000
+    16: 1080000
+    17: 1200000
+    18: 1320000
+    19: 1440000
+    20: 1560000
+  special_abilities: []
+  description: >
+    Disciplined warriors who train in every weapon and every armour the
+    smiths can forge. Fighters carry the line — they can use any sword,
+    axe, polearm, or bow, and they wear plate as easily as a cloak. They
+    have no spells and no skills beyond their craft, but the craft is
+    survival.
+
+- name: Cleric
+  hit_die: d6
+  prime_requisite: WIS
+  prime_req_bonus_threshold: 13
+  weapon_restrictions: blunt only — mace, club, war hammer, staff, sling
+  armour_restrictions: any
+  saves:
+    1:  {death_ray: 11, magic_wand: 12, paralysis: 14, dragon_breath: 16, spells: 15}
+    2:  {death_ray: 11, magic_wand: 12, paralysis: 14, dragon_breath: 16, spells: 15}
+    3:  {death_ray: 11, magic_wand: 12, paralysis: 14, dragon_breath: 16, spells: 15}
+    4:  {death_ray: 11, magic_wand: 12, paralysis: 14, dragon_breath: 16, spells: 15}
+    5:  {death_ray: 9,  magic_wand: 10, paralysis: 12, dragon_breath: 14, spells: 12}
+    6:  {death_ray: 9,  magic_wand: 10, paralysis: 12, dragon_breath: 14, spells: 12}
+    7:  {death_ray: 9,  magic_wand: 10, paralysis: 12, dragon_breath: 14, spells: 12}
+    8:  {death_ray: 9,  magic_wand: 10, paralysis: 12, dragon_breath: 14, spells: 12}
+    9:  {death_ray: 6,  magic_wand: 7,  paralysis: 9,  dragon_breath: 11, spells: 9}
+    10: {death_ray: 6,  magic_wand: 7,  paralysis: 9,  dragon_breath: 11, spells: 9}
+    11: {death_ray: 6,  magic_wand: 7,  paralysis: 9,  dragon_breath: 11, spells: 9}
+    12: {death_ray: 6,  magic_wand: 7,  paralysis: 9,  dragon_breath: 11, spells: 9}
+    13: {death_ray: 3,  magic_wand: 5,  paralysis: 6,  dragon_breath: 8,  spells: 7}
+    14: {death_ray: 3,  magic_wand: 5,  paralysis: 6,  dragon_breath: 8,  spells: 7}
+    15: {death_ray: 3,  magic_wand: 5,  paralysis: 6,  dragon_breath: 8,  spells: 7}
+    16: {death_ray: 3,  magic_wand: 5,  paralysis: 6,  dragon_breath: 8,  spells: 7}
+    17: {death_ray: 2,  magic_wand: 4,  paralysis: 5,  dragon_breath: 6,  spells: 5}
+    18: {death_ray: 2,  magic_wand: 4,  paralysis: 5,  dragon_breath: 6,  spells: 5}
+    19: {death_ray: 2,  magic_wand: 4,  paralysis: 5,  dragon_breath: 6,  spells: 5}
+    20: {death_ray: 2,  magic_wand: 4,  paralysis: 5,  dragon_breath: 6,  spells: 5}
+  attack_bonus_progression:
+    1: 1
+    2: 1
+    3: 2
+    4: 2
+    5: 3
+    6: 4
+    7: 5
+    8: 6
+    9: 6
+    10: 7
+    11: 7
+    12: 8
+    13: 8
+    14: 9
+    15: 9
+    16: 10
+    17: 10
+    18: 11
+    19: 11
+    20: 12
+  xp_progression:
+    1: 0
+    2: 1500
+    3: 3000
+    4: 6000
+    5: 12000
+    6: 24000
+    7: 48000
+    8: 90000
+    9: 180000
+    10: 270000
+    11: 360000
+    12: 450000
+    13: 540000
+    14: 630000
+    15: 720000
+    16: 810000
+    17: 900000
+    18: 990000
+    19: 1080000
+    20: 1170000
+  spells_per_day:
+    # Outer keys are caster level (int). Inner keys are spell levels
+    # rendered as strings to satisfy Pydantic's default key handling.
+    1:  {}
+    2:  {"1": 1}
+    3:  {"1": 2}
+    4:  {"1": 2, "2": 1}
+    5:  {"1": 2, "2": 2}
+    6:  {"1": 2, "2": 2, "3": 1, "4": 1}
+    7:  {"1": 3, "2": 3, "3": 2, "4": 1, "5": 1}
+    8:  {"1": 3, "2": 3, "3": 3, "4": 2, "5": 2}
+    9:  {"1": 4, "2": 4, "3": 3, "4": 2, "5": 2}
+    10: {"1": 4, "2": 4, "3": 3, "4": 3, "5": 3}
+    11: {"1": 5, "2": 4, "3": 4, "4": 3, "5": 3}
+    12: {"1": 5, "2": 5, "3": 4, "4": 3, "5": 3}
+    13: {"1": 5, "2": 5, "3": 5, "4": 3, "5": 3}
+    14: {"1": 6, "2": 5, "3": 5, "4": 4, "5": 4}
+    15: {"1": 6, "2": 6, "3": 5, "4": 4, "5": 4}
+    16: {"1": 6, "2": 6, "3": 6, "4": 5, "5": 4}
+    17: {"1": 7, "2": 6, "3": 6, "4": 5, "5": 5}
+    18: {"1": 7, "2": 7, "3": 6, "4": 6, "5": 5}
+    19: {"1": 7, "2": 7, "3": 7, "4": 6, "5": 6}
+    20: {"1": 8, "2": 7, "3": 7, "4": 7, "5": 6}
+  turn_undead:
+    # List of {hd_or_type, target} entries. target is an integer d20 needed,
+    # "T" for automatic turn, "D" for automatic destroy, "-" for no effect.
+    # Each entry encodes "cleric of level X facing undead Y".
+    - {hd_or_type: "L1 vs skeleton", target: 11}
+    - {hd_or_type: "L1 vs zombie",   target: 13}
+    - {hd_or_type: "L1 vs ghoul",    target: 15}
+    - {hd_or_type: "L1 vs wight",    target: 17}
+    - {hd_or_type: "L1 vs wraith",   target: 19}
+    - {hd_or_type: "L1 vs mummy",    target: "-"}
+    - {hd_or_type: "L1 vs spectre",  target: "-"}
+    - {hd_or_type: "L1 vs vampire",  target: "-"}
+    - {hd_or_type: "L2 vs skeleton", target: 9}
+    - {hd_or_type: "L2 vs zombie",   target: 11}
+    - {hd_or_type: "L2 vs ghoul",    target: 13}
+    - {hd_or_type: "L2 vs wight",    target: 15}
+    - {hd_or_type: "L2 vs wraith",   target: 17}
+    - {hd_or_type: "L2 vs mummy",    target: 19}
+    - {hd_or_type: "L2 vs spectre",  target: "-"}
+    - {hd_or_type: "L2 vs vampire",  target: "-"}
+    - {hd_or_type: "L3 vs skeleton", target: 7}
+    - {hd_or_type: "L3 vs zombie",   target: 9}
+    - {hd_or_type: "L3 vs ghoul",    target: 11}
+    - {hd_or_type: "L3 vs wight",    target: 13}
+    - {hd_or_type: "L3 vs wraith",   target: 15}
+    - {hd_or_type: "L3 vs mummy",    target: 17}
+    - {hd_or_type: "L3 vs spectre",  target: 19}
+    - {hd_or_type: "L3 vs vampire",  target: "-"}
+    - {hd_or_type: "L4 vs skeleton", target: "T"}
+    - {hd_or_type: "L4 vs zombie",   target: 7}
+    - {hd_or_type: "L4 vs ghoul",    target: 9}
+    - {hd_or_type: "L4 vs wight",    target: 11}
+    - {hd_or_type: "L4 vs wraith",   target: 13}
+    - {hd_or_type: "L4 vs mummy",    target: 15}
+    - {hd_or_type: "L4 vs spectre",  target: 17}
+    - {hd_or_type: "L4 vs vampire",  target: 19}
+    - {hd_or_type: "L5 vs skeleton", target: "T"}
+    - {hd_or_type: "L5 vs zombie",   target: "T"}
+    - {hd_or_type: "L5 vs ghoul",    target: 7}
+    - {hd_or_type: "L5 vs wight",    target: 9}
+    - {hd_or_type: "L5 vs wraith",   target: 11}
+    - {hd_or_type: "L5 vs mummy",    target: 13}
+    - {hd_or_type: "L5 vs spectre",  target: 15}
+    - {hd_or_type: "L5 vs vampire",  target: 17}
+    - {hd_or_type: "L6 vs skeleton", target: "D"}
+    - {hd_or_type: "L6 vs zombie",   target: "T"}
+    - {hd_or_type: "L6 vs ghoul",    target: "T"}
+    - {hd_or_type: "L6 vs wight",    target: 7}
+    - {hd_or_type: "L6 vs wraith",   target: 9}
+    - {hd_or_type: "L6 vs mummy",    target: 11}
+    - {hd_or_type: "L6 vs spectre",  target: 13}
+    - {hd_or_type: "L6 vs vampire",  target: 15}
+    - {hd_or_type: "L7 vs skeleton", target: "D"}
+    - {hd_or_type: "L7 vs zombie",   target: "D"}
+    - {hd_or_type: "L7 vs ghoul",    target: "T"}
+    - {hd_or_type: "L7 vs wight",    target: "T"}
+    - {hd_or_type: "L7 vs wraith",   target: 7}
+    - {hd_or_type: "L7 vs mummy",    target: 9}
+    - {hd_or_type: "L7 vs spectre",  target: 11}
+    - {hd_or_type: "L7 vs vampire",  target: 13}
+    - {hd_or_type: "L8+ vs skeleton", target: "D"}
+    - {hd_or_type: "L8+ vs zombie",  target: "D"}
+    - {hd_or_type: "L8+ vs ghoul",   target: "D"}
+    - {hd_or_type: "L8+ vs wight",   target: "T"}
+    - {hd_or_type: "L8+ vs wraith",  target: "T"}
+    - {hd_or_type: "L8+ vs mummy",   target: 7}
+    - {hd_or_type: "L8+ vs spectre", target: 9}
+    - {hd_or_type: "L8+ vs vampire", target: 11}
+  special_abilities:
+    - Turn Undead
+    - Divine Spellcasting
+  description: >
+    Holy warriors and healers — clerics serve a deity or a cause and
+    receive their spells through prayer rather than study. They wear
+    any armour, fight with blunt weapons (no edge, by tradition), and
+    can repel undead by brandishing a holy symbol. Where the fighter
+    holds the line and the magic-user breaks it, the cleric keeps the
+    party alive long enough for either to matter.
+
+- name: Magic-User
+  hit_die: d4
+  prime_requisite: INT
+  prime_req_bonus_threshold: 13
+  weapon_restrictions: dagger and walking staff/quarterstaff only
+  armour_restrictions: none
+  saves:
+    1:  {death_ray: 13, magic_wand: 14, paralysis: 13, dragon_breath: 16, spells: 15}
+    2:  {death_ray: 13, magic_wand: 14, paralysis: 13, dragon_breath: 16, spells: 15}
+    3:  {death_ray: 13, magic_wand: 14, paralysis: 13, dragon_breath: 16, spells: 15}
+    4:  {death_ray: 13, magic_wand: 14, paralysis: 13, dragon_breath: 16, spells: 15}
+    5:  {death_ray: 13, magic_wand: 14, paralysis: 13, dragon_breath: 16, spells: 15}
+    6:  {death_ray: 11, magic_wand: 12, paralysis: 11, dragon_breath: 14, spells: 12}
+    7:  {death_ray: 11, magic_wand: 12, paralysis: 11, dragon_breath: 14, spells: 12}
+    8:  {death_ray: 11, magic_wand: 12, paralysis: 11, dragon_breath: 14, spells: 12}
+    9:  {death_ray: 11, magic_wand: 12, paralysis: 11, dragon_breath: 14, spells: 12}
+    10: {death_ray: 11, magic_wand: 12, paralysis: 11, dragon_breath: 14, spells: 12}
+    11: {death_ray: 8,  magic_wand: 9,  paralysis: 8,  dragon_breath: 11, spells: 8}
+    12: {death_ray: 8,  magic_wand: 9,  paralysis: 8,  dragon_breath: 11, spells: 8}
+    13: {death_ray: 8,  magic_wand: 9,  paralysis: 8,  dragon_breath: 11, spells: 8}
+    14: {death_ray: 8,  magic_wand: 9,  paralysis: 8,  dragon_breath: 11, spells: 8}
+    15: {death_ray: 8,  magic_wand: 9,  paralysis: 8,  dragon_breath: 11, spells: 8}
+    16: {death_ray: 5,  magic_wand: 6,  paralysis: 5,  dragon_breath: 8,  spells: 5}
+    17: {death_ray: 5,  magic_wand: 6,  paralysis: 5,  dragon_breath: 8,  spells: 5}
+    18: {death_ray: 5,  magic_wand: 6,  paralysis: 5,  dragon_breath: 8,  spells: 5}
+    19: {death_ray: 5,  magic_wand: 6,  paralysis: 5,  dragon_breath: 8,  spells: 5}
+    20: {death_ray: 5,  magic_wand: 6,  paralysis: 5,  dragon_breath: 8,  spells: 5}
+  attack_bonus_progression:
+    1: 1
+    2: 1
+    3: 1
+    4: 2
+    5: 2
+    6: 2
+    7: 3
+    8: 3
+    9: 3
+    10: 4
+    11: 4
+    12: 4
+    13: 5
+    14: 5
+    15: 5
+    16: 6
+    17: 6
+    18: 6
+    19: 7
+    20: 7
+  xp_progression:
+    1: 0
+    2: 2500
+    3: 5000
+    4: 10000
+    5: 20000
+    6: 40000
+    7: 80000
+    8: 150000
+    9: 300000
+    10: 450000
+    11: 600000
+    12: 750000
+    13: 900000
+    14: 1050000
+    15: 1200000
+    16: 1350000
+    17: 1500000
+    18: 1650000
+    19: 1800000
+    20: 1950000
+  spells_per_day:
+    1:  {"1": 1}
+    2:  {"1": 2}
+    3:  {"1": 2, "2": 1}
+    4:  {"1": 2, "2": 2}
+    5:  {"1": 2, "2": 2, "3": 1}
+    6:  {"1": 3, "2": 2, "3": 2}
+    7:  {"1": 3, "2": 3, "3": 2, "4": 1}
+    8:  {"1": 3, "2": 3, "3": 3, "4": 2}
+    9:  {"1": 4, "2": 3, "3": 3, "4": 2, "5": 1}
+    10: {"1": 4, "2": 4, "3": 3, "4": 2, "5": 2}
+    11: {"1": 4, "2": 4, "3": 4, "4": 3, "5": 3}
+    12: {"1": 4, "2": 4, "3": 4, "4": 4, "5": 4, "6": 1}
+    13: {"1": 5, "2": 5, "3": 5, "4": 4, "5": 4, "6": 2}
+    14: {"1": 5, "2": 5, "3": 5, "4": 4, "5": 4, "6": 3}
+    15: {"1": 5, "2": 5, "3": 5, "4": 5, "5": 5, "6": 4}
+    16: {"1": 6, "2": 5, "3": 5, "4": 5, "5": 5, "6": 4}
+    17: {"1": 6, "2": 6, "3": 5, "4": 5, "5": 5, "6": 5}
+    18: {"1": 6, "2": 6, "3": 6, "4": 5, "5": 5, "6": 5}
+    19: {"1": 7, "2": 6, "3": 6, "4": 6, "5": 5, "6": 5}
+    20: {"1": 7, "2": 7, "3": 6, "4": 6, "5": 6, "6": 5}
+  special_abilities:
+    - Arcane Spellcasting
+    - Spell Research
+    - Read Magic (always known; starting spellbook holds Read Magic plus three first-level spells)
+  description: >
+    Scholars of the arcane. A magic-user spends their first decades
+    copying out spellbooks by candlelight; they begin play with Read
+    Magic and three first-level spells in a personal book. They cast
+    no spells without preparation, wear no armour at all, and carry
+    only a dagger or staff — but a Sleep spell at the right moment
+    ends a fight before it starts.
+
+- name: Thief
+  hit_die: d4
+  prime_requisite: DEX
+  prime_req_bonus_threshold: 13
+  weapon_restrictions: any one-handed; no two-handed melee weapons
+  armour_restrictions: leather only; no shield
+  saves:
+    1:  {death_ray: 13, magic_wand: 14, paralysis: 13, dragon_breath: 16, spells: 15}
+    2:  {death_ray: 13, magic_wand: 14, paralysis: 13, dragon_breath: 16, spells: 15}
+    3:  {death_ray: 13, magic_wand: 14, paralysis: 13, dragon_breath: 16, spells: 15}
+    4:  {death_ray: 13, magic_wand: 14, paralysis: 13, dragon_breath: 16, spells: 15}
+    5:  {death_ray: 12, magic_wand: 13, paralysis: 11, dragon_breath: 14, spells: 13}
+    6:  {death_ray: 12, magic_wand: 13, paralysis: 11, dragon_breath: 14, spells: 13}
+    7:  {death_ray: 12, magic_wand: 13, paralysis: 11, dragon_breath: 14, spells: 13}
+    8:  {death_ray: 12, magic_wand: 13, paralysis: 11, dragon_breath: 14, spells: 13}
+    9:  {death_ray: 10, magic_wand: 11, paralysis: 9,  dragon_breath: 12, spells: 10}
+    10: {death_ray: 10, magic_wand: 11, paralysis: 9,  dragon_breath: 12, spells: 10}
+    11: {death_ray: 10, magic_wand: 11, paralysis: 9,  dragon_breath: 12, spells: 10}
+    12: {death_ray: 10, magic_wand: 11, paralysis: 9,  dragon_breath: 12, spells: 10}
+    13: {death_ray: 8,  magic_wand: 9,  paralysis: 7,  dragon_breath: 10, spells: 8}
+    14: {death_ray: 8,  magic_wand: 9,  paralysis: 7,  dragon_breath: 10, spells: 8}
+    15: {death_ray: 8,  magic_wand: 9,  paralysis: 7,  dragon_breath: 10, spells: 8}
+    16: {death_ray: 8,  magic_wand: 9,  paralysis: 7,  dragon_breath: 10, spells: 8}
+    17: {death_ray: 6,  magic_wand: 7,  paralysis: 5,  dragon_breath: 8,  spells: 6}
+    18: {death_ray: 6,  magic_wand: 7,  paralysis: 5,  dragon_breath: 8,  spells: 6}
+    19: {death_ray: 6,  magic_wand: 7,  paralysis: 5,  dragon_breath: 8,  spells: 6}
+    20: {death_ray: 6,  magic_wand: 7,  paralysis: 5,  dragon_breath: 8,  spells: 6}
+  attack_bonus_progression:
+    1: 1
+    2: 1
+    3: 2
+    4: 2
+    5: 3
+    6: 4
+    7: 5
+    8: 6
+    9: 6
+    10: 7
+    11: 7
+    12: 8
+    13: 8
+    14: 9
+    15: 9
+    16: 10
+    17: 10
+    18: 11
+    19: 11
+    20: 12
+  xp_progression:
+    1: 0
+    2: 1250
+    3: 2500
+    4: 5000
+    5: 10000
+    6: 20000
+    7: 40000
+    8: 75000
+    9: 150000
+    10: 225000
+    11: 300000
+    12: 375000
+    13: 450000
+    14: 525000
+    15: 600000
+    16: 675000
+    17: 750000
+    18: 825000
+    19: 900000
+    20: 975000
+  thief_skills:
+    # Percentile targets (d100 ≤ value succeeds). The schema's keys are
+    # open_locks, remove_traps, pick_pockets, move_silently, climb_walls,
+    # hide, and listen. BFRPG distinguishes "find traps" from "remove
+    # traps"; the engine treats the listed remove_traps as the lower of
+    # the two, with find usually 10 points higher (GM call).
+    1:  {open_locks: 25, remove_traps: 10, pick_pockets: 30, move_silently: 25, climb_walls: 80, hide: 10, listen: 30}
+    2:  {open_locks: 30, remove_traps: 15, pick_pockets: 35, move_silently: 30, climb_walls: 81, hide: 15, listen: 34}
+    3:  {open_locks: 35, remove_traps: 20, pick_pockets: 40, move_silently: 35, climb_walls: 82, hide: 20, listen: 38}
+    4:  {open_locks: 40, remove_traps: 25, pick_pockets: 45, move_silently: 40, climb_walls: 83, hide: 25, listen: 42}
+    5:  {open_locks: 45, remove_traps: 30, pick_pockets: 50, move_silently: 45, climb_walls: 84, hide: 30, listen: 46}
+    6:  {open_locks: 50, remove_traps: 35, pick_pockets: 55, move_silently: 50, climb_walls: 85, hide: 35, listen: 50}
+    7:  {open_locks: 55, remove_traps: 40, pick_pockets: 60, move_silently: 55, climb_walls: 86, hide: 40, listen: 54}
+    8:  {open_locks: 60, remove_traps: 45, pick_pockets: 65, move_silently: 60, climb_walls: 87, hide: 45, listen: 58}
+    9:  {open_locks: 65, remove_traps: 50, pick_pockets: 70, move_silently: 65, climb_walls: 88, hide: 50, listen: 62}
+    10: {open_locks: 68, remove_traps: 55, pick_pockets: 75, move_silently: 68, climb_walls: 89, hide: 55, listen: 65}
+    11: {open_locks: 71, remove_traps: 58, pick_pockets: 80, move_silently: 71, climb_walls: 90, hide: 58, listen: 68}
+    12: {open_locks: 74, remove_traps: 61, pick_pockets: 85, move_silently: 74, climb_walls: 91, hide: 61, listen: 71}
+    13: {open_locks: 77, remove_traps: 64, pick_pockets: 90, move_silently: 77, climb_walls: 92, hide: 64, listen: 74}
+    14: {open_locks: 80, remove_traps: 67, pick_pockets: 92, move_silently: 80, climb_walls: 93, hide: 67, listen: 77}
+    15: {open_locks: 83, remove_traps: 70, pick_pockets: 94, move_silently: 83, climb_walls: 94, hide: 70, listen: 80}
+    16: {open_locks: 86, remove_traps: 73, pick_pockets: 96, move_silently: 86, climb_walls: 95, hide: 73, listen: 83}
+    17: {open_locks: 89, remove_traps: 76, pick_pockets: 98, move_silently: 89, climb_walls: 96, hide: 76, listen: 86}
+    18: {open_locks: 92, remove_traps: 79, pick_pockets: 99, move_silently: 92, climb_walls: 97, hide: 79, listen: 89}
+    19: {open_locks: 95, remove_traps: 82, pick_pockets: 99, move_silently: 95, climb_walls: 98, hide: 82, listen: 92}
+    20: {open_locks: 98, remove_traps: 85, pick_pockets: 99, move_silently: 98, climb_walls: 99, hide: 85, listen: 95}
+  special_abilities:
+    - Backstab (+4 to hit, double damage when attacking unaware target from behind)
+    - Thief Skills (Open Locks, Remove Traps, Pick Pockets, Move Silently, Climb Walls, Hide, Listen — d100 ≤ target)
+    - Read Languages (4th level; chance to puzzle out unfamiliar scripts)
+    - Cast Spells from Scrolls (10th level; 10% miscast chance per attempt)
+  description: >
+    Picklocks, second-storey workers, scouts, and ne'er-do-wells. The
+    thief brings the tools of the underworld to the dungeon: lockpicks,
+    grease, soft boots, and the patience to wait for the right moment.
+    They wear leather, never a shield, and prefer to win fights they
+    finish before the opponent knows one started.

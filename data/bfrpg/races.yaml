@@ -1,0 +1,131 @@
+# Basic Fantasy RPG core races — Human, Dwarf, Elf, Halfling.
+# Mechanics conform to BFRPG 4th edition (CC BY-SA, Basic Fantasy Project).
+#
+# Field shape matches app/game/schemas/race_def.py:
+#   ability_requirements: {ability: {min, max}}  (ability ∈ str/int/wis/dex/con/cha)
+#   level_caps:           {class_name: int | null}; null = uncapped
+#   save_modifiers:       {save_kind: int}       (save_kind from SaveKind)
+#   special_abilities:    [str, ...]             (free-form display strings)
+#   allowed_alignments:   subset of [lawful, neutral, chaotic]
+#   languages:            [str, ...]
+#   movement:             int (feet per turn; default 40)
+#   infravision:          int (range in feet; 0 = none)
+
+- name: Human
+  description: >
+    The most numerous folk of the surface world. Humans have no innate
+    knack for sorcery or stonecraft, but they breed faster, learn faster,
+    and reach further than any of the older peoples. Where dwarves and
+    elves see boundaries, humans see borders waiting to be crossed.
+    Their advantage is ambition: a human adventurer can rise to any
+    height their daring will carry them.
+  ability_requirements: {}
+  allowed_classes: [Fighter, Cleric, Magic-User, Thief]
+  level_caps:
+    Fighter: null
+    Cleric: null
+    Magic-User: null
+    Thief: null
+  save_modifiers: {}
+  special_abilities: []
+  allowed_alignments: [lawful, neutral, chaotic]
+  languages: [Common]
+  movement: 40
+  infravision: 0
+  source: core
+
+- name: Dwarf
+  description: >
+    Stout, broad-shouldered folk of the deep places. Dwarves stand around
+    four feet tall but weigh nearly as much as a human, and centuries of
+    living beneath stone have given them sharp eyes for tunnel work and
+    a legendary stubbornness against magic. They favour beard-grease and
+    practical armour, distrust elves on principle, and remember slights
+    longer than most kingdoms last. A dwarf's word, once given, is kept.
+  ability_requirements:
+    con: {min: 9}
+  allowed_classes: [Fighter, Cleric, Thief]
+  level_caps:
+    Fighter: 6
+    Cleric: 8
+    Thief: 8
+  save_modifiers:
+    magic_wand: 4
+    paralysis: 4
+    dragon_breath: 4
+    spells: 4
+  special_abilities:
+    - "Darkvision 60 ft"
+    - "Detect Slope (1-2 on 1d6 in passages)"
+    - "Detect New Construction (1-2 on 1d6 passing worked stone)"
+    - "Cannot use longbows or two-handed swords"
+  allowed_alignments: [lawful, neutral, chaotic]
+  languages: [Common, Dwarvish, Goblin, Kobold, Orc, Gnomish]
+  movement: 30
+  infravision: 60
+  source: core
+
+- name: Elf
+  description: >
+    Slender, pale, and long of life — elves are folk of the old forests
+    and the older starlight. They speak slowly, age slowly, and remember
+    everything; a slight given to an elf at twenty might be repaid at
+    two hundred. Elves alone among the core peoples have the gift of
+    weaving sword and spell in the same breath, and they value beauty
+    almost as much as they value being correct.
+  ability_requirements:
+    int: {min: 9}
+  allowed_classes: [Fighter, Cleric, Magic-User, Thief]
+  level_caps:
+    Fighter: 4
+    Cleric: 4
+    Magic-User: 8
+    Thief: 4
+  save_modifiers:
+    paralysis: 1
+    dragon_breath: 1
+    spells: 1
+  special_abilities:
+    - "Darkvision 60 ft"
+    - "Detect Secret Doors (1-2 on 1d6 passive within 10 ft, 1-3 on 1d6 actively searching)"
+    - "Immune to magical sleep"
+    - "Multiclass Fighter / Magic-User permitted (variant; GM ruling)"
+  allowed_alignments: [lawful, neutral, chaotic]
+  languages: [Common, Elvish, Gnoll, Hobgoblin, Orc]
+  movement: 40
+  infravision: 60
+  source: core
+
+- name: Halfling
+  description: >
+    Halflings stand around three feet tall, with broad bare feet, ruddy
+    cheeks, and a hearty appetite for second breakfasts. Most live as
+    farmers and innkeepers in quiet villages, but every generation a few
+    take to the road, where their small size, quick fingers, and
+    surprisingly good aim make them superb scouts and skirmishers.
+    A halfling's idea of a comfortable evening is a warm fire, a full
+    pipe, and a story that ends with everyone alive.
+  ability_requirements:
+    dex: {min: 9}
+    str: {max: 17}
+  allowed_classes: [Fighter, Cleric, Thief]
+  level_caps:
+    Fighter: 4
+    Cleric: 4
+    Thief: 8
+  save_modifiers:
+    magic_wand: 4
+    paralysis: 4
+    dragon_breath: 4
+    spells: 4
+  special_abilities:
+    - "+1 to attack rolls with all missile weapons"
+    - "Larger creatures (bigger than human-sized) attack at -2 in melee"
+    - "Hide in natural terrain (90% chance outdoors; 1-2 on 1d6 indoors)"
+    - "Infravision 30 ft"
+    - "Cannot use weapons designed for larger races (longbows, two-handed swords, polearms)"
+  allowed_alignments: [lawful, neutral, chaotic]
+  languages: [Common, Halfling]
+  movement: 30
+  infravision: 30
+  source: core
