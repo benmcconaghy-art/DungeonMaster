@@ -231,19 +231,20 @@ Parking lot for items deliberately deferred. Each entry is a short,
 actionable note; the trigger condition tells future-you when to pick it
 up. Promote to a real issue / phase task when its trigger fires.
 
-- **Reasoning mode tuning** (added 2026-04-30, target Phase 5).
-  Apply Nemotron's `low_effort` reasoning mode to memory subsystem
-  calls (session summariser, campaign summariser, fact extractor)
-  while keeping the DM turn loop at full reasoning. Mechanical change
-  to `app/llm/client.py` adding a `reasoning_mode` parameter.
-  **Verify:** `low_effort` doesn't degrade JSON output on the fact
-  extractor — if it does, keep the extractor at full and only the
-  summarisers low. Phase 5 is the right home because it's where the
-  project first cares seriously about latency budgets across async
-  workloads. **Trigger:** start of Phase 5 image-generation work
-  (latency on memory tasks competes with image-worker priority).
-  **Context:** discussion of `nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4`
-  reasoning modes in the Phase 3 conversation.
+- **Reasoning mode tuning** *(resolved 2026-05-01, Phase 5 prep #2)*.
+  `app/llm/client.py` gained a `reasoning_mode` parameter that maps
+  to Nemotron's `chat_template_kwargs`. Verdict per call site:
+  **summarisers → "low"** (compression IS structuring; JSON shape
+  stays clean), **fact extractor → "full"** (kept after a 4-run
+  integration study: 3× "low" → 21/38/51 facts vs 1× "full" → 128
+  facts on the same 25-turn fixture; "what merits long-term memory"
+  is salience judgement, not structuring). Latency cost at "full":
+  ~+8s/turn extractor delta (mean turn 8.6s → 18.6s on the same
+  fixture). DM turn loop stays "full" for tool-call accuracy. Phase
+  8 module extractor will start at "full" for the same salience
+  reason. **Future watch:** if a multi-session campaign shows
+  campaign-summary drift (the "low" summariser missing arcs), revisit
+  promoting the campaign summariser to "full" too.
 
 - **Per-class spell levels** (added 2026-04-30, target: when it bites).
   Spells like Hold Person and Continual Light have different levels per

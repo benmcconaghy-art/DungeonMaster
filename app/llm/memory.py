@@ -694,20 +694,25 @@ async def extract_and_persist_facts(
         # truncating mid-array and breaking the parse. 2048 leaves
         # headroom; the summarisers run at the same ceiling.
         #
-        # reasoning_mode="low" — Phase 5 prep tuned this empirically.
-        # The structural prompt below is explicit enough about JSON
-        # shape that low-effort reasoning still produces parseable
-        # {facts: [...]} payloads; ``_strip_json_envelope`` is the
-        # tripwire — if Nemotron's structure breaks under low_effort,
-        # parse failures spike in the logs and we escalate this back
-        # to "full". Future Phase 8 module extractor stays at "full"
-        # because its output is much richer and structurally fragile.
+        # reasoning_mode="full" — Phase 5 prep evaluated "low" first
+        # (compression's canonical low_effort use case) and the JSON
+        # output stayed parseable, but a 4-run integration study
+        # (3x low -> 21/38/51 facts; 1x full -> 128 facts on the same
+        # 25-turn fixture) showed low_effort produces ~3x fewer facts.
+        # "What merits long-term memory" is a salience judgement, not
+        # just a structuring task; reasoning depth shows up as
+        # quantity, not parseability. The extractor stays at "full"
+        # despite the ~8s/turn latency cost — silent memory
+        # degradation across long campaigns is the worse failure mode.
+        # Summarisers (above) keep "low": compression IS structuring.
+        # Phase 8 module extractor stays at "full" for the same
+        # salience-judgement reason.
         raw = await client.complete(
             messages,
             response_format={"type": "json_object"},
             max_tokens=2048,
             temperature=0.2,
-            reasoning_mode="low",
+            reasoning_mode="full",
         )
     except DmClientError:
         log.exception("fact extractor: LLM call failed; skipping turn")
