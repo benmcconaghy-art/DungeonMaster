@@ -171,6 +171,18 @@ class ImageReady(_BaseMessage):
     url: str
 
 
+class ImageFailed(_BaseMessage):
+    """Phase 5 — image generation failed (FLUX 503 retry exhaustion,
+    transport error, malformed response). The placeholder card swaps
+    to a "(scene image unavailable)" state. Distinct from
+    :class:`DmError` because the rest of the turn is unaffected — only
+    the image slot is impacted."""
+
+    type: Literal["image_failed"] = "image_failed"
+    image_id: str
+    reason: str
+
+
 class Presence(_BaseMessage):
     """Who is currently connected to this session.
 
@@ -229,6 +241,7 @@ ServerMessage = Annotated[
     | StateUpdate
     | ImagePending
     | ImageReady
+    | ImageFailed
     | Presence
     | DmError
     | Pong
