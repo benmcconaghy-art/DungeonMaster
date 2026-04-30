@@ -31,9 +31,13 @@ Lifecycle:
    - ``pc_action`` → echo a :class:`~app.realtime.messages.PcAction`
      to the session, then trigger the orchestrator's :func:`take_turn`
      in a background task that publishes each event through Valkey.
-     Combat-kind actions go through the initiative gate (Phase 4
-     step 6 lands the gate; this commit echoes the dispatch and
-     leaves a TODO marker).
+     Combat-kind actions go through :func:`_check_initiative_gate`
+     server-side: out of combat any action passes; during combat the
+     submitting character must match the active initiative slot or
+     the hub returns a :class:`~app.realtime.messages.DmError` with
+     ``reason="not_your_turn"``. The gate is server-side; a UI that
+     skips its visual hint and sends a combat action anyway still
+     gets rejected.
    - ``whisper_to_dm`` → persist with audience=``["dm"]``; not
      surfaced to other players, no immediate orchestrator turn (the
      whisper context flows in via the next prompt).
@@ -55,6 +59,7 @@ import asyncio
 import contextlib
 import logging
 import uuid
+from dataclasses import dataclass
 from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
@@ -157,6 +162,68 @@ async def _build_snapshot(
         messages=snapshot_msgs,
         connected=roster,
     )
+
+
+@dataclass(frozen=True, slots=True)
+class _GateResult:
+    """Outcome of an initiative-gate check.
+
+    The hub uses the typed ``reason`` / ``message`` to surface a
+    :class:`~app.realtime.messages.DmError` to the offending client
+    when a combat action is rejected; ``allowed=True`` short-circuits
+    that path.
+    """
+
+    allowed: bool
+    reason: str = ""
+    message: str = ""
+
+
+async def _check_initiative_gate(*, session_id: str, character_id: str | None) -> _GateResult:
+    """Server-side initiative gate for combat-kind pc_action messages.
+
+    Out of combat (no active encounter), every action is allowed.
+    During combat, only the current actor's character can submit a
+    combat action — anyone else gets ``not_your_turn``. The gate is
+    enforced server-side regardless of client behaviour; a buggy or
+    malicious UI cannot bypass it by sending the message anyway.
+
+    Edge case: if combat is active but the current initiative slot is
+    a non-PC (a monster's turn), nobody can submit a combat action —
+    the DM is on the clock and will narrate the monster's turn through
+    the orchestrator. The reject reason is the same ``not_your_turn``;
+    only the message text differs.
+    """
+
+    async with SessionLocal() as db:
+        actor = await _resolve_current_actor(db, session_id=session_id)
+    if actor is None:
+        return _GateResult(allowed=True)
+    if not actor.is_player:
+        return _GateResult(
+            allowed=False,
+            reason="not_your_turn",
+            message=(
+                f"It's {actor.name}'s turn (round {actor.round_number}); the DM"
+                " is resolving non-player actions."
+            ),
+        )
+    if character_id is None:
+        return _GateResult(
+            allowed=False,
+            reason="not_your_turn",
+            message=(
+                f"It's {actor.name}'s turn; submit a combat action with"
+                " character_id set to the active PC."
+            ),
+        )
+    if actor.participant_id != character_id:
+        return _GateResult(
+            allowed=False,
+            reason="not_your_turn",
+            message=f"It's {actor.name}'s turn (round {actor.round_number}).",
+        )
+    return _GateResult(allowed=True)
 
 
 async def _resolve_current_actor(db: Any, *, session_id: str) -> ws_msgs.CurrentActor | None:
@@ -415,9 +482,26 @@ async def _handle_inbound(
         return
 
     if isinstance(client_msg, ws_msgs.ClientPcAction):
-        # Initiative gating for combat actions lands in step 6.
-        # For now: echo to the session and trigger the orchestrator.
         char_id = client_msg.character_id or (primary_char.id if primary_char else None)
+
+        # Initiative gating: combat-kind actions during an active
+        # encounter must be the current actor's. Non-combat (talk,
+        # look, other) and any action when there's no active encounter
+        # are unconditionally accepted.
+        if client_msg.kind == "combat":
+            gate = await _check_initiative_gate(session_id=session_id, character_id=char_id)
+            if not gate.allowed:
+                await ws.send_text(
+                    ws_msgs.DmError(
+                        reason=gate.reason,
+                        message=gate.message,
+                    ).model_dump_json()
+                )
+                return
+
+        # Echo the player's intent to the session so other clients see
+        # what was declared (the originating client's UI already
+        # rendered the action optimistically).
         await pubsub.publish(
             session_id,
             ws_msgs.PcAction(

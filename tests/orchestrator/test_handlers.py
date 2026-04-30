@@ -459,6 +459,58 @@ class TestEncounters:
         assert "Goblins!" in result.content
 
     @pytest.mark.asyncio
+    async def test_start_encounter_merges_alive_pcs_into_initiative(
+        self, db_session
+    ) -> None:  # type: ignore[no-untyped-def]
+        """Phase 4: alive PCs in the campaign join initiative
+        automatically. The PC's ``participant_id`` is the character row
+        id so the WS hub's gate can match a player's character_id
+        against ``current_turn``.
+        """
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        # Two alive PCs and one dead PC — only alive ones should join.
+        alive1 = await make_character(
+            db_session, user_id=user.id, campaign_id=campaign.id, name="Alive Alice"
+        )
+        alive2 = await make_character(
+            db_session, user_id=user.id, campaign_id=campaign.id, name="Alive Bob"
+        )
+        await make_character(
+            db_session,
+            user_id=user.id,
+            campaign_id=campaign.id,
+            name="Dead Don",
+            status="dead",
+        )
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        handler = get_handler("start_encounter")
+        assert handler is not None
+        args = StartEncounter(
+            name="Goblins!",
+            monsters=[EncounterMonster(name="goblin", count=2, hp=5)],
+        )
+        with with_dispatch_context(_ctx(session.id)):
+            await handler.fn(db_session, args)
+        await db_session.commit()
+
+        enc = (await db_session.scalars(select(Encounter))).one()
+        # 2 goblins + 2 alive PCs + 0 dead PCs = 4 entries.
+        assert len(enc.initiative) == 4
+        ids = {e["participant_id"] for e in enc.initiative}
+        assert alive1.id in ids
+        assert alive2.id in ids
+        # Player flag matches the participant kind.
+        for entry in enc.initiative:
+            if entry["participant_id"] in {alive1.id, alive2.id}:
+                assert entry["is_player"] is True
+            else:
+                assert entry["is_player"] is False
+
+    @pytest.mark.asyncio
     async def test_end_encounter_flips_status(self, db_session) -> None:  # type: ignore[no-untyped-def]
         user = await make_user(db_session)
         campaign = await make_campaign(db_session, owner_id=user.id)

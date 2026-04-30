@@ -1,40 +1,40 @@
 """Handler for the ``start_encounter`` tool.
 
-Creates an active ``encounters`` row for the session, rolls
-initiative for every monster the LLM declared (the DM never rolls
-initiative in prose — engine territory, AGENTS.md invariant #1), and
-returns the resolved order so the LLM can narrate the opening
-moments of combat.
+Creates an active ``encounters`` row for the session, rolls initiative
+for every monster the LLM declared AND every alive PC in the campaign
+(the DM never rolls initiative in prose — engine territory,
+AGENTS.md invariant #1), and returns the resolved order so the LLM
+can narrate the opening moments of combat.
 
-Phase 2 only includes monsters in initiative. Phase 5+ reads the
-party's character list and merges PCs into the order; for now the
-orchestrator's caller is single-player and the LLM can request a
-PC-side dice roll separately.
+Phase 4 change: PCs are auto-merged into initiative. Their
+``participant_id`` is the character row id so the WS hub's initiative
+gate can match a player's ``character_id`` against ``current_turn``.
+The PC's Dex modifier is the BFRPG curve applied to ``dex_score``.
 """
 
 from __future__ import annotations
 
 import random
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Encounter
-from app.game.rules import Participant, roll_initiative
+from app.db.models import Character, Encounter
+from app.db.models import Session as DmSession
+from app.game.rules import Participant, ability_modifier, roll_initiative
 from app.llm.tools import StartEncounter, ToolResult, register
 from app.orchestrator.context import current_context
 
 
 @register("start_encounter")  # type: ignore[arg-type]
 async def handle(db: AsyncSession, args: StartEncounter) -> ToolResult:
-    """Create an encounter, roll initiative, persist."""
+    """Create an encounter, roll initiative for monsters + alive PCs, persist."""
 
     ctx = current_context()
     rng = random.Random()
 
-    # Build participants for initiative. Each declared monster contributes
-    # ``count`` participants, each with a unique participant_id so ties
-    # break deterministically. Phase 2 doesn't model monster Dex
-    # individually, so dex_modifier defaults to 0.
+    # Build the participants list. Monsters first (so a stable ordering
+    # falls out for ties at the same initiative value); PCs second.
     participants: list[Participant] = []
     monsters_payload: list[dict[str, object]] = []
     for monster in args.monsters:
@@ -56,6 +56,31 @@ async def handle(db: AsyncSession, args: StartEncounter) -> ToolResult:
                     is_player=False,
                 )
             )
+
+    # Resolve the campaign for the encounter via session, then enrol
+    # every alive PC. Their ``participant_id`` matches the character row
+    # id so the WS gate's lookup works directly.
+    session_row = await db.get(DmSession, ctx.session_id)
+    if session_row is None:
+        raise ValueError(f"unknown session_id {ctx.session_id!r} during start_encounter")
+    campaign_id = session_row.campaign_id
+
+    pc_stmt = (
+        select(Character)
+        .where(Character.campaign_id == campaign_id)
+        .where(Character.status == "alive")
+        .order_by(Character.name)
+    )
+    pcs = list((await db.scalars(pc_stmt)).all())
+    for pc in pcs:
+        participants.append(
+            Participant(
+                participant_id=pc.id,
+                name=pc.name,
+                dex_modifier=ability_modifier(pc.dex_score),
+                is_player=True,
+            )
+        )
 
     order = roll_initiative(participants, rng=rng)
     initiative_payload = [
