@@ -206,8 +206,12 @@ app/
 ├── orchestrator/
 │   ├── dm.py           # the DM turn loop
 │   └── handlers/       # one file per tool: apply_damage.py, award_xp.py, etc.
-├── templates/          # Jinja2
-└── static/             # CSS, JS, images
+├── views/              # server-side template-context builders
+│                       # (one composer per non-trivial view)
+├── templates/          # Jinja2 (base + per-view: index/login/register/
+│                       # campaign_dashboard/character_sheet/table)
+└── static/             # CSS (per-view: tokens/base/auth/dashboard/sheet/
+                        # table), JS, images
 
 data/bfrpg/             # YAML: classes, spells, monsters, equipment
 data/bfrpg/modules/     # bundled modules (Morgansfort)
@@ -248,7 +252,7 @@ uv run mypy app                                 # type check
 
 ## Current build phase
 
-**Phase 5 complete; Phase 6 (richer combat / encounter polish) ready to start.**
+**Phase 6 complete; Phase 7 (hardening) ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.
 
@@ -315,30 +319,30 @@ up. Promote to a real issue / phase task when its trigger fires.
   **Context:** Phase 3 commit `64d690e`, Phase 4 commits
   `327a9c7`/`bd9ba9c`; spec §13 single-worker rationale.
 
-- **SSE bridge removal** (added 2026-04-30, target Phase 5 prep or
-  end-of-Phase-5 cleanup). Phase 4 made `app/api/sse.py` and
-  `tests/test_sse_bridge.py` orphaned — WS hub is now the primary
-  transport. Remove only after confirming Phase 5's image worker
-  doesn't reuse the bridge for any streaming concern (the worker
-  publishes via Valkey pub/sub which the WS hub consumes directly,
-  so SSE shouldn't matter). Verify with grep + integration test
-  rerun before deletion. **Trigger:** at the start of Phase 5, the
-  agent picks this up as a 10-minute prep task.
-  **Context:** Phase 2 commit `40e96af` (introduced); Phase 4 commit
-  `13d9b60` (orphaned).
+- **SSE bridge removal** *(resolved before Phase 6)*. Verified during
+  Phase 6 Step 3 prep that `app/api/sse.py` and
+  `tests/test_sse_bridge.py` were both already removed (presumably
+  during Phase 5 step prep). No action needed at Phase 6 close.
 
 - **Multi-tab cross-visibility for the same user** (added 2026-04-30,
-  target Phase 6). When a user opens two browser tabs of the same
-  session and submits an action from tab A, tab B doesn't see it.
-  Cause: `pc_action` frames echo back via Valkey to every connection,
-  and the JS de-dupes by `selfUserId === msg.user_id`. The fix needs
-  a per-connection identifier — easiest is to have the server filter
-  the originating socket out of the broadcast (currently the publisher
-  doesn't know which sockets it came from). Acceptable for Phase 4
-  (real multi-tab is rare and not blocking gameplay). **Trigger:**
-  a player reports it, OR Phase 6 polish surfaces it as a confused
-  user moment. **Context:** `app/templates/table.html` `pc_action`
-  dispatcher; Phase 4 commit `13d9b60`.
+  re-evaluated 2026-05-01 at Phase 6 close, target Phase 7+).
+  When a user opens two browser tabs of the same session and submits
+  an action from tab A, tab B doesn't see it. Cause: `pc_action`
+  frames echo back via Valkey to every connection, and the JS
+  de-dupes by `selfUserId === msg.user_id`. The fix needs a
+  per-connection identifier — easiest is to have the server filter
+  the originating socket out of the broadcast (currently the
+  publisher doesn't know which sockets it came from). **Phase 6
+  re-evaluation**: deferred again. The Phase 6 design's WHISPERS
+  sidebar gives a natural future surface for "your other tab acted"
+  notifications, but the underlying server-side filtering is real
+  architectural work, not polish. Whoever picks this up should
+  consider piggy-backing on the same per-conn identifier needed for
+  the multi-client integration test below. **Trigger:** a player
+  reports it, OR Phase 7+ multi-client load testing motivates the
+  conn-id surface. **Context:** `app/templates/table.html`
+  `pc_action` dispatcher; Phase 4 commit `13d9b60`; Phase 6
+  WHISPERS panel as the natural notification surface.
 
 - **Multi-client integration test** (added 2026-04-30, target Phase 7
   hardening). `tests/integration/test_multiplayer.py` is single-client
@@ -356,37 +360,43 @@ up. Promote to a real issue / phase task when its trigger fires.
   docstring of `tests/integration/test_multiplayer.py`.
 
 - **Kontext /edit output dimensions vs scene-kind params** (added 2026-05-01,
-  Phase 5 step 8 close-out, target Phase 6 polish). Kontext `/edit`
-  preserves the source image's aspect ratio — a scene-edit job that
-  references an NPC's canonical portrait (768x1024) produces a 768x1024
-  image, not the scene-kind 1280x768. The worker today persists
-  `width=null, height=null` for /edit jobs because we don't know the
-  output size until decoded. **Acceptable for Phase 5** (the image still
-  renders and remains visually coherent) but the table will mix portrait-
-  shaped "scenes" with landscape-shaped ones, which is jarring. Three
-  acceptable fixes when this matters: (a) decode the PNG in the worker
-  to fill width/height post-hoc; (b) add an explicit `target_width` /
-  `target_height` to the edit request so Kontext outputs scene-shaped;
-  (c) crop/pad to scene aspect on the FastAPI side before serving.
-  **Trigger:** a player or playtest comments on the inconsistent aspect,
-  OR Phase 6 polish surfaces it during scene-image work.
-  **Context:** spec §8 line 766 explicitly puts Kontext scene edits in
-  Phase 6; Step 8 shipped the dispatch path early.
+  Phase 5 step 8 close-out, re-evaluated 2026-05-01 at Phase 6 close).
+  Kontext `/edit` preserves the source image's aspect ratio — a
+  scene-edit job that references an NPC's canonical portrait
+  (768x1024) produces a 768x1024 image, not the scene-kind
+  1280x768. The worker today persists `width=null, height=null` for
+  /edit jobs because we don't know the output size until decoded.
+  **Phase 6 polish-pass observation**: the design's image-card frame
+  (parchment plate with `width: 280px; height: auto;` for the img,
+  scaled to 220px at ≤1280px) renders portrait-shaped images at
+  ~280×373px without breaking the float-and-letterbox layout. The
+  inconsistency between landscape `/generate` scenes (~280×168) and
+  portrait `/edit` scenes (~280×373) in the same column is real but
+  not visually broken — the frame composition is the same, the
+  plate just gets taller. Real fix when it matters: (a) decode the
+  PNG in the worker to fill width/height post-hoc; (b) add an
+  explicit `target_width` / `target_height` to the edit request so
+  Kontext outputs scene-shaped; (c) crop/pad to scene aspect on the
+  FastAPI side before serving. **Trigger:** a player or playtest
+  comments on the inconsistent aspect (the visual layer no longer
+  hides this — readers see the size delta).
+  **Context:** spec §8 line 766; Phase 6 step 4 image-card
+  composition decision in `app/static/css/table.css`.
 
-- **Image events not in Snapshot.messages** (added 2026-05-01, Phase 5
-  step 9 close-out, target Phase 6 reconnect polish). The Snapshot wire
-  shape only carries persisted `session_messages`. Image lifecycle
-  events (`image_pending`, `image_ready`, `image_failed`) live only on
-  the live WS event stream — a player reconnecting mid-generation sees
-  nothing for that scene until the worker emits the eventual
-  ready/failed event, at which point the late-delivery path in
-  `appendImageReady` / `appendImageFailed` renders a fresh card. The
-  failure case is the worse one: a worker that died before publishing
-  produces a permanent gap. **Fix idea:** snapshot in-flight image jobs
-  by querying `images:queue` length + the worker's in-flight log.
-  **Trigger:** Phase 6 polish, OR a multi-tab reconnect bug surfaces it.
-  **Context:** `app/templates/table.html` has a comment marking this
-  Phase 5/6 boundary.
+- **Image events not in Snapshot.messages** *(resolved 2026-05-01,
+  Phase 6 step 3)*. Migration `78fa9cf6ec1a` added a nullable
+  `session_id` column to `generated_images`. The worker writes it
+  from `ImageJob.session_id`. `_build_snapshot` queries the session's
+  recent images and returns them on a parallel `image_events` list
+  on `Snapshot`. The frontend snapshot handler interleaves messages
+  and image events by `created_at` so the rebuilt log matches the
+  chronology a steady-state viewer saw.
+  **Remaining narrow gap**: only `ready` events have rows. Pending
+  lives on the queue, failed doesn't get a row, so a reconnect during
+  the brief in-flight window still relies on the live `image_ready` /
+  `image_failed` to land for that one slot. The `status` field stays
+  on the wire shape for forward compatibility — a future
+  `session_image_events` table could expand the set if it bites.
 
 - **FLUX cold-load measurement vs spec estimate** (added 2026-05-01,
   Phase 5 step 6 close-out). Spec §8 estimated "cold pipeline load
@@ -430,6 +440,132 @@ up. Promote to a real issue / phase task when its trigger fires.
   sentinel filenames so they're invisible. Don't deserve their own
   PR. **Trigger:** anyone cares.
   **Context:** Phase 4 step-4 close-out.
+
+- **Chargen UI does not exist** (added 2026-05-01, Phase 6 close-out,
+  target Phase 7 prep). The dashboard's "Roll a new character" link
+  navigates to `/campaigns/{id}/characters/new` — a route that
+  doesn't exist yet. The chargen API endpoint
+  (`POST /api/campaigns/{id}/characters`) is fully wired and tested,
+  but no HTML form posts to it. Either build the form (race +
+  class + alignment + method picker, ability-roll preview) or
+  redirect the link to the API + a confirm dialog for now.
+  **Trigger:** Phase 7 prep, OR a player notices the broken link.
+  **Context:** `app/templates/campaign_dashboard.html` `.char-roll`
+  hrefs; `app/api/characters.py` `roll_character`.
+
+- **Dashboard list-campaigns N+1 queries** (added 2026-05-01, Phase 6
+  close-out, target if it ever bites). `app/api/campaigns.list_campaigns`
+  and the parallel `app/views/dashboard._list_campaigns_for` issue a
+  per-campaign `_campaign_last_played` query inside a loop. Acceptable
+  at the spec's scale (2-4 players, low-tens of campaigns per user)
+  but unbounded as the campaign count grows. Fix: a single grouped
+  query with `MAX(coalesce(ended_at, started_at)) GROUP BY
+  campaign_id` joined back to the campaigns rows. **Trigger:** the
+  dashboard feels slow on a campaign-rich account, OR Phase 7
+  load-testing flags it.
+  **Context:** `app/api/campaigns.py` and `app/views/dashboard.py`
+  share the same loop pattern.
+
+- **Spell-slot tracking separate from prepared/known**
+  (added 2026-05-01, Phase 6 close-out, target when spell prep UI
+  lands). The character sheet renders prepared spells as filled
+  ember pips and unprepared/known as hollow pips, derived from the
+  `spells_known.prepared` boolean. There's no separate notion of
+  spent vs ready slots within a level — the design's "slots" line
+  in the spell-level header is currently empty in the implementation.
+  When spell-prep UI lands, add a `spent_slots` counter (probably
+  on `characters.sheet` JSON or a new `prepared_slots` table) so the
+  sheet can render `slots ●●○` for "two ready, one spent at lvl 1".
+  **Trigger:** spell-prep UI, OR a player asks why slots don't
+  decrement after casting.
+  **Context:** `app/templates/character_sheet.html` spell-level
+  header; `app/db/models.py` `SpellKnown`.
+
+- **Inventory `item_type` is a string** (added 2026-05-01, Phase 6
+  close-out, target when item editing lands). The character sheet's
+  WIELDED / OFF-HAND / WORN loadout strip filters by
+  `item.item_type == "weapon" / "shield" / "armor"`. Those are
+  strings on the model with no enum or CHECK constraint. New
+  inventory features (drag-drop equip, item editing, item creation
+  from chargen) should consolidate the type vocabulary or accept
+  the strings as is and document them.
+  **Trigger:** an inventory editing surface lands, OR a chargen
+  flow auto-populates inventory and produces a typo.
+  **Context:** `app/db/models.py` `InventoryItem.item_type`;
+  `app/templates/character_sheet.html` loadout filter.
+
+- **Invite-code audit / revocation** (added 2026-05-01, Phase 6
+  close-out, target if revocation matters). Phase 6 invite codes
+  are `URLSafeTimedSerializer` signed tokens — stateless, 7-day
+  TTL, multi-use. No DB row, no audit trail, no revocation. A
+  leaked code stays valid until expiry. For a trusted-LAN
+  deployment this is fine. If audit ("who joined when, with whose
+  code") or revocation ("regenerate to lock out a fired
+  campaign-mate") matters, promote to a row-backed surface:
+  `campaign_invites(id, campaign_id, code, created_by, created_at,
+  revoked_at, max_uses, use_count)`.
+  **Trigger:** a deployment scenario where audit / revocation
+  matters, OR a player gets the wrong code and can't undo it.
+  **Context:** `app/api/campaigns.py` `_invite_signer` +
+  `mint_invite` + `join_via_invite`.
+
+## Working with Claude Design handoffs
+
+Phase 6 (UX polish) consumed a Claude Design handoff bundle —
+HTML/CSS/JS prototypes, design tokens, and a chat transcript
+showing the iteration history. The pattern worked well; record it
+here for future UI-heavy phases:
+
+1. **Read the chat transcript first.** The transcripts live in the
+   bundle's `chats/` directory and tell you what the user actually
+   asked for, where they landed after iterations, and which file
+   was the last version. The HTML files are the output; the chat
+   is where the intent lives. Skip this and you'll re-litigate
+   decisions the user already settled.
+
+2. **Inventory before translating.** For each design HTML file in
+   the bundle: which view, what viewport widths it covers, what
+   variants (combat vs exploration, alive vs dying, empty state).
+   Cross-reference against existing templates so you know which
+   are translations vs creations vs extrapolations.
+
+3. **Tokens.css first.** The design's tokens.css is the single
+   source of palette, typography, spacing, and shared idioms
+   (chips, plate frames, cap-tabs, grain texture). Land it as
+   `app/static/css/tokens.css` verbatim; every per-view
+   stylesheet then references its custom properties without
+   re-declaring them.
+
+4. **Per-view stylesheets, not one giant CSS file.** Mirror the
+   handoff's structure: tokens.css + base.css for shared chrome +
+   one CSS per view. Keeps maintainership tight; matches the
+   convention in `.claude/agents/frontend.md`.
+
+5. **Preserve every WS/HTMX/Alpine binding during translation.**
+   The design rearranges DOM; the bindings need to follow.
+   Integration tests are the contract — if they pass after the
+   visual translation, behaviour was preserved.
+
+6. **Don't port the prototype's JS.** The design files include
+   demo interactivity (key bindings to toggle states, etc.) that
+   exists only to let the user evaluate the design. The
+   production layer uses the existing WS dispatcher / Alpine
+   bindings / HTMX swaps. The chat transcript usually flags this
+   explicitly.
+
+7. **Extrapolation is on you.** Auth views, base layout shells,
+   empty states, error states — the design rarely covers every
+   surface. Match the established voice (see Phase 6
+   `register.html` blurb for the "world-aware, three-rolls-and-
+   a-name" register) and document any non-obvious decisions
+   inline (Phase 6 image-card narrow-width comment in
+   `app/static/css/table.css` is the canonical example).
+
+8. **Acknowledge what didn't make it.** The design might imply
+   functionality that doesn't exist (Phase 6 dashboard's "Roll a
+   new character" link points at a chargen UI that's still API-
+   only). Add a Follow-up entry rather than building the missing
+   piece in the polish phase — keeps phase scope honest.
 
 ## Working with subagents
 
