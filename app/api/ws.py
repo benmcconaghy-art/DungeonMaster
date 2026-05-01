@@ -68,9 +68,8 @@ from sqlalchemy import select
 
 from app.db import models
 from app.db.session import SessionLocal
-from app.orchestrator.dm import take_turn
+from app.orchestrator.dispatch import run_dm_turn
 from app.realtime import messages as ws_msgs
-from app.realtime.bridge import orchestrator_event_to_ws
 from app.realtime.presence import get_presence_registry
 from app.realtime.pubsub import DmPubsubError, get_pubsub
 
@@ -81,21 +80,6 @@ router = APIRouter()
 # Discriminated-union adapter for inbound client frames. Cached so we
 # don't rebuild on every message.
 _CLIENT_MSG_ADAPTER: TypeAdapter[ws_msgs.ClientMessage] = TypeAdapter(ws_msgs.ClientMessage)
-
-# Per-session lock for the orchestrator. Two pc_actions on the same
-# session serialise; turn N+1 waits for turn N to finish before
-# building its prompt.
-_session_turn_locks: dict[str, asyncio.Lock] = {}
-
-
-def _session_lock(session_id: str) -> asyncio.Lock:
-    """Return (or lazily create) the per-session orchestrator lock."""
-
-    lock = _session_turn_locks.get(session_id)
-    if lock is None:
-        lock = asyncio.Lock()
-        _session_turn_locks[session_id] = lock
-    return lock
 
 
 # ---------------------------------------------------------------------------
@@ -582,7 +566,7 @@ async def _handle_inbound(
             ),
         )
         task = asyncio.create_task(
-            _run_turn(
+            run_dm_turn(
                 session_id=session_id,
                 sender_user_id=user.id,
                 sender_character_id=char_id,
@@ -625,57 +609,6 @@ async def _handle_inbound(
             ),
         )
         return
-
-
-async def _run_turn(
-    *,
-    session_id: str,
-    sender_user_id: str,
-    sender_character_id: str | None,
-    content: str,
-) -> None:
-    """Run :func:`take_turn` in the background and publish each yielded
-    event to the session's Valkey channel.
-
-    Holds the per-session orchestrator lock so two pc_actions on the
-    same session serialise (one finishes before the next builds its
-    prompt). Without the lock, simultaneous tool calls race the
-    SQLAlchemy session state and the LLM sees half-stale prompts.
-    """
-
-    pubsub = get_pubsub()
-    lock = _session_lock(session_id)
-    async with lock, SessionLocal() as db:
-        try:
-            async for event in take_turn(
-                db,
-                session_id=session_id,
-                sender_user_id=sender_user_id,
-                sender_character_id=sender_character_id,
-                content=content,
-            ):
-                ws_msg = orchestrator_event_to_ws(event)
-                if ws_msg is None:
-                    continue
-                try:
-                    await pubsub.publish(session_id, ws_msg)
-                except DmPubsubError:
-                    log.exception("ws: pubsub publish failed mid-turn")
-                    # Stop the turn — without the broadcast the
-                    # narration only reaches the originator's subscriber
-                    # if Valkey came back; cleaner to surface to the
-                    # table and return.
-                    return
-        except Exception:
-            log.exception("ws: take_turn raised an unexpected error")
-            with contextlib.suppress(DmPubsubError):
-                await pubsub.publish(
-                    session_id,
-                    ws_msgs.DmError(
-                        reason="orchestrator_crash",
-                        message="DM turn crashed; the table has been notified.",
-                    ),
-                )
 
 
 __all__ = ["router"]

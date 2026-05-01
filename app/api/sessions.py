@@ -9,12 +9,24 @@ actions, narration, dice, presence — runs over the WS hub at
   - GET    /api/sessions/{id}/messages   — list messages (chronological,
                                             paginated by ``before`` cursor)
   - GET    /api/sessions/{id}            — current snapshot
+
+Phase 6.8: ``create_session`` schedules a background opening DM turn
+so the player lands on the table view with the scene already setting
+itself instead of an indefinite "DM is preparing the scene…"
+placeholder. The turn dispatches via the shared orchestrator helper
+in ``app/orchestrator/dispatch.py`` (same lock + pubsub fan-out as
+the WS hub uses for player actions). The persisted DM message lands
+in ``session_messages`` regardless of whether a WS subscriber has
+connected yet — the snapshot path covers late connections; live
+streaming covers fast connections.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -24,10 +36,48 @@ from app.db import models
 from app.deps import CurrentUser, DbSession
 from app.llm.client import DmClientError
 from app.llm.memory import regenerate_campaign_summary
+from app.orchestrator.dispatch import run_dm_turn
 
 log = logging.getLogger(__name__)
 
 router = APIRouter(tags=["sessions"])
+
+# Bootstrapping directive injected as the leading message of an
+# auto-greeting turn. Persisted with sender_kind='system' so future
+# prompts surface it as engine context, not as user input the DM
+# should "answer". Phrased so the model treats it as a stage
+# direction: set the scene, lean on the campaign + location +
+# party context that the prompt builder already includes.
+_OPENING_DIRECTIVE = (
+    "[Session begins — set the opening scene for the party. Use the campaign,"
+    " current location, and active PCs from the prompt context to ground the"
+    " narration. End with a natural beat that invites the players to act.]"
+)
+
+# Module-level set keeps strong refs to in-flight opening tasks so
+# asyncio's create_task can't drop them mid-flight when the only
+# reference would have been a local that goes out of scope as the
+# HTTP handler returns.
+_OPENING_TASKS: set[asyncio.Task[Any]] = set()
+
+
+def _schedule_opening_turn(session_id: str, *, sender_user_id: str) -> None:
+    """Fire the auto-greeting in the background. The HTTP handler
+    returns immediately so the browser proceeds to the table view; the
+    DM turn streams through pubsub to whichever WS connects in time
+    and persists the canonical DM message either way."""
+
+    task = asyncio.create_task(
+        run_dm_turn(
+            session_id=session_id,
+            sender_user_id=sender_user_id,
+            sender_character_id=None,
+            content=_OPENING_DIRECTIVE,
+            opening=True,
+        )
+    )
+    _OPENING_TASKS.add(task)
+    task.add_done_callback(_OPENING_TASKS.discard)
 
 
 # ---------- response models -------------------------------------------------
@@ -131,6 +181,14 @@ async def create_session(
     db.add(session)
     await db.commit()
     await db.refresh(session)
+
+    # Phase 6.8 Bug 3: kick off the opening DM turn in the background
+    # so the player lands on a setting-itself scene instead of the
+    # placeholder. The dispatch helper takes the per-session lock so
+    # a fast first player action serialises behind the opening rather
+    # than racing it.
+    _schedule_opening_turn(session.id, sender_user_id=user.id)
+
     return _session_to_snapshot(session)
 
 

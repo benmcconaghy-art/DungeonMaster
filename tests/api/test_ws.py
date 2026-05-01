@@ -352,7 +352,7 @@ def test_ws_multi_client_pc_action_broadcast(
 
     # Stub take_turn so it yields nothing — we only care about
     # the WS receive path around the orchestrator dispatch.
-    monkeypatch.setattr("app.api.ws.take_turn", _stub_take_turn([]))
+    monkeypatch.setattr("app.orchestrator.dispatch.take_turn", _stub_take_turn([]))
 
     with (
         client_a.websocket_connect(f"/ws/session/{session['id']}") as ws_a,
@@ -428,15 +428,19 @@ def test_ws_whisper_isolation(
     # take_turn yields a NarrationChunk + a WhisperEvent addressed to
     # alice's character only, then completes.
     async def _whisper_take_turn(*args: Any, **kwargs: Any) -> AsyncIterator[DmEvent]:
-        yield NarrationChunk(content="A figure beckons from the alley.")
+        yield NarrationChunk(stream_id="s-1", content="A figure beckons from the alley.")
         yield WhisperEvent(
             tool_call_id="tc-1",
             audience=[char_a["id"]],
             content="(A coin presses into your palm.)",
         )
-        yield NarrationComplete(message_id="msg-1", content="A figure beckons from the alley.")
+        yield NarrationComplete(
+            stream_id="s-1",
+            message_id="msg-1",
+            content="A figure beckons from the alley.",
+        )
 
-    monkeypatch.setattr("app.api.ws.take_turn", _whisper_take_turn)
+    monkeypatch.setattr("app.orchestrator.dispatch.take_turn", _whisper_take_turn)
 
     with (
         client_a.websocket_connect(f"/ws/session/{session['id']}") as ws_a,
@@ -578,7 +582,7 @@ def test_ws_non_combat_action_passes_during_combat(
         )
     )
 
-    monkeypatch.setattr("app.api.ws.take_turn", _stub_take_turn([]))
+    monkeypatch.setattr("app.orchestrator.dispatch.take_turn", _stub_take_turn([]))
 
     with client_a.websocket_connect(f"/ws/session/{session['id']}") as ws_a:
         _drain_until(ws_a, "snapshot")
@@ -632,7 +636,7 @@ def test_ws_combat_action_accepted_when_current_actor(
         )
     )
 
-    monkeypatch.setattr("app.api.ws.take_turn", _stub_take_turn([]))
+    monkeypatch.setattr("app.orchestrator.dispatch.take_turn", _stub_take_turn([]))
 
     with client_a.websocket_connect(f"/ws/session/{session['id']}") as ws_a:
         _drain_until(ws_a, "snapshot")

@@ -79,7 +79,7 @@ async def test_reset_for_tests_drops_singleton(monkeypatch: pytest.MonkeyPatch) 
 @pytest.mark.asyncio
 async def test_fake_publish_with_no_subscribers_returns_zero() -> None:
     fake = FakePubsub()
-    count = await fake.publish("s-1", NarrationChunk(content="alone in the void"))
+    count = await fake.publish("s-1", NarrationChunk(stream_id="s-1", content="alone in the void"))
     assert count == 0
 
 
@@ -100,7 +100,7 @@ async def test_fake_subscribe_receives_published_message() -> None:
     task = asyncio.create_task(reader())
     # Yield control once so the iterator attaches before publish.
     await asyncio.sleep(0)
-    count = await fake.publish("s-1", NarrationChunk(content="hello"))
+    count = await fake.publish("s-1", NarrationChunk(stream_id="s-1", content="hello"))
     assert count == 1
     await asyncio.wait_for(task, timeout=1.0)
     assert len(received) == 1
@@ -125,8 +125,8 @@ async def test_fake_two_subscribers_both_receive() -> None:
     task_a = asyncio.create_task(reader(a_received))
     task_b = asyncio.create_task(reader(b_received))
     await asyncio.sleep(0)
-    n1 = await fake.publish("s-1", NarrationChunk(content="one"))
-    n2 = await fake.publish("s-1", NarrationChunk(content="two"))
+    n1 = await fake.publish("s-1", NarrationChunk(stream_id="s-1", content="one"))
+    n2 = await fake.publish("s-1", NarrationChunk(stream_id="s-1", content="two"))
     assert n1 == 2
     assert n2 == 2
     await asyncio.wait_for(asyncio.gather(task_a, task_b), timeout=1.0)
@@ -194,7 +194,7 @@ async def test_fake_subscriber_cancellation_unregisters() -> None:
 
     task = asyncio.create_task(reader())
     await asyncio.sleep(0)
-    n_attached = await fake.publish("s-1", NarrationChunk(content="x"))
+    n_attached = await fake.publish("s-1", NarrationChunk(stream_id="s-1", content="x"))
     assert n_attached == 1
 
     task.cancel()
@@ -203,7 +203,7 @@ async def test_fake_subscriber_cancellation_unregisters() -> None:
 
     # Yield once so the iterator's finally-block runs.
     await asyncio.sleep(0)
-    n_after_cancel = await fake.publish("s-1", NarrationChunk(content="y"))
+    n_after_cancel = await fake.publish("s-1", NarrationChunk(stream_id="s-1", content="y"))
     assert n_after_cancel == 0
 
 
@@ -212,7 +212,7 @@ async def test_fake_publish_after_aclose_raises() -> None:
     fake = FakePubsub()
     await fake.aclose()
     with pytest.raises(RuntimeError):
-        await fake.publish("s-1", NarrationChunk(content="x"))
+        await fake.publish("s-1", NarrationChunk(stream_id="s-1", content="x"))
 
 
 @pytest.mark.asyncio

@@ -69,7 +69,7 @@ async def test_publish_subscribe_round_trip(reachable_pubsub: Pubsub) -> None:
     # publish-before-subscribe race drops the message.
     await asyncio.sleep(0.1)
 
-    count = await pubsub.publish(session_id, NarrationChunk(content="round trip"))
+    count = await pubsub.publish(session_id, NarrationChunk(stream_id="s-1", content="round trip"))
     assert count >= 1, "expected at least one subscriber attached"
 
     await asyncio.wait_for(task, timeout=2.0)
@@ -99,13 +99,13 @@ async def test_isolated_channel_does_not_receive_other_session(
     await asyncio.sleep(0.1)
 
     # Publish on B — should not reach A.
-    await pubsub.publish(session_b, NarrationChunk(content="for B"))
+    await pubsub.publish(session_b, NarrationChunk(stream_id="s-1", content="for B"))
     await asyncio.sleep(0.1)
     assert a_received == []
 
     # Publish on A — does reach A. Required to prove the subscription
     # is alive and the prior negative was meaningful.
-    await pubsub.publish(session_a, NarrationChunk(content="for A"))
+    await pubsub.publish(session_a, NarrationChunk(stream_id="s-1", content="for A"))
     await asyncio.wait_for(task, timeout=2.0)
     assert len(a_received) == 1
     assert a_received[0].content == "for A"

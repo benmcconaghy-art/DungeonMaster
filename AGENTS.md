@@ -97,6 +97,43 @@ modules. Single-server deployment on AlmaLinux 10.1, trusted internal LAN.
     helper rejects setting both. A regression that sent `kind=scene` for
     portraits would silently produce wide landscape renders.
 
+13. **Tool parameters that carry database ids must also accept name-based
+    lookup or creation.** The DM never asks the player for an id — that's
+    a fourth-wall break. Phase 6.8 surfaced this on
+    `transition_location`, which originally took only `location_id`; it
+    now accepts either `location_id` (when the canonical id is known)
+    or `name` (resolved by exact + difflib fuzzy match within the
+    campaign, falling back to creating a new row with the supplied
+    description). Apply the same shape to any future mutation tool that
+    references a persisted entity by id (NPCs, items, factions). The
+    role prompt also bans asking the player for ids — both layers are
+    required, not interchangeable.
+
+14. **Session creation auto-dispatches an opening DM turn.** Phase 6.8
+    added a background `run_dm_turn(opening=True)` task fired from
+    `POST /api/campaigns/{id}/sessions` so players land on a
+    setting-itself scene rather than the
+    "DM is preparing the scene…" placeholder. The leading message
+    persists as `sender_kind='system'` so the prompt builder treats
+    the bootstrapping directive as engine context, not as user input
+    the DM should "respond to". The dispatch helper
+    (`app/orchestrator/dispatch.py`) holds the same per-session
+    `asyncio.Lock` the WS hub uses, so a fast first player action
+    serialises behind the opening rather than racing it.
+
+15. **Streaming narration carries a per-iteration `stream_id`.** Each
+    pass of the orchestrator's tool-call loop mints a fresh
+    `stream_id` so the client renders one narration bubble per
+    "the DM continues speaking" beat. Without it, post-tool
+    continuations fold back into the previous bubble OR (after Phase
+    6.8) a tool dispatch between chunk runs would split the bubble
+    incorrectly. The id is on `NarrationChunk` and `NarrationComplete`
+    (orchestrator events and WS messages); the trailing
+    `narration_complete` carries the final iteration's id so the
+    client knows which bubble to finalise. The persistence layer
+    still writes one `dm` `SessionMessage` per turn — `stream_id` is
+    purely a streaming-UX construct.
+
 ## Tech stack
 
 - Python 3.12
@@ -292,8 +329,11 @@ uv run mypy app                                 # type check
 ## Current build phase
 
 **Phase 7 complete; Phase 6.5 (chargen UI), Phase 6.6
-(dashboard Start Session click target), and the Phase 5 image-
-serving route landed 2026-05-01 to unblock real play; Phase 8
+(dashboard Start Session click target), the Phase 5 image-
+serving route, and the Phase 6.8 playthrough fixes (per-iteration
+narration stream_id, dice multiplier parser, transition_location
+name resolver, ID-discipline prompt rule, opening DM turn on
+session create) landed 2026-05-01 to unblock real play; Phase 8
 (Adventure modules) ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.

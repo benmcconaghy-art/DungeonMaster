@@ -53,6 +53,27 @@ def _fresh_ratelimit_counters() -> None:
     _reset_ratelimit()
 
 
+@pytest.fixture(autouse=True)
+def _stub_opening_turn(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Phase 6.8 Bug 3: ``create_session`` schedules an opening DM turn
+    as a background task that calls ``run_dm_turn`` (vLLM + pubsub).
+    For tests that don't care about that path, stub ``run_dm_turn`` to
+    a no-op coroutine so the scheduled task fires and resolves
+    immediately without real network I/O. Tests that *do* exercise
+    the auto-greeting wiring patch this attribute to their own
+    capture (the per-test patch wins over this autouse one).
+
+    Autouse so every fixture topology — the ``client`` fixture, the
+    WS-test ``ws_setup`` fixture, integration scaffolding — picks it
+    up without each having to remember.
+    """
+
+    async def _stub_run_dm_turn(**_kwargs: object) -> None:
+        return None
+
+    monkeypatch.setattr("app.api.sessions.run_dm_turn", _stub_run_dm_turn)
+
+
 @pytest.fixture
 async def db_session(monkeypatch: pytest.MonkeyPatch) -> AsyncIterator[AsyncSession]:
     """Yield an ``AsyncSession`` against a fresh in-memory SQLite database.

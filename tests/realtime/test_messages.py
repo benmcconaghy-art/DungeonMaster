@@ -62,8 +62,8 @@ def _client_round_trip(msg: ClientMessage) -> ClientMessage:
 @pytest.mark.parametrize(
     "msg",
     [
-        NarrationChunk(content="The goblin hisses."),
-        NarrationComplete(message_id="msg-1", content="The goblin falls."),
+        NarrationChunk(stream_id="s-1", content="The goblin hisses."),
+        NarrationComplete(stream_id="s-1", message_id="msg-1", content="The goblin falls."),
         PcAction(character_id="ch-1", user_id="u-1", content="I attack."),
         Whisper(tool_call_id="tc-1", audience=["ch-2"], content="A note slips into your hand."),
         DiceRoll(
@@ -252,5 +252,5 @@ def test_dump_json_is_bytes() -> None:
     TypeAdapter's dump_json returns bytes (not str) so callers don't
     need to encode again."""
 
-    raw: Any = _SERVER_ADAPTER.dump_json(NarrationChunk(content="hi"))
+    raw: Any = _SERVER_ADAPTER.dump_json(NarrationChunk(stream_id="s-1", content="hi"))
     assert isinstance(raw, bytes)

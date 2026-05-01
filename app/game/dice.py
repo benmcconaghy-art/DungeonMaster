@@ -9,13 +9,21 @@ decides what to do with them).
 
 Grammar (case-insensitive)::
 
-    expr     := dice (mod)?
-    dice     := N "d" M (keep)?
+    expr     := "(" dice (keep)? ")" (mult)? (mod)?
+              | dice (keep)? (mult)? (mod)?
+    dice     := N "d" M
     keep     := ("kh" | "kl") K
+    mult     := "*" K
     mod      := ("+" | "-") K
 
 Where ``N``, ``M``, ``K`` are positive integers. ``N`` defaults to ``1``
-(``d20`` parses the same as ``1d20``).
+(``d20`` parses the same as ``1d20``). The multiplier is the BFRPG idiom
+for things like starting gold (``3d6*10``); the math is
+``(sum_of_kept * mult) + modifier`` with mult defaulting to ``1`` and
+modifier to ``0``. Whitespace around ``*`` / ``+`` / ``-`` is tolerated.
+A single layer of parentheses around the dice term is allowed
+(``(3d6)*10``); deeper nesting or a full expression parser is out of
+scope — this module only does dice + scalar arithmetic.
 
 Advantage / disadvantage are passed as keyword arguments. The full
 expression is rolled twice and the better (advantage) or worse
@@ -54,16 +62,27 @@ class Roll:
     natural_twenty: bool = False
 
 
-# Anchored, case-insensitive. Groups: count, faces, keep-mode, keep-count, sign, modifier.
+# Anchored, case-insensitive. The dice term may be wrapped in a single
+# layer of parens to support the ``(3d6)*10`` idiom; the parser balances
+# the parens itself rather than going through a real expression parser.
+# Groups: count, faces, keep-mode, keep-count, mult, sign, modifier.
 _DICE_RE = re.compile(
     r"""
     ^\s*
+    (?P<lparen>\()?         # optional opening paren around the dice term
+    \s*
     (?P<count>\d+)?         # optional die count, defaults to 1
     d
     (?P<faces>\d+)
     (?:                     # optional keep-highest / keep-lowest
       k(?P<keep_mode>[hl])
       (?P<keep_count>\d+)
+    )?
+    \s*
+    (?P<rparen>\))?         # optional closing paren around the dice term
+    (?:                     # optional scalar multiplier (BFRPG idiom: 3d6*10)
+      \s*\*\s*
+      (?P<mult>\d+)
     )?
     (?:                     # optional flat modifier
       \s*(?P<sign>[+-])\s*
@@ -81,6 +100,7 @@ class _Parsed:
     faces: int
     keep_mode: str | None  # 'h', 'l', or None
     keep_count: int | None
+    multiplier: int  # defaults to 1
     modifier: int  # signed; already incorporates +/-
 
 
@@ -90,6 +110,13 @@ def _parse(expression: str) -> _Parsed:
     match = _DICE_RE.match(expression)
     if match is None:
         raise ValueError(f"invalid dice expression: {expression!r}")
+
+    # Parens must match: either both present or both absent. A lone
+    # opening or closing paren is malformed.
+    lparen = match.group("lparen")
+    rparen = match.group("rparen")
+    if bool(lparen) != bool(rparen):
+        raise ValueError(f"unbalanced parentheses in dice expression: {expression!r}")
 
     count_str = match.group("count")
     count = int(count_str) if count_str is not None else 1
@@ -109,6 +136,13 @@ def _parse(expression: str) -> _Parsed:
                 f"keep count must be in 1..{count} for {expression!r}; got {keep_count}"
             )
 
+    mult_str = match.group("mult")
+    multiplier = 1
+    if mult_str is not None:
+        multiplier = int(mult_str)
+        if multiplier <= 0:
+            raise ValueError(f"dice multiplier must be positive: {expression!r}")
+
     sign = match.group("sign")
     modifier_str = match.group("modifier")
     modifier = 0
@@ -122,6 +156,7 @@ def _parse(expression: str) -> _Parsed:
         faces=faces,
         keep_mode=keep_mode,
         keep_count=keep_count,
+        multiplier=multiplier,
         modifier=modifier,
     )
 
@@ -140,7 +175,7 @@ def _roll_once(parsed: _Parsed, rng: random.Random) -> tuple[int, list[int]]:
         assert parsed.keep_count is not None
         kept = sorted(rolls)[: parsed.keep_count]
 
-    total = sum(kept) + parsed.modifier
+    total = sum(kept) * parsed.multiplier + parsed.modifier
     return total, kept
 
 

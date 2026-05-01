@@ -111,20 +111,38 @@ class SnapshotImageEvent(_BaseMessage):
 
 
 class NarrationChunk(_BaseMessage):
-    """One streamed fragment from the DM. The client appends to the
-    currently-rendering DM message; the canonical full text arrives in
-    the trailing :class:`NarrationComplete`."""
+    """One streamed fragment from the DM.
+
+    ``stream_id`` groups chunks belonging to a single
+    *orchestrator iteration* — each "the DM continues speaking" beat
+    after a tool dispatch starts a new id. The client buffers chunks
+    by ``stream_id`` and renders one bubble per stream; the trailing
+    :class:`NarrationComplete` for that ``stream_id`` finalises the
+    bubble with the canonical full text.
+
+    Without per-iteration grouping the dispatch frames between chunk
+    runs ('dice_roll', 'state_update', etc.) would cause the next
+    chunk to start a fresh bubble unrelated to the previous one — the
+    Bug 1 (Phase 6.8) symptom that prompted this field.
+    """
 
     type: Literal["narration_chunk"] = "narration_chunk"
+    stream_id: str
     content: str
 
 
 class NarrationComplete(_BaseMessage):
     """End-of-narration marker carrying the persisted message id and the
     full assistant text (so reconnecting clients can render in one go
-    rather than reassembling chunks)."""
+    rather than reassembling chunks).
+
+    ``stream_id`` matches the *final* iteration's chunks so the client
+    knows which bubble to finalise. Earlier-iteration partials are
+    already settled bubbles by the time this arrives.
+    """
 
     type: Literal["narration_complete"] = "narration_complete"
+    stream_id: str
     message_id: str
     content: str
 

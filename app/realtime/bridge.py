@@ -50,9 +50,13 @@ def orchestrator_event_to_ws(event: DmEvent) -> ws.ServerMessage | None:
     """
 
     if isinstance(event, NarrationChunk):
-        return ws.NarrationChunk(content=event.content)
+        return ws.NarrationChunk(stream_id=event.stream_id, content=event.content)
     if isinstance(event, NarrationComplete):
-        return ws.NarrationComplete(message_id=event.message_id, content=event.content)
+        return ws.NarrationComplete(
+            stream_id=event.stream_id,
+            message_id=event.message_id,
+            content=event.content,
+        )
     if isinstance(event, DiceRollEvent):
         return ws.DiceRoll(
             tool_call_id=event.tool_call_id,

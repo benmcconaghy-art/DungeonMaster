@@ -406,6 +406,126 @@ class TestTransitionLocation:
             result = await handler.fn(db_session, args)
         assert result.side_effects.get("kind") == "error"
 
+    @pytest.mark.asyncio
+    async def test_name_match_resolves_to_existing_location(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """A name passed to the tool that closely matches an existing
+        campaign location resolves to that location rather than
+        creating a duplicate. This is the Bug 4 fix path: the DM
+        references places by name, the engine resolves them."""
+
+        from app.db.models import Location
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        existing = await make_location(db_session, campaign_id=campaign.id, name="Jeb's Smithy")
+        await db_session.commit()
+
+        handler = get_handler("transition_location")
+        assert handler is not None
+        # Slightly different casing to exercise normalised matching.
+        args = TransitionLocation(name="jeb's smithy", description="Smoke and hammer.")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        await db_session.commit()
+
+        # Same row, no duplicate created.
+        rows = list((await db_session.scalars(select(Location))).all())
+        assert len(rows) == 1
+        assert rows[0].id == existing.id
+
+        from app.db.models import Session as DmSession
+
+        refreshed = await db_session.get(DmSession, session.id)
+        assert refreshed is not None
+        assert refreshed.current_location_id == existing.id
+        assert result.side_effects["resolution"] == "name_match"
+
+    @pytest.mark.asyncio
+    async def test_name_create_inserts_new_location(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """A name with no close match in the campaign creates a fresh
+        Location row with the supplied description and transitions to
+        it. The DM never has to surface an id to the player; this is
+        the no-existing-place path."""
+
+        from app.db.models import Location
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        # Seed an unrelated location so the candidate set isn't empty.
+        await make_location(db_session, campaign_id=campaign.id, name="The Keep Gate")
+        await db_session.commit()
+
+        handler = get_handler("transition_location")
+        assert handler is not None
+        args = TransitionLocation(
+            name="The Old Crypt",
+            description="Cold air, lichen, a single black door.",
+        )
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        await db_session.commit()
+
+        rows = list((await db_session.scalars(select(Location))).all())
+        assert len(rows) == 2
+        crypt = next(r for r in rows if r.name == "The Old Crypt")
+        assert crypt.campaign_id == campaign.id
+        assert crypt.description == "Cold air, lichen, a single black door."
+
+        from app.db.models import Session as DmSession
+
+        refreshed = await db_session.get(DmSession, session.id)
+        assert refreshed is not None
+        assert refreshed.current_location_id == crypt.id
+        assert result.side_effects["resolution"] == "name_create"
+
+    @pytest.mark.asyncio
+    async def test_name_match_only_within_campaign(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """A location with a matching name in a *different* campaign
+        must not be reused — the resolver creates a fresh row scoped
+        to the active campaign."""
+
+        from app.db.models import Location
+
+        user = await make_user(db_session)
+        campaign_a = await make_campaign(db_session, owner_id=user.id, name="A")
+        campaign_b = await make_campaign(db_session, owner_id=user.id, name="B")
+        session_a = await make_session(db_session, campaign_id=campaign_a.id)
+        # Same name, different campaign — must not be reused.
+        await make_location(db_session, campaign_id=campaign_b.id, name="The Tavern")
+        await db_session.commit()
+
+        handler = get_handler("transition_location")
+        assert handler is not None
+        args = TransitionLocation(name="The Tavern", description="Smoky.")
+        with with_dispatch_context(_ctx(session_a.id)):
+            result = await handler.fn(db_session, args)
+        await db_session.commit()
+
+        rows = list(
+            (
+                await db_session.scalars(
+                    select(Location).where(Location.campaign_id == campaign_a.id)
+                )
+            ).all()
+        )
+        assert len(rows) == 1
+        assert rows[0].name == "The Tavern"
+        assert result.side_effects["resolution"] == "name_create"
+
+    @pytest.mark.asyncio
+    async def test_neither_id_nor_name_rejected_at_validation(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """A call with neither location_id nor name must fail Pydantic
+        validation — the orchestrator's ``parse_tool_args`` is what
+        the LLM hits, and a half-formed call should be a clean reject
+        before the handler runs."""
+
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            TransitionLocation(description="x")
+
 
 # ---------------------------------------------------------------------------
 # whisper

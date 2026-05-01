@@ -23,6 +23,7 @@ import asyncio
 import json
 import logging
 import re
+import uuid
 from collections.abc import AsyncIterator
 from typing import Any, Literal
 
@@ -60,19 +61,36 @@ class _Event(BaseModel):
 
 
 class NarrationChunk(_Event):
-    """One streamed narration fragment. The SSE bridge concatenates these
-    on the client; the server-side ``narration_complete`` carries the
-    canonical full string for re-renders."""
+    """One streamed narration fragment.
+
+    ``stream_id`` is minted fresh at the top of each
+    :data:`_MAX_TOOL_ITERATIONS` body — i.e. once per "the DM continues
+    speaking" moment within a single turn. Mid-tool-dispatch
+    interruptions therefore start a new ``stream_id``, which the
+    client renders as a discrete bubble. Without this, post-tool
+    chunks fold back into the original bubble and the player sees
+    one merged narration; with it, each iteration is its own beat.
+    The Bug 1 (Phase 6.8) fix relies on this being per-iteration,
+    not per-DM-turn.
+    """
 
     type: Literal["narration_chunk"] = "narration_chunk"
+    stream_id: str
     content: str
 
 
 class NarrationComplete(_Event):
     """End-of-narration marker carrying the full assistant text and the
-    persisted message id."""
+    persisted message id.
+
+    Carries the ``stream_id`` of the *final* iteration so the client
+    can finalise that bubble (replace its content with the canonical
+    full string). Earlier-iteration partials remain as their own
+    settled bubbles.
+    """
 
     type: Literal["narration_complete"] = "narration_complete"
+    stream_id: str
     message_id: str
     content: str
 
@@ -270,6 +288,7 @@ async def take_turn(
     sender_user_id: str,
     sender_character_id: str | None,
     content: str,
+    opening: bool = False,
 ) -> AsyncIterator[DmEvent]:
     """Execute one turn for ``content`` from ``sender_user_id``.
 
@@ -279,9 +298,26 @@ async def take_turn(
     then ``narration_complete`` when the assistant's final message has
     been persisted.
 
+    ``opening`` switches the turn into auto-greeting mode:
+
+    * The leading message persisted to ``session_messages`` is
+      ``sender_kind='system'`` rather than ``'player'``, so future
+      prompts surface it as a system note (via
+      :func:`_recent_turns_to_messages`) and not as a player utterance
+      the DM should "respond to". ``content`` is the bootstrapping
+      directive (the caller injects something like
+      "[Session begins — set the opening scene given the campaign,
+      location, and party]"); the player never sees it as their own
+      input.
+    * Everything else — prompt build, tool loop, persistence of the
+      DM message, post-turn memory work — is unchanged. The opening
+      DM message lands in ``session_messages`` exactly like a normal
+      assistant turn so a reconnecting client picks it up via the
+      snapshot path.
+
     Discipline:
 
-    1. Persist the player message in a tight transaction. Commit.
+    1. Persist the leading message in a tight transaction. Commit.
     2. Build the prompt (read-only DB activity, no transaction held).
     3. Loop up to :data:`_MAX_TOOL_ITERATIONS`:
        a. Stream a completion (no transaction held).
@@ -291,12 +327,18 @@ async def take_turn(
           and break.
     """
 
-    # ------- 1. Persist the player message -----------------------------------
+    # ------- 1. Persist the leading message ----------------------------------
+    # Player turn → sender_kind='player'; opening turn → sender_kind='system'
+    # so the prompt builder surfaces it as a neutral system note rather than
+    # tail-position user input the DM is expected to respond to. The DM
+    # treats the bootstrapping directive as engine-level instruction.
+    leading_kind = "system" if opening else "player"
+    leading_sender_id = None if opening else sender_character_id
     async with db.begin():
         player_msg = SessionMessage(
             session_id=session_id,
-            sender_kind="player",
-            sender_id=sender_character_id,
+            sender_kind=leading_kind,
+            sender_id=leading_sender_id,
             audience=[],
             content=content,
         )
@@ -326,9 +368,18 @@ async def take_turn(
     final_assistant_text = ""
     final_tool_calls_audit: list[dict[str, Any]] = []
     iteration = 0
+    # Track the most recent iteration's stream_id so the trailing
+    # NarrationComplete pairs with the correct bubble on the client.
+    final_stream_id: str = ""
 
     while iteration < _MAX_TOOL_ITERATIONS:
         iteration += 1
+        # One stream_id per iteration. See ``NarrationChunk`` docstring:
+        # post-tool continuations are conceptually a new "the DM
+        # continues speaking" beat and the client renders them as a
+        # discrete bubble.
+        stream_id = uuid.uuid4().hex
+        final_stream_id = stream_id
         try:
             # reasoning_mode="full" (the default) — the DM's tool-call
             # accuracy is load-bearing on the full reasoning trace. The
@@ -351,7 +402,7 @@ async def take_turn(
                 # The runaway detector raises if it trips; catch is below.
                 fragment = _content_of(chunk)
                 if fragment:
-                    yield NarrationChunk(content=fragment)
+                    yield NarrationChunk(stream_id=stream_id, content=fragment)
                     accumulated_content += fragment
                 _accumulate_tool_calls(chunk, accumulated_tool_calls)
         except RunawayTokenError as exc:
@@ -440,7 +491,11 @@ async def take_turn(
         )
         db.add(dm_msg)
 
-    yield NarrationComplete(message_id=dm_msg.id, content=final_assistant_text)
+    yield NarrationComplete(
+        stream_id=final_stream_id,
+        message_id=dm_msg.id,
+        content=final_assistant_text,
+    )
 
     # ------- 5. Schedule fire-and-forget post-turn memory work ---------------
     # The fact extractor and the session-summary regeneration both run

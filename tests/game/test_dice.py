@@ -167,3 +167,69 @@ def test_advantage_keeps_first_when_equal() -> None:
     result = roll("1d1", advantage=True, rng=rng)
     assert result.total == 1
     assert result.individual == [1]
+
+
+# ---------------------------------------------------------------------------
+# Multiplier — BFRPG starting-gold idiom (3d6*10) and friends
+# ---------------------------------------------------------------------------
+
+
+def test_multiplier_bfrpg_starting_gold() -> None:
+    rng = random.Random(11)  # 3d6 with seed 11 -> [4, 5, 4] = 13
+    result = roll("3d6*10", rng=rng)
+    assert result.individual == [4, 5, 4]
+    assert result.total == 130
+
+
+def test_multiplier_with_spaces_around_star() -> None:
+    rng = random.Random(11)
+    result = roll("3d6 * 10", rng=rng)
+    assert result.total == 130
+
+
+def test_multiplier_with_parens_around_dice() -> None:
+    rng = random.Random(11)
+    result = roll("(3d6)*10", rng=rng)
+    assert result.total == 130
+
+
+def test_multiplier_combined_with_modifier() -> None:
+    rng = random.Random(11)  # 3d6 -> [4, 5, 4] = 13; *10 + 5 = 135
+    result = roll("3d6*10+5", rng=rng)
+    assert result.total == 135
+
+
+def test_multiplier_combined_with_negative_modifier() -> None:
+    rng = random.Random(11)  # 13 * 10 - 3 = 127
+    result = roll("3d6*10-3", rng=rng)
+    assert result.total == 127
+
+
+def test_modifier_alone_still_works() -> None:
+    """Adding the multiplier rule must not break the bare modifier path."""
+
+    rng = random.Random(42)  # 1d20 -> [4]; +1 -> 5
+    result = roll("2d4+1", rng=rng)
+    assert sum(result.individual) + 1 == result.total
+
+
+def test_multiplier_must_be_positive() -> None:
+    rng = random.Random(0)
+    with pytest.raises(ValueError):
+        roll("3d6*0", rng=rng)
+
+
+@pytest.mark.parametrize(
+    "expression",
+    [
+        "(3d6",  # unbalanced
+        "3d6)",
+        "3d6*",  # missing multiplier value
+        "3d6*+5",
+        "3d6**10",
+    ],
+)
+def test_invalid_multiplier_expressions_raise(expression: str) -> None:
+    rng = random.Random(0)
+    with pytest.raises(ValueError):
+        roll(expression, rng=rng)

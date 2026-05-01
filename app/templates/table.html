@@ -224,8 +224,11 @@
   let reconnectAttempt = 0;
   let reconnectTimer = null;
   let manuallyClosed = false;
-  let activeNarration = null;     // current streaming DM <p> node
-  let lastFrameType = null;       // for narration_chunk start logic
+  // Phase 6.8 Bug 1: chunks now carry a ``stream_id`` that groups them
+  // by orchestrator-iteration. We render one bubble per stream_id so a
+  // post-tool continuation produces a discrete bubble rather than
+  // folding back into the previous one.
+  let narrationBubbles = {};      // { stream_id: <p> node }
   let currentActor = null;        // CurrentActor | null
   let presenceRoster = [];        // PresenceEntry[]
   let charactersById = {};        // {id: {id, name}}
@@ -327,7 +330,6 @@
     } catch (err) {
       console.error("ws: handler error", msg.type, err);
     }
-    lastFrameType = msg.type;
   }
 
   function onClose(event) {
@@ -383,7 +385,7 @@
   // ---- Render helpers ---------------------------------------------------
   function clearNarration() {
     narration.replaceChildren();
-    activeNarration = null;
+    narrationBubbles = {};
   }
 
   function dropEmptyLog() {
@@ -655,28 +657,44 @@
       renderPresence();
       currentActor = msg.current_actor || null;
       renderTurnHints();
-      activeNarration = null;
+      narrationBubbles = {};
     },
     narration_chunk(msg) {
-      if (!activeNarration || lastFrameType !== "narration_chunk") {
-        activeNarration = appendMessage("dm", "Dungeon Master", "", formatNow());
-        // First chunk of a fresh DM message — light up the streaming
-        // caret so the table sees prose flowing.
-        const article = activeNarration.parentElement;
+      // Phase 6.8 Bug 1: chunks are grouped by stream_id (one per
+      // orchestrator iteration). A fresh stream_id starts a new
+      // bubble; subsequent chunks with the same id append to the
+      // bubble we created earlier. Frames between chunk runs
+      // ('dice_roll', 'state_update', 'whisper') no longer cause
+      // mid-turn bubble splits because they don't carry a
+      // stream_id and we key off the id, not on adjacency.
+      const sid = msg.stream_id || "";
+      let bubble = narrationBubbles[sid];
+      if (!bubble) {
+        bubble = appendMessage("dm", "Dungeon Master", "", formatNow());
+        // Light up the streaming caret so the table sees prose flowing.
+        const article = bubble.parentElement;
         if (article) article.dataset.streaming = "true";
+        narrationBubbles[sid] = bubble;
       }
-      activeNarration.textContent += (msg.content || "");
+      bubble.textContent += (msg.content || "");
       narration.scrollTop = narration.scrollHeight;
     },
     narration_complete(msg) {
-      if (activeNarration) {
-        if (msg.content) activeNarration.textContent = msg.content;
-        const article = activeNarration.parentElement;
+      // Finalise the bubble belonging to the trailing iteration's
+      // stream_id. Earlier-iteration bubbles are already settled.
+      const sid = msg.stream_id || "";
+      const bubble = narrationBubbles[sid];
+      if (bubble) {
+        if (msg.content) bubble.textContent = msg.content;
+        const article = bubble.parentElement;
         if (article) delete article.dataset.streaming;
+        delete narrationBubbles[sid];
       } else if (msg.content) {
+        // Defensive: no chunks landed for this stream (e.g. server
+        // skipped streaming). Render the canonical text as a fresh
+        // bubble so the player still sees the narration.
         appendMessage("dm", "Dungeon Master", msg.content, formatNow());
       }
-      activeNarration = null;
     },
     pc_action(msg) {
       // De-dupe: the local user already optimistically rendered

@@ -430,6 +430,103 @@ async def test_empty_completion_yields_dm_error(db_session, patch_client) -> Non
 
 
 @pytest.mark.asyncio
+async def test_opening_turn_persists_system_not_player_message(  # type: ignore[no-untyped-def]
+    db_session, patch_client
+) -> None:
+    """Phase 6.8 Bug 3: ``take_turn(opening=True)`` writes the leading
+    message as ``sender_kind='system'`` so the prompt builder surfaces
+    it as engine context, not as a player utterance the DM is
+    expected to respond to. The DM message lands as usual."""
+
+    _, _, session, _ = await _setup_session(db_session)
+    patch_client([[_content_chunk("The wind howls. You stand at the gate.")]])
+
+    events: list[Any] = []
+    async for event in take_turn(
+        db_session,
+        session_id=session.id,
+        sender_user_id="test-user",
+        sender_character_id=None,
+        content="[opening directive]",
+        opening=True,
+    ):
+        events.append(event)
+
+    msgs = list(
+        (
+            await db_session.scalars(
+                select(SessionMessage).where(SessionMessage.session_id == session.id)
+            )
+        ).all()
+    )
+    kinds = [m.sender_kind for m in msgs]
+    # No 'player' row was persisted for the synthetic directive.
+    assert "player" not in kinds
+    # The directive landed as 'system' (engine context).
+    assert "system" in kinds
+    leading = next(m for m in msgs if m.sender_kind == "system")
+    assert leading.content == "[opening directive]"
+    # The DM still spoke and got persisted as 'dm'.
+    assert "dm" in kinds
+
+
+@pytest.mark.asyncio
+async def test_stream_id_is_per_iteration(  # type: ignore[no-untyped-def]
+    db_session, patch_client
+) -> None:
+    """Phase 6.8 Bug 1: each orchestrator iteration mints a fresh
+    stream_id so the client can render per-iteration bubbles. A turn
+    that emits a chunk → tool call → more chunks must carry two
+    distinct stream_ids on the chunk frames, and the trailing
+    NarrationComplete pairs with the *final* iteration's id."""
+
+    _, _, session, _ = await _setup_session(db_session)
+
+    streams: list[list[Any] | object] = [
+        [
+            _content_chunk("Before tool: "),
+            _tool_call_chunk(
+                index=0,
+                id="call-1",
+                name="request_dice_roll",
+                arguments=json.dumps(
+                    {"expression": "1d20", "purpose": "perception", "actor": "dm"}
+                ),
+            ),
+        ],
+        [_content_chunk("After tool, scene continues.")],
+    ]
+    patch_client(streams)
+
+    events: list[Any] = []
+    async for event in take_turn(
+        db_session,
+        session_id=session.id,
+        sender_user_id="test-user",
+        sender_character_id=None,
+        content="Look around.",
+    ):
+        events.append(event)
+
+    chunk_events = [e for e in events if isinstance(e, NarrationChunk)]
+    # First iteration produced one chunk before the tool call;
+    # second iteration produced one chunk after the tool result.
+    assert len(chunk_events) == 2
+    sids = [c.stream_id for c in chunk_events]
+    assert sids[0] != sids[1], (
+        "post-tool chunks must carry a different stream_id from pre-tool chunks "
+        "so the client renders them as a discrete bubble"
+    )
+    # Per-iteration also means each id is a non-empty string.
+    assert all(s for s in sids)
+
+    # NarrationComplete pairs with the final iteration.
+    completes = [e for e in events if isinstance(e, NarrationComplete)]
+    assert len(completes) == 1
+    assert completes[0].stream_id == sids[1]
+
+
+@pytest.mark.asyncio
 async def test_player_input_persisted_independently_of_completion(  # type: ignore[no-untyped-def]
     db_session, patch_client
 ) -> None:

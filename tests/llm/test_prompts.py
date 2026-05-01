@@ -49,6 +49,81 @@ async def test_build_dm_prompt_layered_shape(db_session) -> None:  # type: ignor
 
 
 @pytest.mark.asyncio
+async def test_opening_directive_renders_as_system_context(db_session) -> None:  # type: ignore[no-untyped-def]
+    """Phase 6.8 Bug 3: an opening turn persists a ``sender_kind='system'``
+    pseudo-message carrying the bootstrapping directive. The prompt
+    builder must render that as a system-role message in the
+    chat-completions list — NOT as a user-role message — so the DM
+    treats it as engine context rather than something the player
+    just said.
+    """
+
+    from app.db.models import SessionMessage
+
+    user = await make_user(db_session)
+    campaign = await make_campaign(db_session, owner_id=user.id)
+    session = await make_session(db_session, campaign_id=campaign.id)
+    # Persist exactly the synthetic directive shape that take_turn(opening=True) writes.
+    db_session.add(
+        SessionMessage(
+            session_id=session.id,
+            sender_kind="system",
+            sender_id=None,
+            audience=[],
+            content="[Session begins — set the opening scene for the party.]",
+        )
+    )
+    await db_session.commit()
+
+    messages = await build_dm_prompt(db_session, session_id=session.id)
+
+    # The directive must appear as a system-role message in the
+    # post-system-block tail (where recent turns get rendered).
+    tail = messages[1:]
+    directive_messages = [m for m in tail if "Session begins" in m.get("content", "")]
+    assert directive_messages, "opening directive missing from prompt tail"
+    for m in directive_messages:
+        assert (
+            m["role"] == "system"
+        ), f"opening directive must render as system role, got {m['role']!r}"
+
+    # And it must NOT appear as a user-role message anywhere.
+    user_directives = [
+        m for m in messages if m.get("role") == "user" and "Session begins" in m.get("content", "")
+    ]
+    assert (
+        not user_directives
+    ), "opening directive leaked as a user message — the DM would 'respond' to it"
+
+
+@pytest.mark.asyncio
+async def test_role_block_forbids_asking_player_for_ids(db_session) -> None:  # type: ignore[no-untyped-def]
+    """Phase 6.8 Bug 4 fix: the DM must never ask the player for
+    location_id, character_id, or any schema parameter — that's a
+    fourth-wall break. The rule lands inside the [ROLE] block so it
+    rides on every turn's prompt regardless of campaign state."""
+
+    user = await make_user(db_session)
+    campaign = await make_campaign(db_session, owner_id=user.id)
+    session = await make_session(db_session, campaign_id=campaign.id)
+    await db_session.commit()
+
+    messages = await build_dm_prompt(db_session, session_id=session.id)
+    assert messages[0]["role"] == "system"
+    body = messages[0]["content"]
+
+    # The role block must contain the discipline rule. Phrase-level
+    # check — the test pins on the engine-rather-than-fiction wording
+    # so a casual prose tweak doesn't silently lose the rule.
+    role_start = body.index("[ROLE]")
+    rules_start = body.index("[RULES SUMMARY]")
+    role_block = body[role_start:rules_start]
+    assert "Never ask the player for ids" in role_block
+    assert "fourth-wall break" in role_block
+    assert "engine resolves names" in role_block
+
+
+@pytest.mark.asyncio
 async def test_build_dm_prompt_renders_empty_sections(db_session) -> None:  # type: ignore[no-untyped-def]
     """Empty sections render as ``(none)`` rather than being skipped."""
 

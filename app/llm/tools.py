@@ -32,7 +32,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -101,8 +101,33 @@ class AwardTreasure(_ToolArgs):
 
 
 class TransitionLocation(_ToolArgs):
-    location_id: str
+    """Move the party to a different location.
+
+    Either ``location_id`` (when the DM already knows the canonical id
+    of an established place) or ``name`` (the human-readable place name
+    as it appears in narration) must be provided. With ``name``, the
+    handler resolves the existing location by name match against this
+    campaign and falls back to creating a new one with the given
+    ``description`` if no match is found. The DM never asks the player
+    for an id — see the ID-discipline rule in the role prompt.
+    """
+
+    location_id: str | None = None
+    name: str | None = Field(
+        default=None,
+        description=(
+            "Place name as it appears in narration (e.g. 'Jeb's smithy')."
+            " Used when location_id is unknown; the engine resolves by"
+            " name match and creates the location if it doesn't exist."
+        ),
+    )
     description: str = Field(description="Brief narrative caption for the move.")
+
+    @model_validator(mode="after")
+    def _require_id_or_name(self) -> TransitionLocation:
+        if not self.location_id and not self.name:
+            raise ValueError("transition_location requires either location_id or name")
+        return self
 
 
 class NpcStats(_ToolArgs):
@@ -262,7 +287,14 @@ TOOLS: dict[str, ToolSpec] = {
     ),
     "transition_location": ToolSpec(
         name="transition_location",
-        description="Move the party to a different location.",
+        description=(
+            "Move the party to a different location. Pass ``name`` (the"
+            " place's narrative name) — the engine matches it against"
+            " existing campaign locations or creates a new one with the"
+            " given description. ``location_id`` is for the rare case"
+            " when an established id is already known; never ask the"
+            " player for an id."
+        ),
         args_model=TransitionLocation,
         implemented=True,
     ),
