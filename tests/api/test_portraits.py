@@ -231,9 +231,7 @@ async def test_character_portrait_requires_auth(
 
 
 @pytest.mark.asyncio
-async def test_npc_portrait_enqueues_job(
-    client: AsyncClient, fake_queue: _FakeQueueClient
-) -> None:
+async def test_npc_portrait_enqueues_job(client: AsyncClient, fake_queue: _FakeQueueClient) -> None:
     """NPC portrait endpoint mirrors the character one but links via
     subject_npc_id. We seed the NPC directly through the test DB
     fixture rather than via spawn_npc (which is exercised in the

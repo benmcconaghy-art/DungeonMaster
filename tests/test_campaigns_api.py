@@ -294,6 +294,8 @@ async def test_invite_then_join_round_trip(client: AsyncClient) -> None:
     code = invite.json()["code"]
     assert code
     assert invite.json()["expires_in_seconds"] >= 24 * 3600
+    # Phase 7: invite_id is exposed so a UI can drive a manage-invites view.
+    assert "invite_id" in invite.json()
 
     await client.post("/api/auth/logout")
     await _register_and_login(client, "bob")
@@ -306,9 +308,12 @@ async def test_invite_then_join_round_trip(client: AsyncClient) -> None:
     listed = (await client.get("/api/campaigns")).json()
     assert any(row["id"] == campaign_id for row in listed)
 
-    # Re-redeeming is idempotent — no 409.
+    # Phase 7: invites are single-use. The same code re-presented after
+    # a successful redeem returns 400, not the Phase 6 idempotent 200 —
+    # the audit row tracks who consumed the code.
     re_redeem = await client.post("/api/campaigns/join", json={"code": code})
-    assert re_redeem.status_code == 200
+    assert re_redeem.status_code == 400
+    assert "already been used" in re_redeem.json()["detail"]
 
 
 @pytest.mark.asyncio
@@ -332,7 +337,5 @@ async def test_invite_owner_only(client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_invite_rejects_garbage(client: AsyncClient) -> None:
     await _register_and_login(client, "bob")
-    response = await client.post(
-        "/api/campaigns/join", json={"code": "not-a-real-token"}
-    )
+    response = await client.post("/api/campaigns/join", json={"code": "not-a-real-token"})
     assert response.status_code == 400

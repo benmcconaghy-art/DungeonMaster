@@ -331,12 +331,8 @@ async def _require_character_visibility(
 
     character = await db.get(models.Character, character_id)
     if character is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="character not found"
-        )
-    membership = await db.get(
-        models.CampaignMember, (character.campaign_id, user.id)
-    )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="character not found")
+    membership = await db.get(models.CampaignMember, (character.campaign_id, user.id))
     if membership is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -420,9 +416,7 @@ async def get_character(
     """Return the full sheet detail. Visible to any member of the
     parent campaign; editing is gated separately."""
 
-    character = await _require_character_visibility(
-        db, character_id=character_id, user=user
-    )
+    character = await _require_character_visibility(db, character_id=character_id, user=user)
     inventory = list(
         (
             await db.execute(
@@ -441,9 +435,7 @@ async def get_character(
             )
         ).scalars()
     )
-    return _detail_response(
-        character, viewer_id=user.id, inventory=inventory, spells=spells
-    )
+    return _detail_response(character, viewer_id=user.id, inventory=inventory, spells=spells)
 
 
 @router.patch(
@@ -463,9 +455,7 @@ async def update_notes(
     per-section notes or version history can promote them.
     """
 
-    character = await _require_character_visibility(
-        db, character_id=character_id, user=user
-    )
+    character = await _require_character_visibility(db, character_id=character_id, user=user)
     if character.user_id != user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -495,9 +485,7 @@ async def update_notes(
             )
         ).scalars()
     )
-    return _detail_response(
-        character, viewer_id=user.id, inventory=inventory, spells=spells
-    )
+    return _detail_response(character, viewer_id=user.id, inventory=inventory, spells=spells)
 
 
 __all__ = [

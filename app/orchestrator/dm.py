@@ -30,6 +30,7 @@ from openai.types.chat import ChatCompletionChunk
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import metrics
 from app.db.models import SessionMessage
 from app.db.session import SessionLocal
 from app.llm.client import RunawayTokenError, get_dm_client
@@ -627,12 +628,27 @@ async def _dispatch_one(
                 result: ToolResult = await handler.fn(db, args)
     except Exception as exc:
         log.exception("dm.py: handler %s raised", tc.name)
+        # Phase 7 structured-logging + metrics contract: one record /
+        # one counter per tool dispatch with tool_name + outcome. The
+        # exception message is already in the log via exc_info; the
+        # extras let metrics + alerting key off ``tool_name`` cleanly.
+        log.warning(
+            "dm tool dispatch failed",
+            extra={"tool_name": tc.name, "outcome": "error"},
+        )
+        metrics.dm_tool_dispatch_total.labels(tool_name=tc.name, outcome="error").inc()
         msg = f"handler raised: {exc}"
         yield (
             DmError(reason="handler_error", message=msg),
             _tool_audit_message(tc, msg),
         )
         return
+
+    log.info(
+        "dm tool dispatch ok",
+        extra={"tool_name": tc.name, "outcome": "ok"},
+    )
+    metrics.dm_tool_dispatch_total.labels(tool_name=tc.name, outcome="ok").inc()
 
     # Convenience events for the bridge (in addition to the generic
     # tool_dispatched).

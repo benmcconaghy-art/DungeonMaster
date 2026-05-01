@@ -107,8 +107,7 @@ async def enqueue_portrait(
 
     if subject_character_id is not None and subject_npc_id is not None:
         raise ValueError(
-            "enqueue_portrait: only one of subject_character_id or "
-            "subject_npc_id may be set"
+            "enqueue_portrait: only one of subject_character_id or " "subject_npc_id may be set"
         )
 
     image_id = str(uuid7())
@@ -160,13 +159,9 @@ async def enqueue_scene(
     """
 
     if reference_image_id is not None and edit_instruction is None:
-        raise ValueError(
-            "enqueue_scene: reference_image_id requires edit_instruction"
-        )
+        raise ValueError("enqueue_scene: reference_image_id requires edit_instruction")
     if edit_instruction is not None and reference_image_id is None:
-        raise ValueError(
-            "enqueue_scene: edit_instruction requires reference_image_id"
-        )
+        raise ValueError("enqueue_scene: edit_instruction requires reference_image_id")
 
     image_id = str(uuid7())
     job = ImageJob(

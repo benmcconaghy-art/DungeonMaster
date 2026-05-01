@@ -66,9 +66,7 @@ async def build_context(db: DbSession, *, user: models.User) -> dict[str, Any]:
 
     recent_sessions = await _recent_sessions(db, user=user)
     total_my_chars = sum(e.my_character_count for e in listing)
-    last_played_relative = _relative_time(
-        listing[0].last_played_at if listing else None
-    )
+    last_played_relative = _relative_time(listing[0].last_played_at if listing else None)
 
     return {
         "user": user,
@@ -81,9 +79,7 @@ async def build_context(db: DbSession, *, user: models.User) -> dict[str, Any]:
     }
 
 
-async def _list_campaigns_for(
-    db: DbSession, *, user: models.User
-) -> list[CampaignListEntry]:
+async def _list_campaigns_for(db: DbSession, *, user: models.User) -> list[CampaignListEntry]:
     """Reuse the API endpoint's composition. Keeps dashboard and
     JSON list endpoint perfectly in sync."""
 
@@ -91,12 +87,16 @@ async def _list_campaigns_for(
     # avoids the FastAPI Depends overhead and lets us share the
     # CampaignListEntry shape directly.
     member_ids = (
-        await db.execute(
-            select(models.CampaignMember.campaign_id).where(
-                models.CampaignMember.user_id == user.id
+        (
+            await db.execute(
+                select(models.CampaignMember.campaign_id).where(
+                    models.CampaignMember.user_id == user.id
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     if not member_ids:
         return []
 
@@ -104,9 +104,7 @@ async def _list_campaigns_for(
 
     campaigns = list(
         (
-            await db.execute(
-                select(models.Campaign).where(models.Campaign.id.in_(campaign_ids))
-            )
+            await db.execute(select(models.Campaign).where(models.Campaign.id.in_(campaign_ids)))
         ).scalars()
     )
 
@@ -123,12 +121,16 @@ async def _list_campaigns_for(
         member_count_by_campaign[cid] = member_count_by_campaign.get(cid, 0) + 1
 
     my_char_rows = (
-        await db.execute(
-            select(models.Character.campaign_id)
-            .where(models.Character.user_id == user.id)
-            .where(models.Character.campaign_id.in_(campaign_ids))
+        (
+            await db.execute(
+                select(models.Character.campaign_id)
+                .where(models.Character.user_id == user.id)
+                .where(models.Character.campaign_id.in_(campaign_ids))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     my_char_by_campaign: dict[str, int] = {}
     for cid in my_char_rows:
         my_char_by_campaign[cid] = my_char_by_campaign.get(cid, 0) + 1
@@ -153,9 +155,7 @@ async def _list_campaigns_for(
             )
         )
 
-    dated = sorted(
-        [r for r in rows if r[1] is not None], key=lambda p: p[1] or "", reverse=True
-    )
+    dated = sorted([r for r in rows if r[1] is not None], key=lambda p: p[1] or "", reverse=True)
     undated = [r for r in rows if r[1] is None]
     ordered = [r[0] for r in dated] + [r[0] for r in undated]
     if dated:
@@ -243,12 +243,16 @@ async def _recent_sessions(
     campaign the user belongs to, with a pre-resolved campaign name."""
 
     member_ids = (
-        await db.execute(
-            select(models.CampaignMember.campaign_id).where(
-                models.CampaignMember.user_id == user.id
+        (
+            await db.execute(
+                select(models.CampaignMember.campaign_id).where(
+                    models.CampaignMember.user_id == user.id
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     if not member_ids:
         return []
     rows = list(

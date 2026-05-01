@@ -64,8 +64,9 @@ def test_migrations_apply_to_empty_db_in_one_pass(tmp_path: Path) -> None:
 
 
 def test_phase_1_creates_all_15_tables(tmp_path: Path) -> None:
-    """Sanity-check: the migrated DB has exactly the 15 spec §5 tables
-    (plus alembic_version)."""
+    """Sanity-check: the migrated DB has exactly the spec §5 tables
+    plus the Phase 7 ``campaign_invites`` audit/revocation surface
+    (and ``alembic_version``)."""
 
     import sqlite3
 
@@ -77,6 +78,8 @@ def test_phase_1_creates_all_15_tables(tmp_path: Path) -> None:
         "users",
         "campaigns",
         "campaign_members",
+        # Phase 7: row-backed invites with audit + revocation.
+        "campaign_invites",
         "characters",
         "inventory_items",
         "spells_known",

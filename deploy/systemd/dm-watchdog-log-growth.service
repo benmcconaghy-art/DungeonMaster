@@ -1,0 +1,14 @@
+[Unit]
+Description=Dungeon Master log-growth watchdog (one-shot)
+Documentation=file:///opt/dungeon-master/deploy/watchdogs/log-growth.sh
+
+[Service]
+Type=oneshot
+User=dungeonmaster
+Group=dungeonmaster
+EnvironmentFile=-/etc/dungeon-master/env
+ExecStart=/opt/dungeon-master/deploy/watchdogs/log-growth.sh
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/dungeon-master /var/log/dungeon-master

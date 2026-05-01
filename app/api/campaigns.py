@@ -1,31 +1,39 @@
 """Campaign endpoints.
 
-Phase 2 only had ``POST /api/campaigns`` (create). Phase 6 adds the
+Phase 2 only had ``POST /api/campaigns`` (create). Phase 6 added the
 list / detail / invite / join surface the campaign-dashboard view
-needs:
+needs. Phase 7 promotes invites from stateless signed tokens to
+row-backed single-use codes with audit + revocation:
 
-  - GET    /api/campaigns                  list mine
-  - POST   /api/campaigns                  create (Phase 2)
-  - GET    /api/campaigns/{id}             detail incl. characters,
-                                           recent sessions, members
-  - POST   /api/campaigns/{id}/invite      owner-only invite-code mint
-  - POST   /api/campaigns/join             redeem an invite code
+  - GET    /api/campaigns                       list mine
+  - POST   /api/campaigns                       create (Phase 2)
+  - GET    /api/campaigns/{id}                  detail incl. characters,
+                                                recent sessions, members
+  - POST   /api/campaigns/{id}/invite           owner-only invite-code mint
+  - GET    /api/campaigns/{id}/invites          owner-only: list invites + state
+  - DELETE /api/campaigns/invites/{invite_id}   owner-only: revoke
+  - POST   /api/campaigns/join                  redeem an invite code
 
-Invite codes are signed tokens (``itsdangerous.URLSafeTimedSerializer``)
-rather than DB rows — keeps the schema lean and avoids a janitor job
-for expired codes. Spec §11 lists the endpoints but doesn't pin the
-lifecycle; trusted-LAN deployment per spec §13 means we can stay
-simple. Defaults: 7-day TTL, multi-use within TTL, owner-only mint.
-A future phase can promote to a row-backed surface if the audit trail
-matters.
+Invite token shape (Phase 7): ``{"invite_id": <uuid>, "campaign_id":
+<uuid>}`` signed with the app session secret + a salt. The redeem
+endpoint looks up the row to confirm it exists, isn't revoked, isn't
+expired, and isn't already used. Single-use semantics: once redeemed,
+the row's ``used_by`` / ``used_at`` are set and further redemptions
+return 400.
+
+Legacy grace: Phase 6 in-flight tokens (``{"campaign_id", "by"}`` shape,
+no ``invite_id``) are accepted via the old verification path until
+``_LEGACY_GRACE_END`` (7 days post-deploy), with a deprecation warning
+logged per redemption. After that cutoff, legacy tokens 400.
 """
 
 from __future__ import annotations
 
+import datetime as _dt
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, func, select
@@ -33,6 +41,7 @@ from sqlalchemy import desc, func, select
 from app.config import get_settings
 from app.db import models
 from app.deps import CurrentUser, DbSession
+from app.ratelimit import join_rate_limit
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +62,13 @@ _INVITE_SALT = "campaign-invite"
 # revisit; this is the v1 default.
 _INVITE_MAX_AGE_S = 7 * 24 * 3600
 
+# Legacy grace cutoff for Phase 6 stateless tokens. Tokens that decode to
+# the old ``{"campaign_id", "by"}`` shape (no ``invite_id``) are accepted
+# until this timestamp, with a deprecation warning logged on each use.
+# After the cutoff they 400. Tests monkeypatch this value to exercise
+# both the in-grace and post-grace paths.
+_LEGACY_GRACE_END = "2026-05-08T00:00:00Z"
+
 
 def _invite_signer() -> URLSafeTimedSerializer:
     """Build a signer using the app session secret. Constructed per
@@ -60,6 +76,23 @@ def _invite_signer() -> URLSafeTimedSerializer:
     ``get_settings.cache_clear()``) see the new value immediately."""
 
     return URLSafeTimedSerializer(get_settings().session_secret, salt=_INVITE_SALT)
+
+
+def _now_iso() -> str:
+    """ISO-8601 UTC timestamp with millisecond precision and a trailing
+    ``Z``. Matches the ``strftime('%Y-%m-%dT%H:%M:%fZ','now')`` shape
+    SQLite emits for server-default timestamps so all timestamp string
+    comparisons stay textually orderable."""
+
+    now = _dt.datetime.now(_dt.UTC)
+    return now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
+
+
+def _expires_iso(now: _dt.datetime | None = None) -> str:
+    """Compute the absolute expiry timestamp 7 days from ``now``."""
+
+    when = (now or _dt.datetime.now(_dt.UTC)) + _dt.timedelta(seconds=_INVITE_MAX_AGE_S)
+    return when.strftime("%Y-%m-%dT%H:%M:%S.") + f"{when.microsecond // 1000:03d}Z"
 
 
 # ---------------------------------------------------------------------------
@@ -158,10 +191,31 @@ class CampaignDetail(BaseModel):
 class InviteResponse(BaseModel):
     """Owner-mint response. ``code`` is a signed URL-safe string the
     player pastes into the dashboard's join form. ``expires_in_seconds``
-    documents the TTL so a UI can render "valid for 7d"."""
+    documents the TTL so a UI can render "valid for 7d". ``invite_id``
+    is the row id — exposed so a UI can surface it in a "manage
+    invites" view alongside the list endpoint's entries."""
 
     code: str
     expires_in_seconds: int
+    invite_id: str
+
+
+class InviteListEntry(BaseModel):
+    """One row in ``GET /api/campaigns/{id}/invites``. Surfaces enough
+    state for an owner-side UI to show "active / used by Bob / revoked".
+    The ``code`` field is intentionally absent: the signed token is the
+    secret, returned only at mint time. After that, only the row id
+    travels — revoke happens by id, not by re-pasting the code.
+    """
+
+    invite_id: str
+    created_by: str
+    created_at: str
+    expires_at: str
+    revoked_at: str | None
+    used_by: str | None
+    used_at: str | None
+    state: str  # "active" | "used" | "revoked" | "expired"
 
 
 class JoinRequest(BaseModel):
@@ -209,9 +263,7 @@ async def _require_membership(
     return campaign, membership
 
 
-async def _list_member_summaries(
-    db: DbSession, *, campaign_id: str
-) -> list[MemberSummary]:
+async def _list_member_summaries(db: DbSession, *, campaign_id: str) -> list[MemberSummary]:
     """Members for a single campaign, with the character classes each
     player owns inside it. Used by the dashboard's AT THE TABLE row."""
 
@@ -226,8 +278,9 @@ async def _list_member_summaries(
 
     char_rows = (
         await db.execute(
-            select(models.Character.user_id, models.Character.class_name)
-            .where(models.Character.campaign_id == campaign_id)
+            select(models.Character.user_id, models.Character.class_name).where(
+                models.Character.campaign_id == campaign_id
+            )
         )
     ).all()
     classes_by_user: dict[str, list[str]] = {}
@@ -245,9 +298,7 @@ async def _list_member_summaries(
     ]
 
 
-async def _campaign_last_played(
-    db: DbSession, *, campaign_id: str
-) -> tuple[str | None, bool]:
+async def _campaign_last_played(db: DbSession, *, campaign_id: str) -> tuple[str | None, bool]:
     """Latest session activity for a campaign: ``(last_played_at,
     has_active_session)``. ``last_played_at`` is the most recent of
     ``ended_at`` (or ``started_at`` if still active); ``None`` if the
@@ -306,21 +357,26 @@ async def list_campaigns(
     featured card."""
 
     member_rows = (
-        await db.execute(
-            select(models.CampaignMember.campaign_id)
-            .where(models.CampaignMember.user_id == user.id)
+        (
+            await db.execute(
+                select(models.CampaignMember.campaign_id).where(
+                    models.CampaignMember.user_id == user.id
+                )
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     if not member_rows:
         return []
 
     campaign_ids = list(member_rows)
 
     campaigns = (
-        await db.execute(
-            select(models.Campaign).where(models.Campaign.id.in_(campaign_ids))
-        )
-    ).scalars().all()
+        (await db.execute(select(models.Campaign).where(models.Campaign.id.in_(campaign_ids))))
+        .scalars()
+        .all()
+    )
 
     # Member counts in one query.
     count_rows = (
@@ -458,6 +514,23 @@ async def get_campaign(
     )
 
 
+def _invite_state(invite: models.CampaignInvite, *, now_iso: str) -> str:
+    """Classify an invite row for the list endpoint.
+
+    Order matters: revoked dominates used dominates expired. A row that's
+    both revoked and used reports "revoked" because that's the operator-
+    visible action; "used" still appears in ``used_by`` for the audit.
+    """
+
+    if invite.revoked_at is not None:
+        return "revoked"
+    if invite.used_at is not None:
+        return "used"
+    if invite.expires_at <= now_iso:
+        return "expired"
+    return "active"
+
+
 @router.post(
     "/{campaign_id}/invite",
     response_model=InviteResponse,
@@ -468,37 +541,141 @@ async def mint_invite(
     user: CurrentUser,
     db: DbSession,
 ) -> InviteResponse:
-    """Owner-only: mint a signed invite token for ``campaign_id``.
+    """Owner-only: mint a row-backed single-use invite token for ``campaign_id``.
 
-    Returns the token verbatim. The client renders it as a
-    copy-pasteable code in the campaign card; players paste it into
-    the dashboard's join form. The token is opaque — the server
-    re-derives the campaign id by verifying the signature.
+    Inserts a ``campaign_invites`` row with a 7-day TTL, then signs a
+    token of shape ``{"invite_id": <id>, "campaign_id": <campaign_id>}``.
+    The redeem endpoint looks up the row by id to confirm it exists,
+    isn't revoked, isn't expired, and isn't already used.
     """
 
-    campaign, membership = await _require_membership(
-        db, campaign_id=campaign_id, user=user
-    )
+    campaign, membership = await _require_membership(db, campaign_id=campaign_id, user=user)
     if membership.role != "owner":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="only the campaign owner can mint invites",
         )
 
-    payload: dict[str, Any] = {"campaign_id": campaign.id, "by": user.id}
+    invite = models.CampaignInvite(
+        campaign_id=campaign.id,
+        created_by=user.id,
+        expires_at=_expires_iso(),
+    )
+    db.add(invite)
+    await db.commit()
+    await db.refresh(invite)
+
+    payload: dict[str, Any] = {
+        "invite_id": invite.id,
+        "campaign_id": campaign.id,
+    }
     code = _invite_signer().dumps(payload)
-    return InviteResponse(code=code, expires_in_seconds=_INVITE_MAX_AGE_S)
+    return InviteResponse(
+        code=code,
+        expires_in_seconds=_INVITE_MAX_AGE_S,
+        invite_id=invite.id,
+    )
 
 
-@router.post("/join", response_model=JoinResponse)
+@router.get(
+    "/{campaign_id}/invites",
+    response_model=list[InviteListEntry],
+)
+async def list_invites(
+    campaign_id: str,
+    user: CurrentUser,
+    db: DbSession,
+) -> list[InviteListEntry]:
+    """Owner-only: enumerate all invites for the campaign with their
+    audit + lifecycle state. Drives a "manage invites" UI surface;
+    the wire shape is owner-private (it includes who used what)."""
+
+    campaign, membership = await _require_membership(db, campaign_id=campaign_id, user=user)
+    if membership.role != "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="only the campaign owner can list invites",
+        )
+
+    rows = list(
+        (
+            await db.scalars(
+                select(models.CampaignInvite)
+                .where(models.CampaignInvite.campaign_id == campaign.id)
+                .order_by(desc(models.CampaignInvite.created_at))
+            )
+        ).all()
+    )
+    now = _now_iso()
+    return [
+        InviteListEntry(
+            invite_id=invite.id,
+            created_by=invite.created_by,
+            created_at=invite.created_at,
+            expires_at=invite.expires_at,
+            revoked_at=invite.revoked_at,
+            used_by=invite.used_by,
+            used_at=invite.used_at,
+            state=_invite_state(invite, now_iso=now),
+        )
+        for invite in rows
+    ]
+
+
+@router.delete("/invites/{invite_id}")
+async def revoke_invite(
+    invite_id: str,
+    user: CurrentUser,
+    db: DbSession,
+) -> Response:
+    """Owner-only: revoke an invite by id. Idempotent — revoking an
+    already-revoked invite is a 204 no-op (the desired state is the
+    actual state). Revoking a used invite is allowed: it changes the
+    row's lifecycle classification (per ``_invite_state``) so a
+    "manage" view shows the operator action without erasing the audit.
+    Trying to revoke a never-existed invite is 404; revoking another
+    owner's invite is 403."""
+
+    invite = await db.get(models.CampaignInvite, invite_id)
+    if invite is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="invite not found")
+    # Authorisation: must be the owner of the invite's campaign.
+    membership = await db.get(models.CampaignMember, (invite.campaign_id, user.id))
+    if membership is None or membership.role != "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="only the campaign owner can revoke invites",
+        )
+    if invite.revoked_at is None:
+        invite.revoked_at = _now_iso()
+        await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/join",
+    response_model=JoinResponse,
+    dependencies=[Depends(join_rate_limit)],
+)
 async def join_via_invite(
     payload: JoinRequest,
     user: CurrentUser,
     db: DbSession,
 ) -> JoinResponse:
     """Redeem an invite code: add the current user as a player member
-    of the encoded campaign. Idempotent — already-a-member is a
-    successful no-op (returns the campaign, doesn't 409)."""
+    of the encoded campaign.
+
+    Phase 7 path (token has ``invite_id``): look up the row, enforce
+    single-use semantics. Reject revoked / expired / already-used.
+    On success, set ``used_by`` / ``used_at`` and add a CampaignMember
+    row. The whole sequence runs in one commit so a crash mid-flight
+    can't leave a half-redeemed state.
+
+    Legacy path (Phase 6 token, no ``invite_id``): until
+    ``_LEGACY_GRACE_END``, accept the old ``campaign_id``/``by``
+    payload with a deprecation warning. Past the cutoff, return 400
+    with a "please request a new code" message.
+    """
 
     try:
         decoded = _invite_signer().loads(payload.code, max_age=_INVITE_MAX_AGE_S)
@@ -527,6 +704,74 @@ async def join_via_invite(
             detail="campaign no longer exists",
         )
 
+    invite_id = decoded.get("invite_id")
+    if invite_id is None:
+        # Legacy Phase 6 token. Accept until the cutoff; log a
+        # deprecation warning either way so the audit log shows the
+        # old shape is still in circulation.
+        if _now_iso() >= _LEGACY_GRACE_END:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "invite code is from a deprecated format and the "
+                    "grace period has ended; please ask the campaign "
+                    "owner for a fresh code"
+                ),
+            )
+        log.warning(
+            "legacy invite redemption (pre-Phase 7 token shape) campaign_id=%s "
+            "user_id=%s grace_until=%s",
+            campaign_id,
+            user.id,
+            _LEGACY_GRACE_END,
+        )
+        existing = await db.get(models.CampaignMember, (campaign_id, user.id))
+        if existing is None:
+            db.add(
+                models.CampaignMember(
+                    campaign_id=campaign_id,
+                    user_id=user.id,
+                    role="player",
+                )
+            )
+            await db.commit()
+        return JoinResponse(campaign_id=campaign.id, name=campaign.name)
+
+    # Phase 7 token: look up the row and enforce single-use.
+    invite = await db.get(models.CampaignInvite, str(invite_id))
+    if invite is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invite code is invalid",
+        )
+    # Defense in depth: signed token + matching campaign_id field.
+    if invite.campaign_id != campaign_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invite code is invalid",
+        )
+    if invite.revoked_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invite code has been revoked",
+        )
+    now = _now_iso()
+    if invite.expires_at <= now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invite code has expired",
+        )
+    if invite.used_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="invite code has already been used",
+        )
+
+    # Mark used + add membership atomically. ``used_by`` is set even if
+    # the user is somehow already a member (e.g. owner added them
+    # directly) so the audit row is consistent.
+    invite.used_by = user.id
+    invite.used_at = now
     existing = await db.get(models.CampaignMember, (campaign_id, user.id))
     if existing is None:
         db.add(
@@ -536,7 +781,7 @@ async def join_via_invite(
                 role="player",
             )
         )
-        await db.commit()
+    await db.commit()
     return JoinResponse(campaign_id=campaign.id, name=campaign.name)
 
 
@@ -546,6 +791,7 @@ __all__ = [
     "CampaignResponse",
     "CharacterCardSummary",
     "CreateCampaignRequest",
+    "InviteListEntry",
     "InviteResponse",
     "JoinRequest",
     "JoinResponse",

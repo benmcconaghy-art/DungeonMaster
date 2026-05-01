@@ -11,12 +11,13 @@ spec §5 without requiring SQLite-specific column collation).
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.exc import IntegrityError
 
 from app.db import models
 from app.deps import CurrentUser, DbSession, by_username
+from app.ratelimit import login_rate_limit, register_rate_limit
 from app.security import hash_password, verify_password
 
 router = APIRouter(prefix="/api", tags=["auth"])
@@ -61,6 +62,7 @@ def _user_to_response(user: models.User) -> UserResponse:
     "/auth/register",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(register_rate_limit)],
 )
 async def register(
     payload: RegisterRequest,
@@ -89,7 +91,11 @@ async def register(
     return _user_to_response(user)
 
 
-@router.post("/auth/login", response_model=UserResponse)
+@router.post(
+    "/auth/login",
+    response_model=UserResponse,
+    dependencies=[Depends(login_rate_limit)],
+)
 async def login(
     payload: LoginRequest,
     request: Request,

@@ -43,6 +43,7 @@ import asyncio
 import contextlib
 import hashlib
 import logging
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -50,6 +51,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app import metrics
 from app.config import get_settings
 from app.db import models
 from app.db.session import SessionLocal
@@ -251,13 +253,25 @@ async def _process_job(
 ) -> None:
     """Run one job end-to-end. Catches all expected failure modes and
     emits the right ``image_failed`` flavour rather than letting the
-    main loop see exceptions."""
+    main loop see exceptions.
+
+    Phase 7 metrics: every terminal path (ok / failed-of-various-kinds)
+    increments ``image_jobs_total{kind, outcome}``. The OK path also
+    observes wall-clock duration on ``image_job_duration_seconds{kind}``
+    so an operator can spot FLUX latency regressions over time.
+    """
+
+    started = time.monotonic()
+
+    def _failed(reason: str) -> None:
+        metrics.image_jobs_total.labels(kind=job.kind, outcome="failed").inc()
 
     if job.reference_image_id is not None and job.edit_instruction is None:
         log.error(
             "image worker: job %s has reference_image_id but no edit_instruction",
             job.id,
         )
+        _failed("invalid_job")
         await _publish(pubsub, job.session_id, ImageFailed(image_id=job.id, reason="invalid_job"))
         return
 
@@ -279,6 +293,11 @@ async def _process_job(
             job.id,
             existing.id,
         )
+        # Dedup hits skip FLUX entirely — count them as "ok" outcomes
+        # because the player gets the image they asked for, but don't
+        # observe a duration histogram value (no real generation
+        # happened, so timing it would skew the latency view).
+        metrics.image_jobs_total.labels(kind=job.kind, outcome="ok").inc()
         await _publish(
             pubsub,
             job.session_id,
@@ -293,6 +312,7 @@ async def _process_job(
                 source_png = await _read_reference_png(db, job.reference_image_id)
         except (ValueError, FileNotFoundError, OSError) as exc:
             log.warning("image worker: source image fetch failed for job %s: %s", job.id, exc)
+            _failed("missing_reference")
             await _publish(
                 pubsub,
                 job.session_id,
@@ -320,6 +340,7 @@ async def _process_job(
             height = params["height"]
     except FluxClientError as exc:
         log.warning("image worker: FLUX call failed for job %s: %s", job.id, exc)
+        _failed("flux_unavailable")
         await _publish(
             pubsub,
             job.session_id,
@@ -333,6 +354,7 @@ async def _process_job(
         file_path.write_bytes(png_bytes)
     except OSError:
         log.exception("image worker: failed to write %s", file_path)
+        _failed("write_failed")
         await _publish(pubsub, job.session_id, ImageFailed(image_id=job.id, reason="write_failed"))
         return
 
@@ -350,9 +372,12 @@ async def _process_job(
         log.exception("image worker: DB persist failed for job %s", job.id)
         # File is on disk but no row points at it — leave it; a future
         # cleanup sweep can drop orphans.
+        _failed("db_failed")
         await _publish(pubsub, job.session_id, ImageFailed(image_id=job.id, reason="db_failed"))
         return
 
+    metrics.image_jobs_total.labels(kind=job.kind, outcome="ok").inc()
+    metrics.image_job_duration_seconds.labels(kind=job.kind).observe(time.monotonic() - started)
     log.info("image worker: completed job %s (kind=%s)", job.id, job.kind)
     await _publish(
         pubsub,
@@ -401,6 +426,7 @@ async def _watchdog(flux: FluxClient, queue_client: Any) -> None:
             await flux.probe()
             now = asyncio.get_running_loop().time()
             last_success = now
+            metrics.flux_health_probe_total.labels(status="ok").inc()
             if current_status != "ok":
                 log.info("image watchdog: FLUX recovered; status -> ok")
                 current_status = "ok"
@@ -408,6 +434,7 @@ async def _watchdog(flux: FluxClient, queue_client: Any) -> None:
         except FluxClientError as exc:
             now = asyncio.get_running_loop().time()
             elapsed = now - last_success
+            metrics.flux_health_probe_total.labels(status="degraded").inc()
             log.warning(
                 "image watchdog: FLUX probe failed (%.0fs since last success): %s",
                 elapsed,

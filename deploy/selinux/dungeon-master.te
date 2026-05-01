@@ -1,0 +1,63 @@
+## <summary>SELinux policy module for the Dungeon Master service.</summary>
+##
+## Phase 7 hardening (spec §13). Targets AlmaLinux 10's SELinux targeted
+## policy. The trusted-LAN deployment posture means the service runs
+## under ``unconfined_service_t`` (the default for systemd-managed
+## services without a specific transition), which already has wide
+## access. This module is intentionally minimal: it exists as a
+## reviewable, version-controlled hook so that *if* the deployment
+## posture ever tightens, the policy module is the place to land
+## domain transitions, dontaudit rules, and bespoke allow blocks.
+##
+## What this module DOES today:
+## - Declares the ``policy_module`` namespace ``dungeon_master`` so the
+##   companion ``dungeon-master.fc`` file-context entries land under a
+##   reviewable identifier in ``semodule -l`` output.
+## - Pulls in the ``require`` block for the types referenced by the .fc
+##   file so checkmodule can resolve them. (.fc entries that name
+##   contexts like ``var_lib_t`` need the kernel to know the type
+##   exists at module load time — the require makes that explicit.)
+## - Carries no custom allow rules. The targeted policy's
+##   ``unconfined_service_t`` already covers everything the service
+##   needs against ``var_lib_t`` / ``var_log_t`` / ``http_port_t``.
+##
+## What this module DOES NOT do (operationally handled by
+## ``deploy/selinux/install.sh``):
+## - Port labelling for 8001 (``semanage port -a -t http_port_t``).
+## - Boolean for nginx → localhost (``setsebool -P httpd_can_network_connect 1``).
+## - ``restorecon`` over the data and log paths.
+## These are operator-time actions, not module declarations; mixing them
+## here would require generating boolean / port DDL that's better kept
+## in a shell script.
+##
+## When to extend:
+## - If audit2allow surfaces denials under enforcing mode (the install
+##   path runs the service under its default domain; AVC denials get
+##   logged to /var/log/audit/audit.log). Inspect, decide whether to
+##   accept (allow rule), suppress (dontaudit), or fix the root cause.
+## - If the project later confines the service into its own domain
+##   (e.g. ``dungeon_master_t``), this is where ``type_transition``
+##   from ``init_t`` lands.
+## - If file contexts diverge from ``var_lib_t`` / ``var_log_t``
+##   (e.g. introducing ``dungeon_master_data_t`` for tighter scoping),
+##   declare the new type here AND update ``dungeon-master.fc``.
+##
+## Build (manual):
+##   checkmodule -m -M -o dungeon-master.mod dungeon-master.te
+##   semodule_package -o dungeon-master.pp \
+##       -m dungeon-master.mod -f dungeon-master.fc
+##   semodule -i dungeon-master.pp
+
+module dungeon-master 1.0.0;
+
+require {
+    type var_lib_t;
+    type var_log_t;
+    type http_port_t;
+}
+
+# No allow rules at this revision — the service runs as
+# unconfined_service_t and the stock AL10 targeted policy already
+# permits the operations the app needs. The require block above
+# exists so checkmodule resolves the referenced types when packaging
+# the .fc entries alongside.

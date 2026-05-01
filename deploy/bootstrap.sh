@@ -160,6 +160,16 @@ if [[ ! -f "${ETC_DIR}/env" ]]; then
 # unit and read by app/config.py via pydantic-settings. Anything not set
 # here falls back to the defaults in app/config.py (which match the
 # production layout described in spec §13).
+#
+# File mode 0640 root:${APP_USER} so only the service user can read it.
+# Do not commit to version control; do not share SESSION_SECRET. If you
+# rotate SESSION_SECRET, all existing user sessions and outstanding
+# campaign invites become invalid (signatures no longer verify).
+#
+# No upstream service tokens are required: vLLM and FLUX run without
+# auth on the trusted LAN per spec §13. If posture ever changes, add
+# ``VLLM_API_KEY`` / ``FLUX_API_KEY`` lines here and read them from
+# app/config.py — they live in this file, never in the systemd unit.
 
 DB_PATH=${DATA_DIR}/dm.db
 IMAGE_STORAGE_PATH=${DATA_DIR}/images
@@ -167,6 +177,12 @@ VLLM_BASE_URL=http://svrai01.mcconaghygroup.internal:8000
 FLUX_BASE_URL=http://svrai01.mcconaghygroup.internal:11437
 REDIS_URL=redis://127.0.0.1:6379/0
 SESSION_SECRET=${session_secret}
+# Optional: if an operator has provisioned an Ollama embedding model
+# on svrai01:11436 (matching the embedding_dim — bge-large is 1024;
+# nomic-embed-text is 768), uncomment and point at it. Otherwise the
+# local sentence-transformers fallback in app/llm/memory.py loads.
+# EMBEDDING_BASE_URL=http://svrai01.mcconaghygroup.internal:11436/v1
+# EMBEDDING_MODEL=bge-large
 EOF
 else
     log "${ETC_DIR}/env already present, leaving operator copy in place"
@@ -193,6 +209,50 @@ install -m 0644 "${APP_DIR}/deploy/nginx.conf"                         /etc/ngin
 
 systemctl daemon-reload
 nginx -t
+
+# ---------- §13 Phase 7 SELinux policy module ---------------------------------
+
+# Compile + load deploy/selinux/dungeon-master.{te,fc}, label port 8001
+# as http_port_t, set httpd_can_network_connect, restorecon the data /
+# log / etc paths. The script is idempotent and self-contained.
+# Required tools: policycoreutils, policycoreutils-python-utils,
+# checkpolicy. The dnf install at the top of this script doesn't pull
+# them in by default; install on demand.
+if ! command -v checkmodule >/dev/null 2>&1 \
+        || ! command -v semanage >/dev/null 2>&1; then
+    log "Installing SELinux tooling for the policy install"
+    dnf install -y policycoreutils policycoreutils-python-utils checkpolicy
+fi
+
+if [[ "$(getenforce 2>/dev/null || echo Disabled)" != "Disabled" ]]; then
+    log "Applying SELinux policy module"
+    bash "${APP_DIR}/deploy/selinux/install.sh"
+else
+    log "SELinux is disabled on this host; skipping policy install"
+fi
+
+# ---------- §13 Phase 7 backups + watchdogs -----------------------------------
+
+log "Installing nightly backup cron entries"
+install -d -m 0755 /etc/cron.d
+install -m 0644 "${APP_DIR}/deploy/cron/dungeon-master.cron" /etc/cron.d/dungeon-master
+install -d -m 0750 -o "${APP_USER}" -g "${APP_USER}" /var/backups/dm /var/backups/dm/images
+
+log "Installing watchdog systemd timers"
+for unit in dm-watchdog-flux dm-watchdog-disk dm-watchdog-log-growth; do
+    install -m 0644 "${APP_DIR}/deploy/systemd/${unit}.service" \
+        /etc/systemd/system/${unit}.service
+    install -m 0644 "${APP_DIR}/deploy/systemd/${unit}.timer" \
+        /etc/systemd/system/${unit}.timer
+done
+install -d -m 0750 -o "${APP_USER}" -g "${APP_USER}" /var/lib/dungeon-master/watchdog-state
+
+systemctl daemon-reload
+# Enable + start the timers; the timers fire the .service units on
+# their schedules. Idempotent — re-running bootstrap re-enables.
+for timer in dm-watchdog-flux.timer dm-watchdog-disk.timer dm-watchdog-log-growth.timer; do
+    systemctl enable --now "${timer}" >/dev/null
+done
 
 log "Bootstrap complete."
 cat <<EOF

@@ -81,9 +81,7 @@ class PortraitResponse(BaseModel):
     prompt: str
 
 
-async def _require_campaign_member(
-    db: DbSession, *, user_id: str, campaign_id: str
-) -> None:
+async def _require_campaign_member(db: DbSession, *, user_id: str, campaign_id: str) -> None:
     """Reject 403 if the user isn't a member of the named campaign.
 
     Sole authorisation gate for portrait requests — once you're in

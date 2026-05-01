@@ -1,0 +1,18 @@
+# /etc/cron.d/dungeon-master — Phase 7 hardening (Step 5A).
+#
+# Installed by deploy/bootstrap.sh. Runs as the dungeonmaster user.
+# The PATH override ensures cron finds sqlite3, rsync, and date
+# even when /etc/cron.d entries inherit the bare cron environment.
+#
+# Times are UTC on the host (cron's default for /etc/cron.d).
+# 02:00/03:00 UTC = 21:00/22:00 US-Eastern winter, before the most
+# likely play windows on this LAN.
+
+PATH=/usr/local/bin:/usr/bin:/bin
+SHELL=/bin/bash
+
+# Nightly SQLite snapshot + integrity check + retention rotation.
+0 2 * * * dungeonmaster /opt/dungeon-master/deploy/cron/dm-backup.sh
+
+# Nightly delta-rsync of the image directory.
+0 3 * * * dungeonmaster /opt/dungeon-master/deploy/cron/dm-images-rsync.sh

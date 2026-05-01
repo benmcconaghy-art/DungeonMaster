@@ -149,6 +149,44 @@ class CampaignMember(Base):
     )
 
 
+class CampaignInvite(Base):
+    """Audit-and-revocation surface for campaign invites (Phase 7).
+
+    Phase 6 invites were stateless ``URLSafeTimedSerializer`` tokens — no
+    DB row, no audit, no revocation. Phase 7 promotes them to row-backed
+    single-use codes: the signed token now carries ``invite_id`` and the
+    redeem path looks up the row to confirm it exists, isn't revoked,
+    isn't expired, and hasn't already been used.
+
+    Single-use: once redeemed, ``used_by``/``used_at`` are populated and
+    further redemption attempts (even by the same user) return 400. To
+    invite a second player, the owner mints a second code. Multi-use
+    semantics could be revisited in a later phase if the friction
+    actually bites in play.
+    """
+
+    __tablename__ = "campaign_invites"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_new_uuid)
+    campaign_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("campaigns.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_by: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=_NOW)
+    # ISO-8601 absolute expiry. Spec/Phase 6 default is 7 days from mint.
+    # Stored explicitly rather than re-derived from ``created_at`` so an
+    # admin can later mint a custom-TTL code without schema changes.
+    expires_at: Mapped[str] = mapped_column(Text, nullable=False)
+    revoked_at: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Single-use audit fields. Both NULL until first redemption.
+    used_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
+    used_at: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (Index("idx_campaign_invites_campaign_id", "campaign_id"),)
+
+
 # ---------------------------------------------------------------------------
 # Generated images
 # ---------------------------------------------------------------------------
@@ -180,9 +218,7 @@ class GeneratedImage(Base):
     edit_instruction: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=_NOW)
 
-    __table_args__ = (
-        Index("idx_generated_images_session_id", "session_id"),
-    )
+    __table_args__ = (Index("idx_generated_images_session_id", "session_id"),)
 
 
 # ---------------------------------------------------------------------------

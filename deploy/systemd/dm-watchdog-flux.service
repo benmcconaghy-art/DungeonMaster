@@ -1,0 +1,15 @@
+[Unit]
+Description=Dungeon Master FLUX-health watchdog (one-shot)
+After=network.target
+Documentation=file:///opt/dungeon-master/deploy/watchdogs/flux-health.sh
+
+[Service]
+Type=oneshot
+User=dungeonmaster
+Group=dungeonmaster
+EnvironmentFile=-/etc/dungeon-master/env
+ExecStart=/opt/dungeon-master/deploy/watchdogs/flux-health.sh
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/dungeon-master /var/log/dungeon-master

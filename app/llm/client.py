@@ -23,6 +23,7 @@ Two responsibilities the orchestrator depends on:
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import AsyncIterator
 from typing import Any, Literal
 
@@ -30,6 +31,7 @@ import httpx
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionChunk
 
+from app import metrics
 from app.config import get_settings
 
 log = logging.getLogger(__name__)
@@ -199,17 +201,54 @@ class DmClient:
         if extra_body is not None:
             kwargs["extra_body"] = extra_body
 
+        started = time.monotonic()
         try:
             response = await self._client.chat.completions.create(**kwargs)
         except Exception as exc:  # openai exceptions don't share a clean base
+            metrics.llm_calls_total.labels(
+                model=self.model, reasoning_mode=reasoning_mode, outcome="error"
+            ).inc()
             raise DmClientError(f"chat.completions.create failed: {exc}") from exc
 
         if not response.choices:
+            metrics.llm_calls_total.labels(
+                model=self.model, reasoning_mode=reasoning_mode, outcome="error"
+            ).inc()
             raise DmClientError("chat.completions.create returned no choices")
-        # Surface usage at debug level — the per-call-site reasoning_mode
-        # tuning only pays off if the savings are visible. Field is
-        # optional in the OpenAI response shape; guard accordingly.
+
+        # Phase 7 structured-logging + metrics contract: emit one INFO
+        # record per LLM call carrying model, reasoning_mode,
+        # prompt/completion tokens, latency_ms, outcome. The contextvar
+        # formatter attaches request_id automatically so a player
+        # turn's LLM calls correlate with the access-log line for the
+        # originating HTTP request. The Counter / token Counter
+        # capture the same data points for /metrics.
+        latency_ms = int((time.monotonic() - started) * 1000)
         usage = getattr(response, "usage", None)
+        prompt_tokens = getattr(usage, "prompt_tokens", None) if usage is not None else None
+        completion_tokens = getattr(usage, "completion_tokens", None) if usage is not None else None
+        log.info(
+            "llm complete",
+            extra={
+                "model": self.model,
+                "reasoning_mode": reasoning_mode,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "latency_ms": latency_ms,
+                "outcome": "ok",
+            },
+        )
+        metrics.llm_calls_total.labels(
+            model=self.model, reasoning_mode=reasoning_mode, outcome="ok"
+        ).inc()
+        if prompt_tokens is not None:
+            metrics.llm_tokens_total.labels(model=self.model, kind="prompt").inc(prompt_tokens)
+        if completion_tokens is not None:
+            metrics.llm_tokens_total.labels(model=self.model, kind="completion").inc(
+                completion_tokens
+            )
+        # Keep the legacy DEBUG line for cases that prefer plain-text logs
+        # over structured ones during interactive debugging.
         if usage is not None:
             log.debug(
                 "complete: reasoning_mode=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",

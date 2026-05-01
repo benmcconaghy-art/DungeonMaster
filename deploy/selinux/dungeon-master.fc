@@ -1,0 +1,44 @@
+## File-context entries for the Dungeon Master deployment paths.
+##
+## Phase 7 (spec §13). Read by ``semodule_package -f`` and applied via
+## ``restorecon`` after the module loads. Entries follow the standard
+## SELinux file-context regex format: <pathspec> [type] context.
+##
+## Choices:
+## - ``/var/lib/dungeon-master`` is application data; ``var_lib_t`` is
+##   the canonical type for service-managed state under
+##   ``/var/lib/<service>``. Includes the SQLite WAL and shared-memory
+##   sidecars (``dm.db-wal``, ``dm.db-shm``) which SQLite creates
+##   alongside the main DB file.
+## - ``/var/lib/dungeon-master/images`` (PNGs served via nginx
+##   X-Accel-Redirect) inherits ``var_lib_t`` from the parent rule;
+##   nginx as ``httpd_t`` can read it because the targeted policy
+##   permits ``httpd_t`` → ``var_lib_t`` in the read direction.
+## - ``/var/log/dungeon-master`` is service logs; ``var_log_t`` is the
+##   right type so ``logrotate`` (under ``logrotate_t``) and the
+##   service's logging code both have appropriate access.
+## - ``/etc/dungeon-master`` is configuration; ``etc_t`` is the
+##   default and what the directory inherits if no rule matches.
+##   The Phase 7 brief mentioned ``system_conf_t`` as an alternative;
+##   it's a tighter type used for some system-wide config (e.g.
+##   ``/etc/passwd``). For a single-application service config
+##   directory, ``etc_t`` is the conservative, broadly-compatible
+##   choice — it's present in every targeted-policy version,
+##   ``systemd`` reads ``EnvironmentFile=`` paths under it without
+##   extra rules, and ``logrotate`` / ``rsyslog`` etc. don't need
+##   special-casing. If a future deploy posture wants tighter
+##   confinement, swap ``etc_t`` → ``system_conf_t`` here and
+##   re-run ``install.sh``.
+##
+## All paths use ``(/.*)?`` to apply the type to both the directory
+## itself and everything under it.
+
+# Literal context format (system_u:object_r:type:s0) is used rather
+# than the refpolicy m4 ``gen_context()`` macro so this file packages
+# with ``semodule_package -f`` directly, without requiring the
+# Reference Policy headers (``policycoreutils-devel`` /
+# ``selinux-policy-devel``) to be installed at build time.
+
+/var/lib/dungeon-master(/.*)?     system_u:object_r:var_lib_t:s0
+/var/log/dungeon-master(/.*)?     system_u:object_r:var_log_t:s0
+/etc/dungeon-master(/.*)?         system_u:object_r:etc_t:s0

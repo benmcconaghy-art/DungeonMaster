@@ -15,7 +15,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -41,6 +41,8 @@ from app.deps import CurrentUser, CurrentUserOrNone, DbSession
 from app.images.portrait import get_queue_client
 from app.images.portrait import reset_for_tests as reset_queue_client
 from app.llm.client import DmClientError, get_dm_client
+from app.logging_config import configure_logging
+from app.middleware import AccessLogMiddleware, RequestIdMiddleware
 from app.realtime.pubsub import DmPubsubError, get_pubsub
 from app.views import dashboard as dashboard_view
 
@@ -78,16 +80,19 @@ class HealthResponse(BaseModel):
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Process-level setup/teardown.
 
-    Boot: probe vLLM (resolve the served model id) and Valkey (confirm
-    the KV store is reachable). Both failures are logged but non-fatal
-    so the rest of the app starts and the WS hub / orchestrator surface
-    typed errors when first hit. The boot log is the canonical place
+    Boot: install the JSON logging formatter (Phase 7), probe vLLM
+    (resolve the served model id) and Valkey (confirm the KV store is
+    reachable). Both upstream failures are logged but non-fatal so the
+    rest of the app starts and the WS hub / orchestrator surface typed
+    errors when first hit. The boot log is the canonical place
     operators see whether the dependencies came up.
 
     Shutdown: dispose the engine, the openai client, and the Valkey
     connection pool so the gunicorn worker shuts down cleanly under
     systemd.
     """
+
+    configure_logging()
 
     client = get_dm_client()
     try:
@@ -129,6 +134,19 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Middleware order (registration is OUTERMOST → INNERMOST as you
+    # read down). Starlette runs them in reverse-registration order on
+    # the request side and forward order on the response side, so:
+    #   1. RequestIdMiddleware runs first on the request, sets the
+    #      contextvar, runs LAST on the response (writing the header).
+    #   2. AccessLogMiddleware runs after the request_id is bound and
+    #      before SessionMiddleware so its access log carries the
+    #      request_id but not yet the user_id (the user-resolution
+    #      dependency sets that lazily once auth runs).
+    #   3. SessionMiddleware is the innermost — closest to the handler.
+    app.add_middleware(AccessLogMiddleware)
+    app.add_middleware(RequestIdMiddleware)
+
     # Signed-cookie sessions per spec §13. ``https_only`` would set the
     # Secure flag, but our self-signed dev cert means a dev browser
     # connecting via plain http:// would refuse to send the cookie back —
@@ -141,6 +159,12 @@ def create_app() -> FastAPI:
         max_age=60 * 60 * 24 * 30,  # 30 days, per spec §13
         same_site="lax",
     )
+
+    # Rate limiting (Phase 7 hardening) is wired per-route via FastAPI
+    # ``Depends(login_rate_limit)`` etc. on the auth/join endpoints.
+    # No app-level middleware required: the dependency raises
+    # HTTPException(429) with a Retry-After header and a human message
+    # when a limit trips.
 
     app.include_router(auth_router)
     app.include_router(campaigns_router)
@@ -192,9 +216,7 @@ def create_app() -> FastAPI:
 
         from app.api.characters import _detail_response, _require_character_visibility
 
-        character = await _require_character_visibility(
-            db, character_id=character_id, user=user
-        )
+        character = await _require_character_visibility(db, character_id=character_id, user=user)
         inventory = list(
             (
                 await db.execute(
@@ -212,15 +234,11 @@ def create_app() -> FastAPI:
                 await db.execute(
                     _sa_select(models.SpellKnown)
                     .where(models.SpellKnown.character_id == character_id)
-                    .order_by(
-                        models.SpellKnown.spell_level, models.SpellKnown.spell_name
-                    )
+                    .order_by(models.SpellKnown.spell_level, models.SpellKnown.spell_name)
                 )
             ).scalars()
         )
-        detail = _detail_response(
-            character, viewer_id=user.id, inventory=inventory, spells=spells
-        )
+        detail = _detail_response(character, viewer_id=user.id, inventory=inventory, spells=spells)
         campaign = await db.get(models.Campaign, character.campaign_id)
         return _TEMPLATES.TemplateResponse(
             request,
@@ -299,6 +317,20 @@ def create_app() -> FastAPI:
                 "recent_rolls": recent_rolls,
             },
         )
+
+    @app.get("/metrics", include_in_schema=False)
+    async def prometheus_metrics() -> Response:
+        """Prometheus exposition format. Internal-only: nginx restricts
+        the location to localhost; reaching this requires shell access
+        to the box. The handler itself is intentionally unauthenticated
+        because Prometheus scrapers don't carry session cookies — the
+        deployment-layer restriction is the gate.
+        """
+
+        from app.metrics import render_exposition
+
+        body, content_type = render_exposition()
+        return Response(content=body, media_type=content_type)
 
     @app.get("/health", response_model=HealthResponse)
     async def health(db: DbSession) -> JSONResponse:

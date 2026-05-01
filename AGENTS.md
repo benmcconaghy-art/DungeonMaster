@@ -166,6 +166,36 @@ async model within one worker. See spec §13 for rationale.
   the explicit-begin pattern only in handlers that don't read from the DB before
   writing — currently rare; see `app/orchestrator/dm.py` for the canonical
   exception (it manages its own session lifecycle outside the DI chain).
+- **Don't use slowapi's `@limiter.limit` decorator** for rate limiting in this
+  codebase. It silently returns 422 on every request when combined with
+  `from __future__ import annotations` (which we use throughout). slowapi's
+  wrapper rebinds `__globals__` to its own module, so FastAPI's
+  `evaluate_forwardref(annotation, globalns, globalns)` can't resolve string
+  annotations like `RegisterRequest`/`DbSession` — body and dep parameters
+  silently degrade to query params. Drive the `limits` library directly via
+  FastAPI `Depends` instead. See `app/ratelimit.py` for the pattern.
+
+### Operational scripts (systemd-driven, watchdogs, cron)
+- **Any systemd-driven script in this codebase MUST exit 0
+  unconditionally**, even on internal failure. Failures route through
+  the alerts hook (`deploy/alerts/notify.sh`), not through exit codes.
+  Reason: a non-zero exit causes systemd to mark the `.service` Failed
+  and stop further invocation by the timer — the watchdog goes silent
+  exactly when it's needed most. The cron-driven backup script is the
+  one principled exception (cron-monitoring tools want a non-zero exit
+  when the snapshot itself failed); even there, *retention* failures
+  log + alert + return 0 so a slightly-too-old backup beats a missed
+  next-night run. Phase 7 watchdogs in `deploy/watchdogs/` follow this
+  invariant; any Phase 8+ timer-driven work should too.
+- State-bearing watchdogs persist their last-tick state under
+  `/var/lib/dungeon-master/watchdog-state/<name>` so transitions can
+  be detected without spawning a long-running daemon. Alert on
+  *transition*, not on every tick — an always-degraded condition
+  would otherwise spam the alert log.
+- Watchdog scripts read configuration from environment variables with
+  sensible defaults (`STATE_FILE`, `ALERT_HOOK`, threshold values) so
+  unit-testing them locally with stubbed paths and a mock alert hook
+  doesn't require root or a real systemd.
 
 ### Tests
 - Each new module gets a parallel `tests/test_<module>.py` from day one.
@@ -252,9 +282,16 @@ uv run mypy app                                 # type check
 
 ## Current build phase
 
-**Phase 6 complete; Phase 7 (hardening) ready to start.**
+**Phase 7 complete; Phase 8 (Adventure modules) ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.
+
+Phase 7 deploy-readiness — the pieces that only meaningfully verify
+against a real production deploy (SELinux enforcing, watchdog timer
+drills, backup integrity on a real DB, restore-procedure timing,
+cron firing on schedule, /metrics nginx restriction) — are
+captured in `deploy/PHASE_7_VERIFICATION.md` as a runbook for
+the first production stand-up. None block Phase 8.
 
 ## Follow-ups
 
@@ -494,20 +531,71 @@ up. Promote to a real issue / phase task when its trigger fires.
   **Context:** `app/db/models.py` `InventoryItem.item_type`;
   `app/templates/character_sheet.html` loadout filter.
 
-- **Invite-code audit / revocation** (added 2026-05-01, Phase 6
-  close-out, target if revocation matters). Phase 6 invite codes
-  are `URLSafeTimedSerializer` signed tokens — stateless, 7-day
-  TTL, multi-use. No DB row, no audit trail, no revocation. A
-  leaked code stays valid until expiry. For a trusted-LAN
-  deployment this is fine. If audit ("who joined when, with whose
-  code") or revocation ("regenerate to lock out a fired
-  campaign-mate") matters, promote to a row-backed surface:
-  `campaign_invites(id, campaign_id, code, created_by, created_at,
-  revoked_at, max_uses, use_count)`.
-  **Trigger:** a deployment scenario where audit / revocation
-  matters, OR a player gets the wrong code and can't undo it.
-  **Context:** `app/api/campaigns.py` `_invite_signer` +
-  `mint_invite` + `join_via_invite`.
+- **Invite-code audit / revocation** *(resolved 2026-05-01,
+  Phase 7 step 3B)*. Promoted to a row-backed surface
+  (`campaign_invites` table, single-use semantics, owner-only
+  GET-list and DELETE-revoke endpoints, 7-day legacy grace for
+  Phase 6 stateless tokens until 2026-05-08). Migration
+  `a96d3a6e501d`. Tests in `tests/test_invite_revocation.py`.
+
+- **SELinux confined domain not implemented** (added 2026-05-01,
+  Phase 7 step 3C, target if posture changes). The Phase 7
+  policy module (`deploy/selinux/dungeon-master.te`) lets the
+  service run as `unconfined_service_t` — the targeted-policy
+  default for systemd-managed services without an explicit
+  transition. The .fc file labels the data / log / config paths
+  correctly; the install script handles port 8001 + the
+  `httpd_can_network_connect` boolean + restorecon. What's
+  shipped is SELinux-aware deployment, not SELinux-confined:
+  the service has wide access via `unconfined_service_t`
+  rather than narrow allow rules in a custom domain. Real
+  confinement would mean a `dungeon_master_t` domain with an
+  `init_t` → `dungeon_master_t` transition and explicit allow
+  rules narrowed to what the service actually uses. ~2-3 hours
+  of policy-engineering work when triggered. **Trigger:** if
+  the deployment posture changes from trusted-LAN to anything
+  with public-internet exposure, multi-tenant deployment, or a
+  regulatory pressure (e.g. compliance audit). **Context:**
+  `deploy/selinux/dungeon-master.te` design notes; the README
+  in that directory has the "when to introduce a confined
+  domain" section.
+
+- **Phase 7 deploy-readiness checklist** (added 2026-05-01,
+  Phase 7 close-out, target first production stand-up). Several
+  Phase 7 pieces only meaningfully verify against a real deploy
+  box and were not run from the dev sandbox: SELinux policy
+  under enforcing mode against the running service, watchdog
+  timer drills (stop FLUX / fill the data dir / runaway log),
+  backup integrity on a production-shaped DB (the unit tests
+  stub `sqlite3`), `RESTORE.md` cold-operator drill timing,
+  cron actually firing at 02:00/03:00, and the `/metrics`
+  nginx-restriction returning 403 from a non-localhost peer.
+  All six are spelled out as a runbook in
+  `deploy/PHASE_7_VERIFICATION.md`. None block Phase 8 work,
+  but the checklist needs to pass before the deploy is
+  considered Phase 7-verified rather than just Phase 7-complete.
+  **Trigger:** first production stand-up, OR any deploy-box
+  smoke after a hardening change. **Context:**
+  `deploy/PHASE_7_VERIFICATION.md`.
+
+- **Dev-default `session_secret` not rejected at boot** (added
+  2026-05-01, Phase 7 step 3D, target if posture changes from
+  trusted-LAN). `app/config.py` declares
+  `session_secret: str = Field(default="dev-only-not-secret-replace-in-production",
+  min_length=16)`. The 38-char placeholder satisfies the length
+  constraint, so a deploy that somehow skipped bootstrap.sh
+  (which writes a real openssl-generated secret to
+  `/etc/dungeon-master/env`) would silently use the placeholder
+  in production. On the trusted-LAN deployment this is benign:
+  bootstrap.sh always writes the env file and the systemd unit
+  always reads it, and even if the dev secret leaks the only
+  thing it forges is a session cookie on a network nobody else
+  can reach. Real fix when triggered: add a startup check that
+  rejects the dev-default placeholder unless an explicit
+  `DM_ALLOW_DEV_SECRET=1` opt-out is set. **Trigger:** if the
+  deployment posture changes from trusted-LAN to anything with
+  public-internet exposure. **Context:** `app/config.py:57`;
+  `deploy/bootstrap.sh:157` (where the real secret is generated).
 
 ## Working with Claude Design handoffs
 

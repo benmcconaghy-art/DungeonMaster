@@ -96,9 +96,7 @@ async def test_get_character_visible_to_table_member(client: AsyncClient) -> Non
     await _register_and_login(client, "alice")
     campaign_id = await _create_campaign(client, "Shared Table")
     character_id = await _create_character(client, campaign_id, name="Alice's PC")
-    invite_code = (
-        await client.post(f"/api/campaigns/{campaign_id}/invite")
-    ).json()["code"]
+    invite_code = (await client.post(f"/api/campaigns/{campaign_id}/invite")).json()["code"]
     await client.post("/api/auth/logout")
 
     await _register_and_login(client, "bob")
@@ -149,9 +147,7 @@ async def test_update_notes_owner_only(client: AsyncClient) -> None:
     assert detail.json()["notes"] == "Brann owes me 4gp."
 
     # Non-owner same-campaign user gets 403.
-    invite_code = (
-        await client.post(f"/api/campaigns/{campaign_id}/invite")
-    ).json()["code"]
+    invite_code = (await client.post(f"/api/campaigns/{campaign_id}/invite")).json()["code"]
     await client.post("/api/auth/logout")
     await _register_and_login(client, "bob")
     await client.post("/api/campaigns/join", json={"code": invite_code})
@@ -180,9 +176,7 @@ async def test_update_notes_rejects_oversize(client: AsyncClient) -> None:
 async def test_get_character_non_spellcaster_hides_spells(client: AsyncClient) -> None:
     await _register_and_login(client, "alice")
     campaign_id = await _create_campaign(client, "Fighter Test")
-    character_id = await _create_character(
-        client, campaign_id, name="Brann", class_name="Fighter"
-    )
+    character_id = await _create_character(client, campaign_id, name="Brann", class_name="Fighter")
 
     body = (await client.get(f"/api/characters/{character_id}")).json()
     assert body["is_spellcaster"] is False

@@ -25,6 +25,11 @@ import os
 # to the production DB path or speak to real upstream services.
 os.environ.setdefault("DB_PATH", ":memory-sentinel:")
 os.environ.setdefault("SESSION_SECRET", "test-secret-not-used-but-min-length-ok")
+# Rate-limit storage: in-memory so unit tests don't need a real Valkey.
+# Re-resolved when ``app.ratelimit.reset_for_tests`` is called by the
+# ``rate_limited`` fixture below — that's how tests get a fresh
+# zero-counter Limiter between cases.
+os.environ.setdefault("RATELIMIT_STORAGE_URI", "memory://")
 
 from collections.abc import AsyncIterator
 
@@ -36,6 +41,21 @@ from app.db.base import Base
 from app.db.session import create_engine
 from app.deps import get_db
 from app.main import app as fastapi_app
+from app.ratelimit import reset_for_tests as _reset_ratelimit
+
+
+@pytest.fixture(autouse=True)
+def _fresh_ratelimit_counters() -> None:
+    """Reset rate-limit counters before every test.
+
+    The MemoryStorage / FixedWindowRateLimiter are module singletons —
+    without this fixture, a test that hits ``/api/auth/login`` 50 times
+    would leave a populated counter that the next test inherits (the
+    testserver IP is the same for every case). Resetting per test
+    keeps the limit window deterministic per case and prevents bleed.
+    """
+
+    _reset_ratelimit()
 
 
 @pytest.fixture

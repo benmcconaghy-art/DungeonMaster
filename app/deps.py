@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import models
 from app.db.session import SessionLocal
+from app.logging_config import set_user_id as _bind_user_id_to_log_context
 
 
 async def get_db() -> AsyncIterator[AsyncSession]:
@@ -41,12 +42,21 @@ async def get_current_user(
     request: Request,
     db: DbSession,
 ) -> models.User | None:
-    """Resolve the session cookie's ``user_id`` to a ``User``, or ``None``."""
+    """Resolve the session cookie's ``user_id`` to a ``User``, or ``None``.
+
+    Side effect: when the resolution succeeds, bind the user id to the
+    Phase 7 structured-logging contextvar so subsequent log lines on
+    the request carry it. The access-log middleware reads the same
+    contextvar after the handler returns.
+    """
 
     user_id = request.session.get("user_id")
     if not user_id:
         return None
-    return await db.get(models.User, user_id)
+    user = await db.get(models.User, user_id)
+    if user is not None:
+        _bind_user_id_to_log_context(user.id)
+    return user
 
 
 CurrentUserOrNone = Annotated[models.User | None, Depends(get_current_user)]
