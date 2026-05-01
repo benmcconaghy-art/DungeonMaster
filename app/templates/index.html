@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Dungeon Master &mdash; v{{ version }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Lightweight landing styles — proper landing/marketing page would
+     be a Phase 7+ exercise. For now this is the bootstrap surface
+     between sign-in and the dashboard. */
+  main.bootstrap {
+    max-width: 36rem;
+    margin: var(--s-8) auto;
+    padding: var(--s-7) var(--s-6);
+    text-align: center;
+  }
+  main.bootstrap h1 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 28px;
+    letter-spacing: 0.06em;
+    color: var(--parchment);
+    margin: 0 0 var(--s-3);
+  }
+  main.bootstrap .version {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ember);
+    letter-spacing: 0.04em;
+    margin: 0 0 var(--s-2);
+  }
+  main.bootstrap .phase {
+    font-style: italic;
+    color: var(--parchment-dim);
+    margin: 0 0 var(--s-6);
+    font-size: 14px;
+  }
+  main.bootstrap .actions {
+    display: flex;
+    gap: var(--s-3);
+    justify-content: center;
+    margin-top: var(--s-5);
+  }
+  main.bootstrap .actions a {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 11px;
+    color: var(--ember);
+    border: 1px solid var(--ember);
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+  }
+  main.bootstrap .actions a:hover { background: rgba(201,147,62,0.06); }
+</style>
+{% endblock %}
+
+{% block content %}
+  <main class="bootstrap">
+    <h1>Dungeon Master</h1>
+    <p class="version">v{{ version }}</p>
+    {% if user %}
+      <p class="phase">Welcome back, <strong>{{ user.username }}</strong>.</p>
+      <div class="actions">
+        <a href="/dashboard">Open campaigns</a>
+      </div>
+    {% else %}
+      <p class="phase">A table for two to four travellers, narrated by the wandering DM.</p>
+      <div class="actions">
+        <a href="/login">Sign in</a>
+        <a href="/register">Register</a>
+      </div>
+    {% endif %}
+  </main>
+{% endblock %}

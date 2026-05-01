@@ -4,23 +4,58 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}Dungeon Master{% endblock %}</title>
+
+    <!-- Fonts: EB Garamond (prose), Cormorant SC (display small caps),
+         JetBrains Mono (numerals). Loaded once at the layout level so
+         every view inherits the same family stack. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Cormorant+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="/static/css/tokens.css" />
     <link rel="stylesheet" href="/static/css/base.css" />
+    {% block extra_head %}{% endblock %}
   </head>
-  <body>
-    <main class="bootstrap">
-      {% block content %}
-        <h1>Dungeon Master &mdash; bootstrapping</h1>
-        <p class="version">v{{ version }}</p>
-        <p class="phase">Phase 1 (BFRPG engine) in progress.</p>
-        {% if user %}
-          <p>Signed in as <strong>{{ user.username }}</strong>.</p>
-          <form method="post" action="/api/auth/logout">
-            <button type="submit">Sign out</button>
-          </form>
-        {% else %}
-          <p><a href="/login">Sign in</a></p>
+  <body class="{% block body_class %}{% endblock %}" {% block body_data %}{% endblock %}>
+
+    <header class="table-header" role="banner">
+      <a class="crest" href="/" aria-label="Dungeon Master — back to dashboard">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <polygon points="16,3 28,11 24,26 8,26 4,11" />
+          <polygon points="16,9 22,13 20,21 12,21 10,13" />
+          <line x1="16" y1="3" x2="16" y2="9" />
+          <line x1="4" y1="11" x2="10" y2="13" />
+          <line x1="28" y1="11" x2="22" y2="13" />
+          <line x1="8" y1="26" x2="12" y2="21" />
+          <line x1="24" y1="26" x2="20" y2="21" />
+        </svg>
+        <span class="wordmark">Dungeon<em>·</em>Master</span>
+      </a>
+
+      <div class="campaign">
+        {% block header_campaign_name %}{% endblock %}
+        {% if self.header_campaign_meta() | trim %}
+          <span class="session-id">{% block header_campaign_meta %}{% endblock %}</span>
         {% endif %}
-      {% endblock %}
-    </main>
+      </div>
+
+      <div class="right">
+        {% block header_right_extra %}{% endblock %}
+        {% if user %}
+          <span class="user-chip">
+            signed in <strong>{{ user.username }}</strong>
+            <form method="post" action="/api/auth/logout" style="display: inline;">
+              <button type="submit">Sign out</button>
+            </form>
+          </span>
+        {% endif %}
+      </div>
+    </header>
+
+    {% block content %}{% endblock %}
+
   </body>
 </html>

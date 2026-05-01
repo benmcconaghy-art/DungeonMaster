@@ -1,472 +1,932 @@
-/* Phase 2 single-player play screen.
- * Replaced wholesale in Phase 6 (UX polish). The goal here is *legible
- * during dev*, not pretty.
- */
+/* table.css — the play screen.
+   The single most important view in the app. Three-area desktop grid:
+     [ narration log (col 1) | sidebar (col 2) ]
+     [ action input          (col 1)           ]
+   Everything dim, warm; the DM's prose is the focus.
 
-body.table-screen {
-  margin: 0;
+   Origin: Phase-6 Claude Design handoff. Header and degraded-banner
+   styles live in base.css; this file owns everything below the
+   header — narration column, action input dock, sidebar, image
+   plates, whisper overlay, in-log persistence.
+
+   Image-card narrow-width decision (Phase 6): at 1440px+ image plates
+   float right at 280px wide and DM narration wraps around them via
+   shape-outside. At ≤1280px the design didn't commit to a single
+   answer; this implementation scales the plate down to 220px and
+   keeps it floated (rather than collapsing to inline). At ≤1024px it
+   falls back to inline-centred. Documented here so a future
+   maintainer knows this is a deliberate Phase-6 call rather than a
+   forgotten edge case. */
+
+/* ---------- Page chrome ---------- */
+.table-screen {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  flex: 1;
+  min-height: 0;
 }
 
-.table-header {
-  display: flex;
-  align-items: baseline;
-  gap: 1rem;
-  padding: 0.6rem 1.2rem;
-  background: rgba(0, 0, 0, 0.4);
-  border-bottom: 1px solid var(--accent);
-  font-size: 0.95rem;
-}
-
-.table-header h1 {
-  font-size: 1rem;
-  margin: 0;
-  font-weight: 500;
-}
-
-.table-header .session-id {
-  margin-left: auto;
-  opacity: 0.6;
-  font-family: ui-monospace, monospace;
-}
-
-.connection-status {
-  font-size: 0.8rem;
-  font-family: ui-monospace, monospace;
-  padding: 0.15rem 0.5rem;
-  border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  opacity: 0.85;
-}
-
-.connection-status[data-state="connected"] {
-  color: #8ad48a;
-  border-color: rgba(138, 212, 138, 0.4);
-}
-
-.connection-status[data-state="connecting"],
-.connection-status[data-state="reconnecting"] {
-  color: #d9c25b;
-  border-color: rgba(217, 194, 91, 0.4);
-}
-
-.connection-status[data-state="rejected"],
-.connection-status[data-state="closed"] {
-  color: #d97a5b;
-  border-color: rgba(217, 122, 91, 0.5);
-}
-
+/* ---------- Main grid ---------- */
 .table-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 18rem;
+  grid-template-columns: minmax(0, 1fr) 340px;
   grid-template-rows: 1fr auto;
+  grid-template-areas:
+    "narration sidebar"
+    "action    sidebar";
   gap: 0;
+  position: relative;
+  z-index: 2;
+  min-height: 0;
+}
+@media (max-width: 1280px) {
+  .table-grid {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+}
+@media (max-width: 880px) {
+  .table-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "sidebar"
+      "narration"
+      "action";
+  }
 }
 
+/* ---------- Narration column ---------- */
 .narration {
-  grid-row: 1;
-  grid-column: 1;
+  grid-area: narration;
   overflow-y: auto;
-  padding: 1.2rem 1.5rem;
+  padding: var(--s-7) clamp(var(--s-6), 6vw, var(--s-8));
+  position: relative;
+}
+
+.narration::before {
+  /* Top fade — old-book gilded edge */
+  content: "";
+  position: sticky;
+  top: 0;
+  display: block;
+  height: 32px;
+  margin: -32px 0 -32px 0;
+  background: linear-gradient(to bottom, var(--ink-bg), transparent);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.narration .scene-marker {
   display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
-
-.message {
-  border-left: 2px solid transparent;
-  padding-left: 0.8rem;
-}
-
-.message-dm {
-  border-left-color: var(--accent);
-}
-
-.message-player {
-  border-left-color: rgba(160, 200, 240, 0.5);
-  font-style: italic;
-  opacity: 0.85;
-}
-
-.message-system {
-  border-left-color: #d97a5b;
-  font-family: ui-monospace, monospace;
-  font-size: 0.9rem;
-}
-
-.message header {
-  display: flex;
-  gap: 0.6rem;
-  font-size: 0.85rem;
-  opacity: 0.7;
-}
-
-.message p {
-  margin: 0.3rem 0 0;
-  white-space: pre-wrap;
-}
-
-.empty-log {
-  opacity: 0.5;
-  font-style: italic;
-  text-align: center;
-}
-
-.sidebar {
-  grid-row: 1 / span 2;
-  grid-column: 2;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 1.2rem 1rem;
-  overflow-y: auto;
-}
-
-.sidebar h2 {
-  font-size: 0.9rem;
+  align-items: center;
+  gap: var(--s-4);
+  margin: var(--s-7) 0 var(--s-5);
+  font-family: var(--font-display);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--accent);
-  margin: 0 0 0.6rem;
+  letter-spacing: 0.22em;
+  font-size: 11px;
+  color: var(--parchment-dim);
+}
+.narration .scene-marker::before,
+.narration .scene-marker::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--rule-strong), transparent);
+}
+.narration .scene-marker .ornament {
+  font-family: var(--font-mono);
+  color: var(--ember);
+  font-size: 14px;
 }
 
-.pc {
-  margin-bottom: 1.4rem;
+/* Message blocks ------------------------------------------------------- */
+.message {
+  position: relative;
+  margin: 0 0 var(--s-6);
+  max-width: 70ch;
 }
-
-.pc h3 {
+.message > header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  margin-bottom: var(--s-2);
+}
+.message .who {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 12px;
+  color: var(--parchment-dim);
+}
+.message > header time {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--parchment-mute);
+  letter-spacing: 0.04em;
+}
+.message > p {
   margin: 0;
-  font-size: 1rem;
+  font-family: var(--font-prose);
+  font-size: var(--fs-prose);
+  line-height: var(--lh-prose);
+  color: var(--parchment-2);
+  text-wrap: pretty;
+  hyphens: auto;
 }
 
-.pc .subtitle {
-  margin: 0.1rem 0 0.5rem;
-  opacity: 0.7;
-  font-size: 0.85rem;
+/* DM = the voice. */
+.message-dm > p {
+  color: var(--parchment);
 }
-
-.stats {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.1rem 0.6rem;
-  font-family: ui-monospace, monospace;
-  font-size: 0.85rem;
-  margin: 0;
+.message-dm.first-of-scene > p::first-letter {
+  font-family: var(--font-display);
+  font-size: 3.5em;
+  float: left;
+  line-height: 0.85;
+  margin: 0.05em 0.08em 0 0;
+  color: var(--ember);
+  text-shadow: 0 0 18px rgba(201,147,62,0.18);
 }
+.message-dm .who { color: var(--ember); }
 
-.stats dt {
-  opacity: 0.6;
+/* Player actions — italic, indented, smaller */
+.message-player {
+  padding-left: var(--s-5);
+  border-left: 1px solid var(--rule-soft);
+  margin-left: var(--s-2);
 }
-
-.stats dd {
-  margin: 0;
-}
-
-.rolls ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  font-size: 0.85rem;
-}
-
-.rolls li {
-  padding: 0.25rem 0;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
-}
-
-.rolls .empty {
-  opacity: 0.4;
+.message-player > p {
   font-style: italic;
+  color: var(--parchment-2);
+  font-size: 16px;
+}
+.message-player .who { color: var(--parchment); letter-spacing: 0.18em; }
+.message-player .who::before { content: "▸ "; color: var(--parchment-mute); }
+
+/* Streaming caret on the active DM article */
+.message-dm[data-streaming="true"] > p::after {
+  content: "▍";
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--ember);
+  animation: blink 1s steps(2) infinite;
+  font-weight: 400;
 }
 
-.rolls .purpose {
-  opacity: 0.6;
-  font-size: 0.8rem;
+/* Whisper-in-log: when a whisper is dismissed it persists here as a
+   private block, re-openable. Inkblue (cool) departure from the warm
+   palette signals "private — DM only to you". */
+.message-whisper {
+  position: relative;
+  padding: var(--s-3) var(--s-4) var(--s-3) var(--s-5);
+  margin: 0 0 var(--s-6) var(--s-2);
+  background: linear-gradient(to right, rgba(58,90,122,0.12), rgba(58,90,122,0.02));
+  border-left: 2px solid var(--inkblue);
+  max-width: 70ch;
+}
+.message-whisper > header { gap: var(--s-2); }
+.message-whisper .who {
+  color: var(--inkblue);
+  letter-spacing: 0.22em;
+}
+.message-whisper .who::before { content: "✶ "; color: var(--inkblue); }
+.message-whisper > p {
+  font-style: italic;
+  color: var(--parchment);
+  font-size: 16px;
+  margin: 0;
+}
+.message-whisper .reopen {
+  background: transparent;
+  border: 1px solid rgba(58,90,122,0.35);
+  color: var(--inkblue);
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 2px;
+  margin-left: auto;
+}
+.message-whisper .reopen:hover { color: var(--parchment); border-color: var(--inkblue); }
+
+/* System/error/info notices */
+.message-system {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--parchment-mute);
+  border-left: 2px solid var(--rule-strong);
+  padding: var(--s-2) var(--s-4);
+  margin: 0 0 var(--s-6) var(--s-2);
+  background: rgba(0,0,0,0.18);
+  max-width: 70ch;
+}
+.message-system .who { color: var(--rust); }
+.message-system > p { font-family: inherit; color: var(--parchment-dim); font-size: 12px; }
+
+/* Empty log placeholder */
+.empty-log {
+  font-style: italic;
+  color: var(--parchment-mute);
+  font-family: var(--font-prose);
+  text-align: center;
+  margin: 30vh 0;
 }
 
-.action {
-  grid-row: 2;
-  grid-column: 1;
+/* ---------- Image cards (illustration plates) ---------- */
+/* Plates are MARGIN illustrations — they float to the right of the
+   following paragraph(s) so the DM's narration flows around them.
+   See the Phase-6 narrow-width decision in the file header. */
+.image-card {
+  float: right;
+  clear: right;
+  width: 280px;
+  margin: var(--s-2) 0 var(--s-5) var(--s-6);
+  shape-outside: inset(0);
+  position: relative;
+  text-align: center;
+  padding: var(--s-4) var(--s-4) var(--s-3);
+  /* Double-rule frame, like a woodcut plate */
+  border: 1px solid var(--rule-strong);
+  outline: 1px solid var(--rule-soft);
+  outline-offset: 4px;
+  background:
+    radial-gradient(ellipse at center, var(--vellum-2), var(--vellum-1));
+}
+@media (max-width: 1280px) {
+  /* Phase 6 decision: scale the plate to 220px at narrower widths and
+     KEEP it floated, rather than collapsing to inline. Preserves the
+     marginalia composition the design built around at 1440px. */
+  .image-card {
+    width: 220px;
+    margin-left: var(--s-5);
+  }
+}
+@media (max-width: 1024px) {
+  .image-card {
+    float: none;
+    width: auto;
+    max-width: 60ch;
+    margin: var(--s-6) auto;
+  }
+}
+.image-card::before {
+  /* Plate label, top-left. Sits inside the frame to avoid colliding
+     with the sidebar boundary when the plate falls inline at 1024px. */
+  content: "PLATE";
+  position: absolute;
+  top: 6px; left: 12px;
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  color: var(--ember);
+  opacity: 0.75;
+}
+
+.image-card-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: saturate(0.92) contrast(1.04);
+  border: 1px solid rgba(0,0,0,0.4);
+}
+
+.image-card-caption {
+  margin-top: var(--s-3);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  color: var(--parchment-dim);
+  font-style: normal;
+}
+
+/* Pending state — candlelit parchment 'sketching' box. NO spinner. */
+.image-card.pending {
+  background:
+    radial-gradient(ellipse at 30% 30%, rgba(201,147,62,0.18), transparent 60%),
+    radial-gradient(ellipse at 70% 80%, rgba(184,88,56,0.10), transparent 60%),
+    var(--vellum-1);
+  min-height: 200px;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.8rem 1.2rem;
-  background: rgba(0, 0, 0, 0.4);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  justify-content: center;
+  animation: candle-flicker 5.5s ease-in-out infinite;
+}
+@keyframes candle-flicker {
+  0%, 100% { background-position: 30% 30%, 70% 80%, 0 0; filter: brightness(1); }
+  35%      { filter: brightness(1.05); }
+  60%      { filter: brightness(0.96); }
+  80%      { filter: brightness(1.03); }
+}
+.image-card.pending .image-card-spinner {
+  width: 100%;
+  height: 140px;
+  position: relative;
+  /* Subtle hatching, like the DM sketching with pen */
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(201,147,62,0.08) 0 1px,
+    transparent 1px 8px
+  );
+  border: 1px dashed var(--rule-strong);
+}
+.image-card.pending .image-card-spinner::after {
+  content: "✦";
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--ember);
+  font-size: 20px;
+  animation: twinkle 2.4s ease-in-out infinite;
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: translate(-50%,-50%) scale(0.85); }
+  50%      { opacity: 1;   transform: translate(-50%,-50%) scale(1.15); }
+}
+.image-card.pending .image-card-caption::before {
+  content: "✎ ";
+  color: var(--ember);
 }
 
+/* Failed — small dignified caption only */
+.image-card.failed {
+  background: transparent;
+  border: 1px dashed var(--rule-soft);
+  outline: none;
+  padding: var(--s-3) var(--s-5);
+  min-height: 0;
+  max-width: 40ch;
+}
+.image-card.failed::before { display: none; }
+.image-card.failed .image-card-caption {
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-family: var(--font-prose);
+  color: var(--parchment-mute);
+  font-size: 13px;
+}
+
+/* ---------- Action input dock ---------- */
+.action {
+  grid-area: action;
+  border-top: 1px solid var(--rule-soft);
+  background: linear-gradient(to bottom, var(--vellum-1), var(--vellum-2));
+  padding: var(--s-4) clamp(var(--s-6), 6vw, var(--s-8));
+}
 .action-row {
-  display: flex;
-  gap: 0.6rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--s-3);
   align-items: stretch;
+}
+.action-row textarea {
+  resize: none;
+  min-height: 64px;
+  max-height: 180px;
+  padding: var(--s-3) var(--s-4);
+  font-family: var(--font-prose);
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--parchment);
+  background: var(--ink-bg);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+.action-row textarea::placeholder {
+  color: var(--parchment-mute);
+  font-style: italic;
+}
+.action-row textarea:focus {
+  border-color: var(--ember);
+  box-shadow: 0 0 0 2px rgba(201,147,62,0.18);
+}
+
+.action-row .action-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  align-items: stretch;
+  justify-content: flex-end;
+}
+.action-row select {
+  appearance: none;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+  padding: var(--s-2) var(--s-7) var(--s-2) var(--s-3);
+  color: var(--parchment-2);
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23c9933e' stroke-width='1.2' fill='none'/></svg>") no-repeat right 10px center / 10px,
+    var(--vellum-2);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.action-row button[type="submit"] {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 13px;
+  padding: var(--s-3) var(--s-6);
+  background: linear-gradient(to bottom, var(--ember), var(--ember-deep));
+  color: var(--ink-bg);
+  border: 1px solid var(--ember-deep);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+.action-row button[type="submit"]:hover { background: var(--ember-bright); }
+.action-row button[type="submit"]:disabled {
+  background: var(--vellum-3);
+  color: var(--parchment-mute);
+  border-color: var(--rule-soft);
+  cursor: not-allowed;
+}
+
+[data-mode="combat"] .action-row button[type="submit"] {
+  background: linear-gradient(to bottom, var(--rust), var(--rust-deep));
+  border-color: var(--rust-deep);
+  color: var(--parchment);
+}
+
+/* Acting-as caption — single-PC compact form */
+.acting-as {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 10px;
+  color: var(--parchment-mute);
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.acting-as strong {
+  color: var(--parchment-2);
+  font-weight: 500;
+  letter-spacing: 0.06em;
 }
 
 .action-meta {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  min-height: 1.2rem;
-  font-size: 0.85rem;
+  gap: var(--s-4);
+  margin-top: var(--s-3);
+  min-height: 22px;
 }
 
 .turn-badge {
-  display: inline-block;
-  padding: 0.15rem 0.55rem;
-  border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  font-family: ui-monospace, monospace;
-  font-size: 0.78rem;
+  font-family: var(--font-display);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.85;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  padding: 4px var(--s-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  color: var(--parchment-dim);
 }
-
 .turn-badge[data-state="you"] {
-  color: var(--bg);
-  background: var(--accent);
-  border-color: var(--accent);
-  font-weight: 600;
+  color: var(--ink-bg);
+  background: var(--ember);
+  border-color: var(--ember-deep);
+  box-shadow: 0 0 14px rgba(201,147,62,0.35);
 }
-
 .turn-badge[data-state="other"] {
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--parchment-dim);
+  border-color: var(--rule-soft);
 }
 
 .action-notice {
-  color: #d9c25b;
-  font-style: italic;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--rust);
 }
 
-.action textarea {
-  flex: 1;
-  resize: vertical;
-  font-family: inherit;
-  font-size: inherit;
-  background: rgba(255, 255, 255, 0.04);
-  color: inherit;
-  border: 1px solid rgba(176, 138, 62, 0.3);
-  border-radius: 3px;
-  padding: 0.5rem;
+/* Help tip "?" — replaces the always-on kbd hint */
+.help-tip {
+  position: relative;
+  margin-left: auto;
 }
-
-.action button {
-  padding: 0.5rem 1.4rem;
-  background: var(--accent);
-  color: var(--bg);
-  font-weight: 600;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.action select {
-  font-family: inherit;
-  background: rgba(255, 255, 255, 0.04);
-  color: inherit;
-  border: 1px solid rgba(176, 138, 62, 0.3);
-  border-radius: 3px;
-  padding: 0.4rem;
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-/* ---- Presence sidebar ----------------------------------------------- */
-.presence ul {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 1.4rem;
-  font-size: 0.9rem;
-}
-
-.presence li {
-  padding: 0.25rem 0.4rem;
-  border-radius: 3px;
-  display: flex;
-  align-items: baseline;
-  gap: 0.25rem;
-}
-
-.presence .empty {
-  opacity: 0.4;
-  font-style: italic;
-}
-
-.presence-name {
-  font-weight: 500;
-}
-
-.presence-character {
-  opacity: 0.65;
-  font-size: 0.85rem;
-}
-
-.presence li.current-actor {
-  background: rgba(176, 138, 62, 0.2);
-  border-left: 2px solid var(--accent);
-  padding-left: 0.55rem;
-}
-
-.presence li.current-actor .presence-name {
-  color: var(--accent);
-  font-weight: 700;
-}
-
-/* ---- Whisper overlay ------------------------------------------------ */
-.whisper-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  display: flex;
+.help-tip > button {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--rule-strong);
+  background: transparent;
+  color: var(--parchment-dim);
+  font-family: var(--font-display);
+  font-size: 11px;
+  line-height: 1;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
-  padding: 1rem;
 }
-
-.whisper-overlay[hidden] {
+.help-tip > button:hover { color: var(--parchment); border-color: var(--ember); }
+.help-tip[data-open="true"] > .tip-bubble { display: block; }
+.help-tip > .tip-bubble {
   display: none;
-}
-
-.whisper-card {
-  background: #1c1814;
-  border: 1px solid var(--accent);
-  border-radius: 4px;
-  max-width: 32rem;
-  width: 100%;
-  padding: 1.2rem 1.4rem;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
-  color: inherit;
-}
-
-.whisper-card header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.6rem;
-}
-
-.whisper-card h2 {
-  margin: 0;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--accent);
-}
-
-.whisper-close {
-  background: transparent;
-  color: inherit;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 3px;
-  width: 1.8rem;
-  height: 1.8rem;
-  font-size: 1.1rem;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.whisper-close:hover,
-.whisper-close:focus {
-  border-color: var(--accent);
-  color: var(--accent);
-  outline: none;
-}
-
-.whisper-content {
-  margin: 0;
-  white-space: pre-wrap;
-  font-style: italic;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  padding: var(--s-3);
+  background: var(--vellum-2);
+  border: 1px solid var(--rule-strong);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--parchment-2);
   line-height: 1.5;
+  z-index: 10;
+}
+.help-tip > .tip-bubble kbd {
+  background: var(--ink-bg);
+  border: 1px solid var(--rule-soft);
+  border-radius: 2px;
+  padding: 0 5px;
+  color: var(--parchment);
 }
 
-/* ---- Image cards ----------------------------------------------------
- * Phase 5: the orchestrator emits image_pending / image_ready /
- * image_failed frames over the session WS. The card lives inline in
- * the narration column and gets identified by data-image-id so a
- * pending placeholder can be swapped for the rendered image (or a
- * failure sentinel) when the worker reports back.
- */
-.image-card {
+/* ---------- Sidebar ---------- */
+.sidebar {
+  grid-area: sidebar;
+  border-left: 1px solid var(--rule-soft);
+  background:
+    linear-gradient(to bottom, var(--vellum-1) 0%, var(--ink-bg) 100%);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.panel {
+  padding: var(--s-5) var(--s-5);
+  border-bottom: 1px solid var(--rule-soft);
+  position: relative;
+}
+.panel:last-child { border-bottom: none; }
+
+.panel > h2 {
+  margin: 0 0 var(--s-3);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 11px;
+  color: var(--parchment-dim);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 500;
+}
+.panel > h2 .meta {
+  color: var(--parchment-mute);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+/* Presence list */
+#presence-list {
+  list-style: none;
   margin: 0;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+#presence-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px var(--s-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--parchment-2);
+  padding-left: 16px;
+  position: relative;
+}
+#presence-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--moss);
+  box-shadow: 0 0 6px rgba(94,122,72,0.6);
+}
+#presence-list .presence-character {
+  flex-basis: 100%;
+  padding-left: 0;
+  font-size: 12px;
+}
+#presence-list li.empty::before { background: var(--parchment-mute); box-shadow: none; }
+#presence-list .presence-name { color: var(--parchment); }
+#presence-list .presence-character {
+  color: var(--parchment-dim);
+  font-style: italic;
+  font-family: var(--font-prose);
+}
+#presence-list li.current-actor {
+  color: var(--ember);
+}
+#presence-list li.current-actor::before {
+  background: var(--ember);
+  box-shadow: 0 0 10px rgba(201,147,62,0.7);
+}
+#presence-list li.current-actor .presence-name {
+  color: var(--ember-bright);
+}
+
+/* Whispers panel list (sidebar) — populated by JS as whispers
+   arrive; persists across the modal closing so a player can re-open
+   any past whisper from the sidebar. */
+.whispers-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.whispers-list li button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid rgba(58,90,122,0.25);
+  border-left-width: 2px;
+  padding: var(--s-2) var(--s-3);
+  color: var(--parchment-2);
+  font-family: var(--font-prose);
+  font-style: italic;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.whispers-list li button:hover { border-color: var(--inkblue); color: var(--parchment); }
+.whispers-list li time {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-style: normal;
+  color: var(--parchment-mute);
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+.whispers-list li.empty {
+  font-family: var(--font-prose);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--parchment-mute);
+  padding: var(--s-2) 0;
+}
+
+/* Party / PC sidebar */
+.pc {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border-bottom: 1px dashed var(--rule-soft);
+}
+.pc:last-child { border-bottom: 0; }
+
+.pc .portrait {
+  width: 56px; height: 72px;
+  background: linear-gradient(135deg, var(--vellum-3), var(--vellum-1));
+  border: 1px solid var(--rule-strong);
+  position: relative;
+  overflow: hidden;
+}
+.pc .portrait::after {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(201,147,62,0.08) 0 1px,
+    transparent 1px 6px
+  );
+  pointer-events: none;
+}
+.pc .portrait img { width: 100%; height: 100%; object-fit: cover; display: block; position: relative; z-index: 1; }
+.pc .portrait .initial {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--ember);
+  letter-spacing: 0.05em;
+}
+
+.pc h3 {
+  margin: 0 0 2px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  color: var(--parchment);
+}
+.pc .subtitle {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--parchment-dim);
+  text-transform: uppercase;
+  margin: 0 0 var(--s-2);
+}
+
+.pc .stats {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  border-top: 1px solid var(--rule-soft);
+  padding-top: var(--s-2);
+}
+.pc .stats > * {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  /* Reserve enough vertical space that the placeholder doesn't
-   * collapse to a 1-line strip — the eventual image will be roughly
-   * landscape, so plan around that. */
-  min-height: 12rem;
 }
-
-.image-card.pending {
-  border-style: dashed;
-  border-color: rgba(176, 138, 62, 0.4);
-  padding: 1.4rem 1rem;
-  gap: 0.7rem;
+.pc .stats dt {
+  font-family: var(--font-display);
+  font-size: 9px;
+  color: var(--parchment-mute);
+  letter-spacing: 0.06em;
+  margin: 0;
 }
-
-.image-card.failed {
-  border-color: rgba(217, 122, 91, 0.4);
-  background: rgba(217, 122, 91, 0.06);
-  padding: 1.2rem 1rem;
-  min-height: auto;
-}
-
-.image-card-img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-}
-
-.image-card-caption {
-  font-size: 0.85rem;
-  font-style: italic;
-  opacity: 0.7;
-  text-align: center;
+.pc .stats dd {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--parchment);
+  font-weight: 500;
   margin: 0;
 }
 
-.image-card.failed .image-card-caption {
-  color: #d97a5b;
-  opacity: 0.85;
-  font-style: normal;
-  font-family: ui-monospace, monospace;
+/* HP bar — slim, candlelit */
+.hp-bar {
+  margin-top: 4px;
+  height: 4px;
+  background: var(--ink-black);
+  border: 1px solid var(--rule-soft);
+  position: relative;
+  overflow: hidden;
+}
+.hp-bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(to right, var(--moss), var(--ember));
+  transition: width 600ms ease;
+}
+.hp-bar.low > span {
+  background: linear-gradient(to right, var(--blood), var(--rust));
 }
 
-.image-card-spinner {
-  width: 1.6rem;
-  height: 1.6rem;
-  border: 2px solid rgba(176, 138, 62, 0.2);
-  border-top-color: var(--accent);
+/* Status tags */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: var(--s-2);
+}
+.tag {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  padding: 2px 6px;
+  border: 1px solid var(--rule-strong);
+  color: var(--parchment-dim);
+  background: rgba(0,0,0,0.2);
+}
+.tag.t-warn { color: var(--rust); border-color: var(--rust-deep); }
+.tag.t-buff { color: var(--moss); border-color: var(--moss); }
+
+/* Initiative tracker (only visible when encounter active) */
+.initiative {
+  display: none;
+}
+[data-mode="combat"] .initiative { display: block; }
+
+/* Dice rolls */
+#dice-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#dice-history li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--s-2);
+  align-items: baseline;
+  padding: 6px var(--s-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  border-bottom: 1px dotted var(--rule-soft);
+}
+#dice-history li:last-child { border-bottom: 0; }
+#dice-history code {
+  font-family: var(--font-mono);
+  color: var(--parchment-dim);
+  font-size: 11px;
+  background: transparent;
+  padding: 0;
+}
+#dice-history strong {
+  color: var(--parchment);
+  font-weight: 600;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+#dice-history .purpose {
+  grid-column: 1 / -1;
+  font-family: var(--font-prose);
+  font-style: italic;
+  color: var(--parchment-mute);
+  font-size: 11px;
+  margin-top: 2px;
+}
+#dice-history li.empty {
+  display: block;
+  font-family: var(--font-prose);
+  font-style: italic;
+  color: var(--parchment-mute);
+  font-size: 12px;
+  padding: var(--s-2) 0;
+  border-bottom: 0;
+}
+
+/* ---------- Whisper overlay ---------- */
+.whisper-overlay[hidden] { display: none; }
+.whisper-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0,0,0,0.55), rgba(0,0,0,0.85));
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.whisper-card {
+  position: relative;
+  width: min(560px, 92vw);
+  background:
+    radial-gradient(ellipse at top, rgba(58,90,122,0.18), transparent 60%),
+    var(--vellum-1);
+  border: 1px solid var(--rule-strong);
+  outline: 1px solid var(--rule-soft);
+  outline-offset: 6px;
+  padding: var(--s-7);
+  font-family: var(--font-prose);
+}
+.whisper-card::before {
+  content: "WHISPER";
+  position: absolute;
+  top: -10px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink-bg);
+  padding: 0 var(--s-3);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--inkblue);
+}
+.whisper-card header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: var(--s-4);
+}
+.whisper-card h2 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--parchment);
+  margin: 0;
+}
+.whisper-close {
+  background: transparent;
+  border: 1px solid var(--rule-soft);
+  color: var(--parchment-dim);
+  width: 28px; height: 28px;
+  font-size: 18px;
   border-radius: 50%;
-  animation: image-card-spin 0.9s linear infinite;
 }
+.whisper-close:hover { color: var(--parchment); border-color: var(--rule-strong); }
 
-@keyframes image-card-spin {
-  to { transform: rotate(360deg); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .image-card-spinner {
-    animation: none;
-    border-top-color: rgba(176, 138, 62, 0.5);
-  }
+.whisper-content {
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--parchment);
+  margin: 0;
+  padding: 0 var(--s-4);
+  border-left: 1px solid var(--rule-soft);
+  border-right: 1px solid var(--rule-soft);
 }

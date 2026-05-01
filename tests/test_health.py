@@ -17,14 +17,16 @@ async def test_health_returns_ok(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_root_renders_bootstrap_page(client: AsyncClient) -> None:
-    """The Jinja2-rendered home page advertises the bootstrap state."""
+async def test_root_renders_landing_page(client: AsyncClient) -> None:
+    """The Jinja2-rendered home page (Phase 6 design refresh) shows the
+    project wordmark and sign-in / register affordances when the
+    visitor is anonymous."""
 
     response = await client.get("/")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/html")
     body = response.text
     assert "Dungeon Master" in body
-    assert "bootstrapping" in body
-    # Anonymous visit shows the sign-in link rather than user info.
+    # Anonymous visit shows both auth entry points.
     assert "Sign in" in body
+    assert "Register" in body

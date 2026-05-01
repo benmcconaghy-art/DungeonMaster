@@ -1,80 +1,206 @@
-/* Bootstrap-page styling — replaced wholesale in Phase 6 (UX polish). */
-:root {
-  color-scheme: dark;
-  --bg: #1a1612;
-  --fg: #e8dcc4;
-  --accent: #b08a3e;
-}
+/* base.css — shared chrome across every server-rendered view.
+   The header (crest + page-context title + signed-in user chip),
+   degraded-mode banner, in-theme scrollbars, and the page-level
+   background gradient. Per-view stylesheets (table.css, dashboard.css,
+   sheet.css, auth.css) layer on top via the design's panel + chip
+   idioms. Tokens come from tokens.css; this file should never declare
+   its own colour or font literals. */
 
+/* ---------- Page chrome ---------- */
 body {
-  margin: 0;
-  font-family: ui-serif, Georgia, "Times New Roman", serif;
-  background: var(--bg);
-  color: var(--fg);
-}
-
-main.bootstrap {
-  max-width: 36rem;
-  margin: 6rem auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-main.bootstrap h1 {
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  border-bottom: 1px solid var(--accent);
-  padding-bottom: 0.5rem;
-}
-
-main.bootstrap .version {
-  color: var(--accent);
-  font-variant-numeric: tabular-nums;
-  margin: 0.25rem 0;
-}
-
-main.bootstrap .phase {
-  opacity: 0.75;
-  font-style: italic;
-}
-
-main.bootstrap form {
+  background:
+    radial-gradient(1200px 600px at 50% -20%, rgba(201,147,62,0.05), transparent 60%),
+    var(--ink-bg);
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin: 1.5rem 0;
+  min-height: 100vh;
 }
 
-main.bootstrap label {
+/* Combat-mode vignette host — child of body, controlled by
+   [data-mode="combat"] from tokens.css. Hidden out of combat. */
+.vignette-rust {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+[data-mode="combat"] .vignette-rust { opacity: 1; }
+
+/* ---------- Header ---------- */
+.table-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--s-5);
+  padding: var(--s-3) var(--s-6);
+  border-bottom: 1px solid var(--rule-soft);
+  background: linear-gradient(to bottom, var(--vellum-2), var(--vellum-1));
+  position: relative;
+  z-index: 2;
+}
+
+.table-header .crest {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  text-decoration: none;
+  color: var(--parchment);
+}
+.table-header .crest svg { width: 28px; height: 28px; color: var(--ember); }
+.table-header .crest .wordmark {
+  font-family: var(--font-display);
+  letter-spacing: 0.18em;
+  font-size: 13px;
+  text-transform: uppercase;
+  color: var(--parchment-2);
+}
+.table-header .crest .wordmark em {
+  font-style: normal;
+  color: var(--ember);
+}
+
+.table-header .campaign {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.25rem;
-  text-align: left;
+  align-items: center;
+  line-height: 1.1;
+  min-width: 0;
+}
+.table-header .campaign .name {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--fs-xl);
+  letter-spacing: 0.06em;
+  color: var(--parchment);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 60vw;
+}
+.table-header .campaign .session-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--parchment-mute);
+  letter-spacing: 0.05em;
 }
 
-main.bootstrap input,
-main.bootstrap button {
+.table-header .right {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+}
+
+/* Connection status dot — used by table.html only today, but lives
+   here because future views (e.g. an active-session indicator on the
+   dashboard) might surface the same chrome. */
+.connection-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
+}
+.connection-status::before {
+  content: "";
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--parchment-mute);
+  box-shadow: 0 0 0 0 currentColor;
+}
+.connection-status[data-state="connected"]::before {
+  background: var(--moss);
+  box-shadow: 0 0 8px rgba(94,122,72,0.7);
+}
+.connection-status[data-state="connecting"]::before,
+.connection-status[data-state="reconnecting"]::before {
+  background: var(--ember);
+  animation: blink 1.2s ease-in-out infinite;
+}
+.connection-status[data-state="rejected"]::before,
+.connection-status[data-state="closed"]::before {
+  background: var(--blood);
+}
+@keyframes blink { 50% { opacity: 0.25; } }
+
+.user-chip {
+  font-family: var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: var(--parchment-dim);
+  border-left: 1px solid var(--rule-soft);
+  padding-left: var(--s-4);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.user-chip strong {
+  color: var(--parchment);
+  font-weight: 500;
+}
+.user-chip a, .user-chip button {
+  color: var(--parchment-dim);
+  text-decoration: none;
+  background: transparent;
+  border: 1px solid var(--rule-soft);
+  padding: 4px 10px;
   font: inherit;
-  padding: 0.5rem 0.75rem;
-  background: rgba(255, 255, 255, 0.06);
-  color: inherit;
-  border: 1px solid rgba(176, 138, 62, 0.4);
-  border-radius: 3px;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  border-radius: var(--radius-sm);
 }
+.user-chip a:hover, .user-chip button:hover { color: var(--ember); border-color: var(--ember); }
 
-main.bootstrap button {
-  cursor: pointer;
-  background: var(--accent);
-  color: var(--bg);
-  font-weight: 600;
+/* ---------- Degraded-mode banner (image worker / FLUX failure) ---------- */
+/* Used by the play screen today, but the layout/styling lives here so
+   any future view that surfaces a degraded indicator inherits it. */
+.degraded-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-2) var(--s-6);
+  background: linear-gradient(to right, rgba(184,88,56,0.10), rgba(184,88,56,0.04));
+  border-bottom: 1px solid rgba(184,88,56,0.28);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+  color: var(--parchment-2);
+  position: relative;
+  z-index: 2;
 }
+.degraded-banner .glyph {
+  color: var(--rust);
+  font-family: var(--font-mono);
+}
+.degraded-banner button {
+  background: transparent;
+  border: none;
+  color: var(--parchment-dim);
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  padding: 0;
+}
+.degraded-banner button:hover { color: var(--parchment); }
 
-main.bootstrap button:hover {
-  filter: brightness(1.1);
+/* ---------- Scrollbars (subtle, in-theme) ---------- */
+* {
+  scrollbar-color: rgba(201,147,62,0.18) transparent;
+  scrollbar-width: thin;
 }
-
-main.bootstrap .error {
-  color: #d97a5b;
-  font-size: 0.9em;
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: rgba(201,147,62,0.18);
+  border-radius: 4px;
 }
+*::-webkit-scrollbar-thumb:hover { background: rgba(201,147,62,0.35); }

@@ -1,818 +1,961 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{{ session_id }} &mdash; Dungeon Master</title>
-    <link rel="stylesheet" href="/static/css/base.css" />
-    <link rel="stylesheet" href="/static/css/table.css" />
-  </head>
-  <body class="table-screen">
-    <header class="table-header">
-      <a href="/">&larr; Home</a>
-      <h1>{{ campaign.name }}</h1>
-      <span class="session-id">session {{ session_id[:8] }}…</span>
-      <span
-        id="connection-status"
-        class="connection-status"
-        data-state="connecting"
-        aria-live="polite"
-      >connecting…</span>
-    </header>
+{% extends "base.html" %}
 
-    <main class="table-grid">
-      <section class="narration" id="narration" aria-live="polite">
-        {% for message in messages %}
-          <article class="message message-{{ message.sender_kind }}">
-            <header>
-              <span class="who">
-                {%- if message.sender_kind == "dm" -%}DM
-                {%- elif message.sender_kind == "player" -%}{{ characters_by_id.get(message.sender_id, "Player").name if message.sender_id else "Player" }}
-                {%- else -%}{{ message.sender_kind|capitalize }}
-                {%- endif -%}
-              </span>
-              <time>{{ message.created_at[11:19] }}</time>
-            </header>
-            <p>{{ message.content }}</p>
-          </article>
-        {% else %}
-          <p class="empty-log">The DM is preparing the scene…</p>
-        {% endfor %}
-      </section>
+{% block title %}{{ campaign.name }} &mdash; Dungeon Master{% endblock %}
 
-      <aside class="sidebar">
-        <section class="presence" id="presence">
-          <h2>Connected</h2>
-          <ul id="presence-list">
-            <li class="empty">connecting…</li>
-          </ul>
-        </section>
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/table.css" />
+{% endblock %}
 
-        <section class="party">
-          <h2>Party</h2>
-          {% for character in characters %}
-            <article class="pc">
-              <h3>{{ character.name }}</h3>
-              <p class="subtitle">
-                {{ character.race }} {{ character.class_name }} (lvl {{ character.level }})
-              </p>
-              <dl class="stats">
-                <dt>HP</dt><dd>{{ character.hp_current }}/{{ character.hp_max }}</dd>
-                <dt>AC</dt><dd>{{ character.ac }}</dd>
-                <dt>STR</dt><dd>{{ character.str_score }}</dd>
-                <dt>DEX</dt><dd>{{ character.dex_score }}</dd>
-                <dt>CON</dt><dd>{{ character.con_score }}</dd>
-                <dt>INT</dt><dd>{{ character.int_score }}</dd>
-                <dt>WIS</dt><dd>{{ character.wis_score }}</dd>
-                <dt>CHA</dt><dd>{{ character.cha_score }}</dd>
-              </dl>
-            </article>
-          {% endfor %}
-        </section>
+{% block body_class %}table-screen{% endblock %}
 
-        <section class="rolls">
-          <h2>Recent rolls</h2>
-          <ul id="dice-history">
-            {% for roll in recent_rolls %}
-              <li>
-                <code>{{ roll.expression }}</code>
-                = <strong>{{ roll.total }}</strong>
-                <span class="purpose">{{ roll.purpose }}</span>
-              </li>
-            {% else %}
-              <li class="empty">no rolls yet</li>
-            {% endfor %}
-          </ul>
-        </section>
-      </aside>
+{% block body_data %}data-mode="exploration"{% endblock %}
 
-      <form class="action" id="action-form">
-        <div class="action-row">
-          <label class="visually-hidden" for="action-input">Your action</label>
-          <textarea
-            id="action-input"
-            name="content"
-            rows="2"
-            placeholder="What do you do? (Enter to submit, Shift+Enter for newline.)"
-            autocomplete="off"
-            aria-describedby="turn-badge"
-          ></textarea>
-          <button type="submit">Submit</button>
-          {% if characters|length == 1 %}
-            <input type="hidden" name="character_id" value="{{ characters[0].id }}" />
-          {% else %}
-            <select name="character_id" required>
-              {% for c in characters %}
-                <option value="{{ c.id }}">{{ c.name }}</option>
-              {% endfor %}
-            </select>
-          {% endif %}
-        </div>
-        <div class="action-meta">
-          <span id="turn-badge" class="turn-badge" hidden></span>
-          <span id="action-notice" class="action-notice" hidden role="status"></span>
-        </div>
-      </form>
-    </main>
+{% block header_campaign_name %}{{ campaign.name }}{% endblock %}
+{% block header_campaign_meta %}session {{ session_id[:8] }}<span class="sep"> · </span>{{ campaign.ruleset }}{% endblock %}
 
-    <div
-      id="whisper-overlay"
-      class="whisper-overlay"
-      hidden
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="whisper-overlay-title"
-    >
-      <div class="whisper-card" role="document">
+{% block header_right_extra %}
+  <span
+    id="connection-status"
+    class="connection-status"
+    data-state="connecting"
+    aria-live="polite"
+  >connecting…</span>
+{% endblock %}
+
+{% block content %}
+
+<div class="vignette-rust" aria-hidden="true"></div>
+
+<main class="table-grid">
+
+  <!-- ========== NARRATION LOG ========== -->
+  <section class="narration" id="narration" aria-live="polite" aria-label="Narration log">
+    {% for message in messages %}
+      <article class="message message-{{ message.sender_kind }}">
         <header>
-          <h2 id="whisper-overlay-title">Whisper from the DM</h2>
-          <button type="button" class="whisper-close" aria-label="Close whisper">&times;</button>
+          <span class="who">
+            {%- if message.sender_kind == "dm" -%}Dungeon Master
+            {%- elif message.sender_kind == "player" -%}{{ characters_by_id.get(message.sender_id, "Player").name if message.sender_id else "Player" }}
+            {%- else -%}{{ message.sender_kind|capitalize }}
+            {%- endif -%}
+          </span>
+          <time>{{ message.created_at[11:19] }}</time>
         </header>
-        <p class="whisper-content"></p>
+        <p>{{ message.content }}</p>
+      </article>
+    {% else %}
+      <p class="empty-log">The DM is preparing the scene…</p>
+    {% endfor %}
+  </section>
+
+  <!-- ========== ACTION INPUT ========== -->
+  <form class="action" id="action-form" aria-label="Submit action">
+    <div class="action-row">
+      <label class="visually-hidden" for="action-input">Your action</label>
+      <textarea
+        id="action-input"
+        name="content"
+        rows="2"
+        placeholder="What do you do?"
+        autocomplete="off"
+        aria-describedby="turn-badge"
+      ></textarea>
+      <div class="action-controls">
+        {% if characters|length == 1 %}
+          <span class="acting-as">as <strong>{{ characters[0].name }}</strong></span>
+          <input type="hidden" name="character_id" value="{{ characters[0].id }}" />
+        {% else %}
+          <select name="character_id" required aria-label="Acting character">
+            {% for c in characters %}
+              <option value="{{ c.id }}">{{ c.name }}, {{ c.class_name }}</option>
+            {% endfor %}
+          </select>
+        {% endif %}
+        <button type="submit">Speak</button>
       </div>
     </div>
+    <div class="action-meta">
+      <span id="turn-badge" class="turn-badge" hidden></span>
+      <span id="action-notice" class="action-notice" hidden role="status"></span>
 
-    <script>
-      // Phase 4: WebSocket-backed multiplayer table. The Phase-2 SSE
-      // bridge is gone; this is the only realtime channel. Phase 6 will
-      // revisit the JS layout (HTMX/Alpine) and CSS polish.
+      <div class="help-tip" id="help-tip">
+        <button type="button" aria-expanded="false" aria-label="Keyboard shortcuts">?</button>
+        <div class="tip-bubble" role="tooltip">
+          <kbd>Enter</kbd> sends · <kbd>Shift</kbd>+<kbd>Enter</kbd> newline<br/>
+          <kbd>Esc</kbd> closes a whisper
+        </div>
+      </div>
+    </div>
+  </form>
 
-      const sessionId = {{ session_id|tojson }};
-      const selfUserId = {{ user.id|tojson }};
-      // ownedCharacterIds lights up the "your turn" hint when the current
-      // initiative slot is one of our PCs.
-      const ownedCharacterIds = new Set({{ characters|map(attribute="id")|list|tojson }});
+  <!-- ========== SIDEBAR ========== -->
+  <aside class="sidebar" aria-label="Session sidebar">
 
-      const narration = document.getElementById("narration");
-      const diceHistory = document.getElementById("dice-history");
-      const presenceList = document.getElementById("presence-list");
-      const form = document.getElementById("action-form");
-      const input = document.getElementById("action-input");
-      const turnBadge = document.getElementById("turn-badge");
-      const actionNotice = document.getElementById("action-notice");
-      const connStatus = document.getElementById("connection-status");
-      const whisperOverlay = document.getElementById("whisper-overlay");
-      const whisperContentEl = whisperOverlay.querySelector(".whisper-content");
-      const whisperCloseBtn = whisperOverlay.querySelector(".whisper-close");
+    <section class="panel presence" id="presence" aria-label="Connected players">
+      <h2>At the table</h2>
+      <ul id="presence-list">
+        <li class="empty">connecting…</li>
+      </ul>
+    </section>
 
-      // ---- Mutable state ----------------------------------------------------
-      let socket = null;
-      let reconnectAttempt = 0;
-      let reconnectTimer = null;
-      let manuallyClosed = false;
-      let activeNarration = null;     // current streaming DM <p> node
-      let lastFrameType = null;       // for narration_chunk start logic
-      let currentActor = null;        // CurrentActor | null
-      let presenceRoster = [];        // PresenceEntry[]
-      let charactersById = {};        // {id: {id, name}}
-      // Characters from the initial Jinja render. The snapshot doesn't
-      // restate character names; we use this for player message labels.
-      {% for c in characters %}
-      charactersById[{{ c.id|tojson }}] = { id: {{ c.id|tojson }}, name: {{ c.name|tojson }} };
+    <section class="panel initiative" id="initiative" aria-label="Initiative order">
+      <h2>Initiative <span class="round-pill" id="round-pill"></span></h2>
+      <ol class="initiative-list" id="initiative-list"></ol>
+    </section>
+
+    <section class="panel whispers" aria-label="Whispers from the DM">
+      <h2>Whispers <span class="meta" id="whispers-count"></span></h2>
+      <ul class="whispers-list" id="whispers-list">
+        <li class="empty">no whispers yet</li>
+      </ul>
+    </section>
+
+    <section class="panel party" aria-label="Your characters">
+      <h2>Party</h2>
+      {% for character in characters %}
+        <article class="pc">
+          <div class="portrait">
+            {% if character.canonical_image_id %}
+              <img src="/api/images/{{ character.canonical_image_id }}.png"
+                   alt="Portrait of {{ character.name }}"
+                   loading="lazy" />
+            {% else %}
+              <span class="initial">{{ character.name[:1]|upper }}</span>
+            {% endif %}
+          </div>
+          <div>
+            <h3>{{ character.name }}</h3>
+            <p class="subtitle">
+              {{ character.race }} · {{ character.class_name }} · Lvl {{ character.level }}
+            </p>
+            <div class="hp-bar{% if character.hp_current * 3 <= character.hp_max %} low{% endif %}">
+              <span style="width: {{ ((character.hp_current / character.hp_max * 100) | round(0, 'floor')) | int if character.hp_max else 0 }}%"></span>
+            </div>
+            <dl class="stats">
+              <dt>STR</dt><dd>{{ character.str_score }}</dd>
+              <dt>DEX</dt><dd>{{ character.dex_score }}</dd>
+              <dt>CON</dt><dd>{{ character.con_score }}</dd>
+              <dt>INT</dt><dd>{{ character.int_score }}</dd>
+              <dt>WIS</dt><dd>{{ character.wis_score }}</dd>
+              <dt>CHA</dt><dd>{{ character.cha_score }}</dd>
+            </dl>
+          </div>
+        </article>
       {% endfor %}
+    </section>
 
-      // ---- Heartbeat --------------------------------------------------------
-      const HEARTBEAT_MS = 20_000;
-      const PING_TIMEOUT_LIMIT = 3;
-      let heartbeatTimer = null;
-      let outstandingPings = new Map();   // nonce -> sentAt
-      let consecutiveMissedPings = 0;
+    <section class="panel rolls" aria-label="Recent dice rolls">
+      <h2>Rolls</h2>
+      <ul id="dice-history">
+        {% for roll in recent_rolls %}
+          <li>
+            <code>{{ roll.expression }}</code>
+            <strong>{{ roll.total }}</strong>
+            <span></span>
+            <span class="purpose">{{ roll.purpose }}</span>
+          </li>
+        {% else %}
+          <li class="empty">no rolls yet</li>
+        {% endfor %}
+      </ul>
+    </section>
+  </aside>
+</main>
 
-      function startHeartbeat() {
-        stopHeartbeat();
-        heartbeatTimer = setInterval(sendPing, HEARTBEAT_MS);
+<!-- Whisper overlay -->
+<div
+  id="whisper-overlay"
+  class="whisper-overlay"
+  hidden
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="whisper-overlay-title"
+>
+  <div class="whisper-card" role="document">
+    <header>
+      <h2 id="whisper-overlay-title">A whisper from the Dungeon Master</h2>
+      <button type="button" class="whisper-close" aria-label="Close whisper">&times;</button>
+    </header>
+    <p class="whisper-content"></p>
+  </div>
+</div>
+
+<script>
+  // Phase 6: visual translation of the play screen onto the
+  // "candlelight & ink" design system. All Phase 4 / Phase 5 wire
+  // contracts preserved — every WS handler, every DOM id the
+  // dispatcher reaches for, and the optimistic-render path on submit.
+  // New visual surfaces this layer adds: whispers persist in the
+  // narration log + a sidebar list; the action input gets a single-PC
+  // compact "acting as" caption; the action meta shows a "?" tooltip
+  // for keyboard shortcuts; combat mode toggles data-mode="combat" on
+  // the body for the rust-vignette + amber-vs-rust submit colouring;
+  // the initiative panel is hidden out of combat and rebuilt from the
+  // current_actor + presence whenever combat starts.
+
+  const sessionId = {{ session_id|tojson }};
+  const selfUserId = {{ user.id|tojson }};
+  // ownedCharacterIds lights up the "your turn" hint when the current
+  // initiative slot is one of our PCs.
+  const ownedCharacterIds = new Set({{ characters|map(attribute="id")|list|tojson }});
+
+  const body = document.body;
+  const narration = document.getElementById("narration");
+  const diceHistory = document.getElementById("dice-history");
+  const presenceList = document.getElementById("presence-list");
+  const initiativePanel = document.getElementById("initiative");
+  const initiativeList = document.getElementById("initiative-list");
+  const roundPill = document.getElementById("round-pill");
+  const whispersList = document.getElementById("whispers-list");
+  const whispersCount = document.getElementById("whispers-count");
+  const form = document.getElementById("action-form");
+  const input = document.getElementById("action-input");
+  const turnBadge = document.getElementById("turn-badge");
+  const actionNotice = document.getElementById("action-notice");
+  const connStatus = document.getElementById("connection-status");
+  const whisperOverlay = document.getElementById("whisper-overlay");
+  const whisperContentEl = whisperOverlay.querySelector(".whisper-content");
+  const whisperCloseBtn = whisperOverlay.querySelector(".whisper-close");
+  const helpTip = document.getElementById("help-tip");
+  const helpBtn = helpTip.querySelector("button");
+
+  // ---- Mutable state ----------------------------------------------------
+  let socket = null;
+  let reconnectAttempt = 0;
+  let reconnectTimer = null;
+  let manuallyClosed = false;
+  let activeNarration = null;     // current streaming DM <p> node
+  let lastFrameType = null;       // for narration_chunk start logic
+  let currentActor = null;        // CurrentActor | null
+  let presenceRoster = [];        // PresenceEntry[]
+  let charactersById = {};        // {id: {id, name}}
+  let whispersLog = [];           // [{id, content, time}]
+  let whisperSeq = 0;
+  // Characters from the initial Jinja render. The snapshot doesn't
+  // restate character names; we use this for player message labels.
+  {% for c in characters %}
+  charactersById[{{ c.id|tojson }}] = { id: {{ c.id|tojson }}, name: {{ c.name|tojson }} };
+  {% endfor %}
+
+  // ---- Heartbeat --------------------------------------------------------
+  const HEARTBEAT_MS = 20_000;
+  const PING_TIMEOUT_LIMIT = 3;
+  let heartbeatTimer = null;
+  let outstandingPings = new Map();   // nonce -> sentAt
+  let consecutiveMissedPings = 0;
+
+  function startHeartbeat() {
+    stopHeartbeat();
+    heartbeatTimer = setInterval(sendPing, HEARTBEAT_MS);
+  }
+  function stopHeartbeat() {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
+    outstandingPings.clear();
+    consecutiveMissedPings = 0;
+  }
+  function sendPing() {
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    for (const [nonce, sentAt] of outstandingPings) {
+      if (Date.now() - sentAt >= HEARTBEAT_MS) {
+        outstandingPings.delete(nonce);
+        consecutiveMissedPings += 1;
       }
-      function stopHeartbeat() {
-        if (heartbeatTimer) {
-          clearInterval(heartbeatTimer);
-          heartbeatTimer = null;
-        }
-        outstandingPings.clear();
-        consecutiveMissedPings = 0;
-      }
-      function sendPing() {
-        if (!socket || socket.readyState !== WebSocket.OPEN) return;
-        // Each ping has its own nonce; if it's still outstanding when
-        // the next interval fires, count it as a miss.
-        for (const [nonce, sentAt] of outstandingPings) {
-          if (Date.now() - sentAt >= HEARTBEAT_MS) {
-            outstandingPings.delete(nonce);
-            consecutiveMissedPings += 1;
-          }
-        }
-        if (consecutiveMissedPings >= PING_TIMEOUT_LIMIT) {
-          console.warn(`ws: ${consecutiveMissedPings} pings missed; force-closing for reconnect`);
-          forceReconnect();
-          return;
-        }
-        const nonce = (crypto.randomUUID && crypto.randomUUID()) ||
-          `${Date.now()}-${Math.random()}`;
-        outstandingPings.set(nonce, Date.now());
-        sendFrame({ type: "ping", nonce });
-      }
-      function forceReconnect() {
-        // Close the socket; the close handler triggers the backoff path.
-        if (socket) {
-          try { socket.close(4000, "heartbeat_timeout"); } catch (e) { /* ignore */ }
-        }
-      }
+    }
+    if (consecutiveMissedPings >= PING_TIMEOUT_LIMIT) {
+      console.warn(`ws: ${consecutiveMissedPings} pings missed; force-closing for reconnect`);
+      forceReconnect();
+      return;
+    }
+    const nonce = (crypto.randomUUID && crypto.randomUUID()) ||
+      `${Date.now()}-${Math.random()}`;
+    outstandingPings.set(nonce, Date.now());
+    sendFrame({ type: "ping", nonce });
+  }
+  function forceReconnect() {
+    if (socket) {
+      try { socket.close(4000, "heartbeat_timeout"); } catch (e) { /* ignore */ }
+    }
+  }
 
-      // ---- WS lifecycle -----------------------------------------------------
-      function wsUrl() {
-        const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-        return `${proto}//${window.location.host}/ws/session/${sessionId}`;
-      }
+  // ---- WS lifecycle -----------------------------------------------------
+  function wsUrl() {
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${proto}//${window.location.host}/ws/session/${sessionId}`;
+  }
 
-      function connect() {
-        manuallyClosed = false;
-        setConnStatus("connecting");
-        try {
-          socket = new WebSocket(wsUrl());
-        } catch (err) {
-          console.error("ws: construct failed", err);
-          scheduleReconnect();
-          return;
-        }
-        socket.addEventListener("open", onOpen);
-        socket.addEventListener("message", onMessage);
-        socket.addEventListener("close", onClose);
-        socket.addEventListener("error", (ev) => console.warn("ws: error event", ev));
-      }
+  function connect() {
+    manuallyClosed = false;
+    setConnStatus("connecting");
+    try {
+      socket = new WebSocket(wsUrl());
+    } catch (err) {
+      console.error("ws: construct failed", err);
+      scheduleReconnect();
+      return;
+    }
+    socket.addEventListener("open", onOpen);
+    socket.addEventListener("message", onMessage);
+    socket.addEventListener("close", onClose);
+    socket.addEventListener("error", (ev) => console.warn("ws: error event", ev));
+  }
 
-      function onOpen() {
-        console.info("ws: connected");
-        reconnectAttempt = 0;
-        setConnStatus("connected");
-        startHeartbeat();
-      }
+  function onOpen() {
+    console.info("ws: connected");
+    reconnectAttempt = 0;
+    setConnStatus("connected");
+    startHeartbeat();
+  }
 
-      function onMessage(event) {
-        let msg;
-        try {
-          msg = JSON.parse(event.data);
-        } catch (err) {
-          console.warn("ws: invalid JSON frame", err);
-          return;
-        }
-        const handler = handlers[msg.type];
-        if (!handler) {
-          console.warn("ws: unknown frame type", msg.type);
-          return;
-        }
-        try {
-          handler(msg);
-        } catch (err) {
-          console.error("ws: handler error", msg.type, err);
-        }
-        // Track frame transitions so narration_chunk can start a new
-        // article whenever the previous frame wasn't part of the same
-        // streaming narration.
-        lastFrameType = msg.type;
-      }
+  function onMessage(event) {
+    let msg;
+    try {
+      msg = JSON.parse(event.data);
+    } catch (err) {
+      console.warn("ws: invalid JSON frame", err);
+      return;
+    }
+    const handler = handlers[msg.type];
+    if (!handler) {
+      console.warn("ws: unknown frame type", msg.type);
+      return;
+    }
+    try {
+      handler(msg);
+    } catch (err) {
+      console.error("ws: handler error", msg.type, err);
+    }
+    lastFrameType = msg.type;
+  }
 
-      function onClose(event) {
-        stopHeartbeat();
-        if (manuallyClosed) {
-          setConnStatus("closed");
-          return;
-        }
-        console.info(`ws: closed (code=${event.code}); scheduling reconnect`);
-        // 4xxx codes from the server (auth/membership reject) are
-        // permanent — don't churn through reconnects against them.
-        if (event.code === 1008) {
-          setConnStatus("rejected");
-          appendSystemMessage("[disconnected]", "Lost session: not authorised.");
-          return;
-        }
-        scheduleReconnect();
-      }
+  function onClose(event) {
+    stopHeartbeat();
+    if (manuallyClosed) {
+      setConnStatus("closed");
+      return;
+    }
+    console.info(`ws: closed (code=${event.code}); scheduling reconnect`);
+    if (event.code === 1008) {
+      setConnStatus("rejected");
+      appendSystemMessage("[disconnected]", "Lost session: not authorised.");
+      return;
+    }
+    scheduleReconnect();
+  }
 
-      function scheduleReconnect() {
-        setConnStatus("reconnecting");
-        // 1s, 2s, 4s, 8s, then capped at 16s, with ±20% jitter.
-        const base = Math.min(1000 * Math.pow(2, reconnectAttempt), 16_000);
-        const jitter = base * 0.2 * (Math.random() * 2 - 1);
-        const delay = Math.max(250, Math.round(base + jitter));
-        reconnectAttempt += 1;
-        if (reconnectTimer) clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(() => {
-          reconnectTimer = null;
-          connect();
-        }, delay);
-      }
-
-      function setConnStatus(state) {
-        if (!connStatus) return;
-        connStatus.dataset.state = state;
-        const labels = {
-          connecting: "connecting…",
-          connected: "connected",
-          reconnecting: "reconnecting…",
-          rejected: "not authorised",
-          closed: "disconnected",
-        };
-        connStatus.textContent = labels[state] || state;
-      }
-
-      function sendFrame(obj) {
-        if (!socket || socket.readyState !== WebSocket.OPEN) {
-          console.warn("ws: dropping send; socket not open", obj);
-          return false;
-        }
-        socket.send(JSON.stringify(obj));
-        return true;
-      }
-
-      // ---- Render helpers ---------------------------------------------------
-      function clearNarration() {
-        narration.replaceChildren();
-        activeNarration = null;
-      }
-
-      function appendMessage(kind, who, content, when) {
-        // Drop the empty-log placeholder if it's still there.
-        const empty = narration.querySelector(".empty-log");
-        if (empty) empty.remove();
-
-        const article = document.createElement("article");
-        article.className = `message message-${kind}`;
-        const header = document.createElement("header");
-        const whoSpan = document.createElement("span");
-        whoSpan.className = "who";
-        whoSpan.textContent = who;
-        header.appendChild(whoSpan);
-        if (when) {
-          const time = document.createElement("time");
-          time.textContent = when;
-          header.appendChild(time);
-        }
-        article.appendChild(header);
-        const p = document.createElement("p");
-        p.textContent = content || "";
-        article.appendChild(p);
-        narration.appendChild(article);
-        narration.scrollTop = narration.scrollHeight;
-        return p;
-      }
-
-      function appendSystemMessage(who, content) {
-        return appendMessage("system", who, content, formatNow());
-      }
-
-      // ---- Image cards ------------------------------------------------------
-      // Phase 6 prep: snapshot now carries `image_events` — the recent
-      // successful images bound to this session — so a reconnecting
-      // client renders the scene illustrations alongside the narration
-      // that produced them. Pending/failed events still flow only on
-      // the live WS stream (the worker doesn't persist a row for
-      // either), so a reconnect during the brief in-flight window
-      // still relies on the live `image_ready` / `image_failed` to
-      // land for that one slot.
-
-      function findImageCard(image_id) {
-        if (!image_id) return null;
-        const sel = `[data-image-id="${CSS.escape(String(image_id))}"]`;
-        return narration.querySelector(sel);
-      }
-
-      function buildImageCardShell(image_id) {
-        // Drop the empty-log placeholder if it's still there.
-        const empty = narration.querySelector(".empty-log");
-        if (empty) empty.remove();
-        const figure = document.createElement("figure");
-        figure.className = "image-card";
-        figure.dataset.imageId = String(image_id);
-        return figure;
-      }
-
-      function appendImagePending(image_id, placeholder) {
-        // If a card with this id already exists (rare — duplicate
-        // image_pending), leave it alone.
-        const existing = findImageCard(image_id);
-        if (existing) return existing;
-        const figure = buildImageCardShell(image_id);
-        figure.classList.add("pending");
-        figure.setAttribute("aria-busy", "true");
-        figure.setAttribute("aria-label", "Scene image rendering");
-        const spinner = document.createElement("div");
-        spinner.className = "image-card-spinner";
-        spinner.setAttribute("role", "presentation");
-        figure.appendChild(spinner);
-        const caption = document.createElement("figcaption");
-        caption.className = "image-card-caption";
-        caption.textContent = (placeholder && String(placeholder).trim())
-          || "rendering scene…";
-        figure.appendChild(caption);
-        narration.appendChild(figure);
-        narration.scrollTop = narration.scrollHeight;
-        return figure;
-      }
-
-      function appendImageReady(image_id, url) {
-        // If we have a placeholder, swap its contents in place to
-        // preserve scroll position relative to surrounding messages.
-        // If not (e.g. late delivery on reconnect), append a new card.
-        let figure = findImageCard(image_id);
-        const fresh = !figure;
-        if (fresh) {
-          // No placeholder was rendered; this is a late-delivery path.
-          figure = buildImageCardShell(image_id);
-          narration.appendChild(figure);
-        } else {
-          figure.replaceChildren();
-        }
-        figure.classList.remove("pending", "failed");
-        figure.classList.add("ready");
-        figure.removeAttribute("aria-busy");
-        figure.setAttribute("aria-label", "Scene image");
-        const img = document.createElement("img");
-        img.className = "image-card-img";
-        img.src = String(url);
-        img.alt = "Scene image";
-        img.loading = "lazy";
-        figure.appendChild(img);
-        if (fresh) narration.scrollTop = narration.scrollHeight;
-        return figure;
-      }
-
-      function appendImageFailed(image_id) {
-        // No raw reason in the UI — operators see the reason in the
-        // dispatcher console.debug call. Players just see the sentinel.
-        let figure = findImageCard(image_id);
-        const fresh = !figure;
-        if (fresh) {
-          figure = buildImageCardShell(image_id);
-          narration.appendChild(figure);
-        } else {
-          figure.replaceChildren();
-        }
-        figure.classList.remove("pending", "ready");
-        figure.classList.add("failed");
-        figure.removeAttribute("aria-busy");
-        figure.setAttribute("aria-label", "Scene image unavailable");
-        const caption = document.createElement("figcaption");
-        caption.className = "image-card-caption";
-        caption.textContent = "(scene image unavailable)";
-        figure.appendChild(caption);
-        if (fresh) narration.scrollTop = narration.scrollHeight;
-        return figure;
-      }
-
-      function formatNow() {
-        const d = new Date();
-        return d.toTimeString().slice(0, 8);
-      }
-
-      function isoTimeOf(iso) {
-        if (!iso || typeof iso !== "string") return formatNow();
-        // Snapshot/sender 'created_at' values arrive ISO-8601-ish; the
-        // existing template just slices [11:19]. Match that.
-        if (iso.length >= 19 && iso[10] === "T") return iso.slice(11, 19);
-        return iso;
-      }
-
-      function senderLabel(senderKind, senderId) {
-        if (senderKind === "dm") return "DM";
-        if (senderKind === "player") {
-          if (senderId && charactersById[senderId]) return charactersById[senderId].name;
-          // Fall back to roster lookup (other players' characters).
-          for (const entry of presenceRoster) {
-            if (entry.character_id === senderId && entry.character_name) {
-              return entry.character_name;
-            }
-          }
-          return senderId ? "Player" : "Table";
-        }
-        return senderKind.charAt(0).toUpperCase() + senderKind.slice(1);
-      }
-
-      // ---- Frame handlers ---------------------------------------------------
-      const handlers = {
-        snapshot(msg) {
-          // Authoritative state on (re)connect: rebuild the log fresh.
-          // Messages and image_events are interleaved by created_at so
-          // an illustration that arrived 17s after a narration block
-          // re-renders in its right place — a player reconnecting
-          // mid-session sees the same chronology a steady-state
-          // viewer saw.
-          clearNarration();
-          const events = (msg.image_events || []).map((ev) => ({
-            kind: "image",
-            created_at: ev.created_at,
-            image_id: ev.image_id,
-            url: ev.url,
-          }));
-          for (const m of msg.messages || []) {
-            events.push({
-              kind: "message",
-              created_at: m.created_at,
-              data: m,
-            });
-          }
-          // Stable sort: the snapshot's messages are already in
-          // chronological order; images interleave by their own
-          // created_at. Equal timestamps keep snapshot order.
-          events.sort((a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0));
-          for (const ev of events) {
-            if (ev.kind === "message") {
-              const m = ev.data;
-              const who = senderLabel(m.sender_kind, m.sender_id);
-              const kind = m.sender_kind === "dm" ? "dm"
-                : m.sender_kind === "player" ? "player"
-                : "system";
-              appendMessage(kind, who, m.content, isoTimeOf(m.created_at));
-            } else {
-              appendImageReady(ev.image_id, ev.url);
-            }
-          }
-          if (events.length === 0) {
-            // Restore the placeholder if the snapshot is empty.
-            const p = document.createElement("p");
-            p.className = "empty-log";
-            p.textContent = "The DM is preparing the scene…";
-            narration.appendChild(p);
-          }
-          presenceRoster = msg.connected || [];
-          renderPresence();
-          currentActor = msg.current_actor || null;
-          renderTurnHints();
-          activeNarration = null;
-        },
-        narration_chunk(msg) {
-          // Start a new article on the first chunk after anything else
-          // (snapshot, complete, dice, presence, ...). Mid-stream
-          // chunks just append.
-          if (!activeNarration || lastFrameType !== "narration_chunk") {
-            activeNarration = appendMessage("dm", "DM", "", formatNow());
-          }
-          activeNarration.textContent += (msg.content || "");
-          narration.scrollTop = narration.scrollHeight;
-        },
-        narration_complete(msg) {
-          // Server sends the canonical full text; if we streamed chunk
-          // by chunk it should match. If the chunks were missed (e.g.
-          // a brief pubsub hiccup) replace with the canonical content.
-          if (activeNarration) {
-            if (msg.content) activeNarration.textContent = msg.content;
-          } else if (msg.content) {
-            appendMessage("dm", "DM", msg.content, formatNow());
-          }
-          activeNarration = null;
-        },
-        pc_action(msg) {
-          // De-dupe: the local user already optimistically rendered
-          // their own action. The server tags pc_action frames with the
-          // originating user_id so a single user with two open tabs
-          // still sees the action mirrored on the other tab.
-          if (msg.user_id && msg.user_id === selfUserId) return;
-          const who = senderLabel("player", msg.character_id);
-          appendMessage("player", who, msg.content, formatNow());
-        },
-        whisper(msg) {
-          showWhisper(msg.content || "");
-        },
-        dice_roll(msg) {
-          const li = document.createElement("li");
-          const code = document.createElement("code");
-          code.textContent = msg.expression || "";
-          const eq = document.createTextNode(" = ");
-          const total = document.createElement("strong");
-          total.textContent = String(msg.total ?? "");
-          const purpose = document.createElement("span");
-          purpose.className = "purpose";
-          purpose.textContent = msg.purpose || "";
-          li.appendChild(code);
-          li.appendChild(eq);
-          li.appendChild(total);
-          li.appendChild(document.createTextNode(" "));
-          li.appendChild(purpose);
-          const empty = diceHistory.querySelector(".empty");
-          if (empty) empty.remove();
-          diceHistory.prepend(li);
-        },
-        state_update(msg) {
-          const kind = msg.side_effects && msg.side_effects.kind;
-          if (kind === "encounter_started") {
-            const initiative = msg.side_effects.initiative || [];
-            const turnIdx = msg.side_effects.current_turn ?? 0;
-            const round = msg.side_effects.round_number ?? 1;
-            const encounterId = msg.side_effects.encounter_id || "";
-            const entry = initiative[Math.max(0, Math.min(turnIdx, initiative.length - 1))];
-            if (entry) {
-              currentActor = {
-                encounter_id: encounterId,
-                participant_id: String(entry.participant_id || ""),
-                name: String(entry.name || ""),
-                is_player: Boolean(entry.is_player),
-                round_number: Number(round),
-              };
-              renderTurnHints();
-            }
-          } else if (kind === "encounter_ended") {
-            currentActor = null;
-            renderTurnHints();
-          } else {
-            // hp/ac/etc. — Phase 6 wires the sidebar; for now log it.
-            console.debug("state_update", msg.side_effects);
-          }
-        },
-        presence(msg) {
-          presenceRoster = msg.connected || [];
-          renderPresence();
-          renderTurnHints();
-        },
-        dm_error(msg) {
-          if (msg.reason === "not_your_turn") {
-            showActionNotice(msg.message || "It's not your turn.");
-            return;
-          }
-          appendSystemMessage("[error]", msg.message || msg.reason || "DM error");
-        },
-        pong(msg) {
-          if (!msg.nonce) return;
-          const sentAt = outstandingPings.get(msg.nonce);
-          if (sentAt !== undefined) {
-            outstandingPings.delete(msg.nonce);
-            consecutiveMissedPings = 0;
-            console.debug(`ws: pong rtt=${Date.now() - sentAt}ms`);
-          }
-        },
-        // Phase 5 — image worker ships ImagePending / ImageReady /
-        // ImageFailed over the WS. Handlers render an in-stream card,
-        // identified by data-image-id so the eventual ready/failed
-        // frame can find and swap it. Implemented (was wire-shape-only
-        // in Phase 4).
-        image_pending(msg) {
-          appendImagePending(msg.image_id, msg.placeholder);
-        },
-        image_ready(msg) {
-          appendImageReady(msg.image_id, msg.url);
-        },
-        image_failed(msg) {
-          // Operator-only visibility into why generation failed; the
-          // player just sees the sentinel state.
-          console.debug("image_failed", msg.image_id, msg.reason);
-          appendImageFailed(msg.image_id);
-        },
-      };
-
-      // ---- Presence / turn hints --------------------------------------------
-      function renderPresence() {
-        presenceList.replaceChildren();
-        if (!presenceRoster.length) {
-          const li = document.createElement("li");
-          li.className = "empty";
-          li.textContent = "no one connected";
-          presenceList.appendChild(li);
-          return;
-        }
-        for (const entry of presenceRoster) {
-          const li = document.createElement("li");
-          const isCurrent =
-            currentActor &&
-            currentActor.is_player &&
-            entry.character_id &&
-            entry.character_id === currentActor.participant_id;
-          if (isCurrent) li.classList.add("current-actor");
-          const name = document.createElement("span");
-          name.className = "presence-name";
-          name.textContent = entry.username || "?";
-          const charSpan = document.createElement("span");
-          charSpan.className = "presence-character";
-          charSpan.textContent = entry.character_name
-            ? ` — ${entry.character_name}`
-            : "";
-          li.appendChild(name);
-          li.appendChild(charSpan);
-          presenceList.appendChild(li);
-        }
-      }
-
-      function renderTurnHints() {
-        // Re-paint presence rows so .current-actor is current.
-        renderPresence();
-
-        if (!currentActor) {
-          turnBadge.hidden = true;
-          turnBadge.textContent = "";
-          turnBadge.dataset.state = "";
-          return;
-        }
-        turnBadge.hidden = false;
-        if (
-          currentActor.is_player &&
-          currentActor.participant_id &&
-          ownedCharacterIds.has(currentActor.participant_id)
-        ) {
-          turnBadge.textContent = `Your turn (round ${currentActor.round_number})`;
-          turnBadge.dataset.state = "you";
-        } else {
-          const who = currentActor.name || "the DM";
-          turnBadge.textContent = `Waiting on ${who} (round ${currentActor.round_number})`;
-          turnBadge.dataset.state = "other";
-        }
-      }
-
-      // ---- Action notice (inline, non-modal) --------------------------------
-      let actionNoticeTimer = null;
-      function showActionNotice(text) {
-        actionNotice.textContent = text;
-        actionNotice.hidden = false;
-        if (actionNoticeTimer) clearTimeout(actionNoticeTimer);
-        actionNoticeTimer = setTimeout(() => {
-          actionNotice.hidden = true;
-          actionNotice.textContent = "";
-        }, 6000);
-      }
-
-      // ---- Whisper overlay --------------------------------------------------
-      function showWhisper(content) {
-        whisperContentEl.textContent = content;
-        whisperOverlay.hidden = false;
-        // Move focus to the close button for keyboard dismiss.
-        whisperCloseBtn.focus();
-      }
-      function hideWhisper() {
-        whisperOverlay.hidden = true;
-        whisperContentEl.textContent = "";
-      }
-      whisperCloseBtn.addEventListener("click", hideWhisper);
-      whisperOverlay.addEventListener("click", (ev) => {
-        // Click outside the card dismisses; clicks inside the card
-        // bubble up here too, so check the target.
-        if (ev.target === whisperOverlay) hideWhisper();
-      });
-      document.addEventListener("keydown", (ev) => {
-        if (ev.key === "Escape" && !whisperOverlay.hidden) {
-          ev.preventDefault();
-          hideWhisper();
-        }
-      });
-
-      // ---- Action input -----------------------------------------------------
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          form.requestSubmit();
-        }
-      });
-
-      form.addEventListener("submit", (event) => {
-        event.preventDefault();
-        const content = input.value.trim();
-        if (!content) return;
-        const characterEl = form.querySelector('[name="character_id"]');
-        const characterId = characterEl ? characterEl.value : null;
-
-        // Determine action kind: combat iff the current actor is a
-        // player AND it's the submitting character's turn. Server
-        // re-validates regardless.
-        let kind = "other";
-        if (
-          currentActor &&
-          currentActor.is_player &&
-          characterId &&
-          currentActor.participant_id === characterId
-        ) {
-          kind = "combat";
-        }
-
-        const frame = {
-          type: "pc_action",
-          character_id: characterId,
-          content,
-          kind,
-        };
-
-        if (!sendFrame(frame)) {
-          showActionNotice("Not connected — message not sent.");
-          return;
-        }
-
-        input.value = "";
-        // Optimistic render: the server will broadcast a pc_action,
-        // but we filter our own in the handler.
-        const who = characterId && charactersById[characterId]
-          ? charactersById[characterId].name
-          : "You";
-        appendMessage("player", who, content, formatNow());
-      });
-
-      // ---- Cleanup on navigation -------------------------------------------
-      window.addEventListener("beforeunload", () => {
-        manuallyClosed = true;
-        stopHeartbeat();
-        if (reconnectTimer) {
-          clearTimeout(reconnectTimer);
-          reconnectTimer = null;
-        }
-        if (socket && socket.readyState === WebSocket.OPEN) {
-          try { socket.close(1000, "page_unload"); } catch (e) { /* ignore */ }
-        }
-      });
-
-      // Kick it off.
+  function scheduleReconnect() {
+    setConnStatus("reconnecting");
+    const base = Math.min(1000 * Math.pow(2, reconnectAttempt), 16_000);
+    const jitter = base * 0.2 * (Math.random() * 2 - 1);
+    const delay = Math.max(250, Math.round(base + jitter));
+    reconnectAttempt += 1;
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
       connect();
-    </script>
-  </body>
-</html>
+    }, delay);
+  }
+
+  function setConnStatus(state) {
+    if (!connStatus) return;
+    connStatus.dataset.state = state;
+    const labels = {
+      connecting: "connecting…",
+      connected: "connected",
+      reconnecting: "reconnecting…",
+      rejected: "not authorised",
+      closed: "disconnected",
+    };
+    connStatus.textContent = labels[state] || state;
+  }
+
+  function sendFrame(obj) {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      console.warn("ws: dropping send; socket not open", obj);
+      return false;
+    }
+    socket.send(JSON.stringify(obj));
+    return true;
+  }
+
+  // ---- Render helpers ---------------------------------------------------
+  function clearNarration() {
+    narration.replaceChildren();
+    activeNarration = null;
+  }
+
+  function dropEmptyLog() {
+    const empty = narration.querySelector(".empty-log");
+    if (empty) empty.remove();
+  }
+
+  function appendMessage(kind, who, content, when) {
+    dropEmptyLog();
+    const article = document.createElement("article");
+    article.className = `message message-${kind}`;
+    const header = document.createElement("header");
+    const whoSpan = document.createElement("span");
+    whoSpan.className = "who";
+    whoSpan.textContent = who;
+    header.appendChild(whoSpan);
+    if (when) {
+      const time = document.createElement("time");
+      time.textContent = when;
+      header.appendChild(time);
+    }
+    article.appendChild(header);
+    const p = document.createElement("p");
+    p.textContent = content || "";
+    article.appendChild(p);
+    narration.appendChild(article);
+    narration.scrollTop = narration.scrollHeight;
+    return p;
+  }
+
+  function appendSystemMessage(who, content) {
+    return appendMessage("system", who, content, formatNow());
+  }
+
+  // ---- Image cards ------------------------------------------------------
+  // Phase 6 prep: snapshot now carries `image_events` — the recent
+  // successful images bound to this session — so a reconnecting
+  // client renders the scene illustrations alongside the narration
+  // that produced them. Pending/failed events still flow only on
+  // the live WS stream (the worker doesn't persist a row for
+  // either), so a reconnect during the brief in-flight window
+  // still relies on the live `image_ready` / `image_failed` to
+  // land for that one slot.
+
+  function findImageCard(image_id) {
+    if (!image_id) return null;
+    const sel = `[data-image-id="${CSS.escape(String(image_id))}"]`;
+    return narration.querySelector(sel);
+  }
+
+  function buildImageCardShell(image_id) {
+    dropEmptyLog();
+    const figure = document.createElement("figure");
+    figure.className = "image-card";
+    figure.dataset.imageId = String(image_id);
+    return figure;
+  }
+
+  function appendImagePending(image_id, placeholder) {
+    const existing = findImageCard(image_id);
+    if (existing) return existing;
+    const figure = buildImageCardShell(image_id);
+    figure.classList.add("pending");
+    figure.setAttribute("aria-busy", "true");
+    figure.setAttribute("aria-label", "Scene image rendering");
+    const spinner = document.createElement("div");
+    spinner.className = "image-card-spinner";
+    spinner.setAttribute("role", "presentation");
+    figure.appendChild(spinner);
+    const caption = document.createElement("figcaption");
+    caption.className = "image-card-caption";
+    caption.textContent = (placeholder && String(placeholder).trim())
+      || "the dungeon master is sketching this scene…";
+    figure.appendChild(caption);
+    narration.appendChild(figure);
+    narration.scrollTop = narration.scrollHeight;
+    return figure;
+  }
+
+  function appendImageReady(image_id, url) {
+    let figure = findImageCard(image_id);
+    const fresh = !figure;
+    if (fresh) {
+      figure = buildImageCardShell(image_id);
+      narration.appendChild(figure);
+    } else {
+      figure.replaceChildren();
+    }
+    figure.classList.remove("pending", "failed");
+    figure.classList.add("ready");
+    figure.removeAttribute("aria-busy");
+    figure.setAttribute("aria-label", "Scene image");
+    const img = document.createElement("img");
+    img.className = "image-card-img";
+    img.src = String(url);
+    img.alt = "Scene image";
+    img.loading = "lazy";
+    figure.appendChild(img);
+    if (fresh) narration.scrollTop = narration.scrollHeight;
+    return figure;
+  }
+
+  function appendImageFailed(image_id) {
+    let figure = findImageCard(image_id);
+    const fresh = !figure;
+    if (fresh) {
+      figure = buildImageCardShell(image_id);
+      narration.appendChild(figure);
+    } else {
+      figure.replaceChildren();
+    }
+    figure.classList.remove("pending", "ready");
+    figure.classList.add("failed");
+    figure.removeAttribute("aria-busy");
+    figure.setAttribute("aria-label", "Scene image unavailable");
+    const caption = document.createElement("figcaption");
+    caption.className = "image-card-caption";
+    caption.textContent = "(scene image unavailable)";
+    figure.appendChild(caption);
+    if (fresh) narration.scrollTop = narration.scrollHeight;
+    return figure;
+  }
+
+  function formatNow() {
+    const d = new Date();
+    return d.toTimeString().slice(0, 8);
+  }
+
+  function isoTimeOf(iso) {
+    if (!iso || typeof iso !== "string") return formatNow();
+    if (iso.length >= 19 && iso[10] === "T") return iso.slice(11, 19);
+    return iso;
+  }
+
+  function senderLabel(senderKind, senderId) {
+    if (senderKind === "dm") return "Dungeon Master";
+    if (senderKind === "player") {
+      if (senderId && charactersById[senderId]) return charactersById[senderId].name;
+      for (const entry of presenceRoster) {
+        if (entry.character_id === senderId && entry.character_name) {
+          return entry.character_name;
+        }
+      }
+      return senderId ? "Player" : "Table";
+    }
+    return senderKind.charAt(0).toUpperCase() + senderKind.slice(1);
+  }
+
+  // ---- Whisper persistence ---------------------------------------------
+  // Whispers arrive as a modal (ephemeral); on close they persist
+  // both in the narration log (.message-whisper) and as a small
+  // entry in the sidebar Whispers panel. Both surfaces re-open the
+  // modal with the same content — the design's "modal / inline /
+  // panel" three-form treatment.
+
+  function recordWhisper(content) {
+    if (!content) return null;
+    whisperSeq += 1;
+    const id = `w-${whisperSeq}`;
+    const entry = { id, content, time: formatNow() };
+    whispersLog.push(entry);
+    appendWhisperToLog(entry);
+    refreshWhispersList();
+    return entry;
+  }
+
+  function appendWhisperToLog(entry) {
+    dropEmptyLog();
+    const article = document.createElement("article");
+    article.className = "message message-whisper";
+    article.dataset.whisperId = entry.id;
+    const header = document.createElement("header");
+    const who = document.createElement("span");
+    who.className = "who";
+    who.textContent = "Whisper · DM → you";
+    const time = document.createElement("time");
+    time.textContent = entry.time;
+    const reopen = document.createElement("button");
+    reopen.type = "button";
+    reopen.className = "reopen";
+    reopen.textContent = "re-open";
+    reopen.addEventListener("click", () => showWhisper(entry.content));
+    header.appendChild(who);
+    header.appendChild(time);
+    header.appendChild(reopen);
+    article.appendChild(header);
+    const p = document.createElement("p");
+    p.textContent = entry.content;
+    article.appendChild(p);
+    narration.appendChild(article);
+    narration.scrollTop = narration.scrollHeight;
+  }
+
+  function refreshWhispersList() {
+    whispersList.replaceChildren();
+    if (!whispersLog.length) {
+      const li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = "no whispers yet";
+      whispersList.appendChild(li);
+      whispersCount.textContent = "";
+      return;
+    }
+    whispersCount.textContent = String(whispersLog.length);
+    // Newest first.
+    const ordered = whispersLog.slice().reverse();
+    for (const entry of ordered) {
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.dataset.whisperId = entry.id;
+      const time = document.createElement("time");
+      time.textContent = entry.time;
+      btn.appendChild(time);
+      const preview = document.createTextNode(
+        // Truncate so the preview stays one line.
+        '"' + (entry.content.length > 90 ? entry.content.slice(0, 90) + "…" : entry.content) + '"'
+      );
+      btn.appendChild(preview);
+      btn.addEventListener("click", () => showWhisper(entry.content));
+      li.appendChild(btn);
+      whispersList.appendChild(li);
+    }
+  }
+
+  // ---- Frame handlers ---------------------------------------------------
+  const handlers = {
+    snapshot(msg) {
+      // Authoritative state on (re)connect: rebuild the log fresh.
+      // Messages and image_events are interleaved by created_at so
+      // an illustration that arrived 17s after a narration block
+      // re-renders in its right place — a player reconnecting
+      // mid-session sees the same chronology a steady-state
+      // viewer saw.
+      clearNarration();
+      const events = (msg.image_events || []).map((ev) => ({
+        kind: "image",
+        created_at: ev.created_at,
+        image_id: ev.image_id,
+        url: ev.url,
+      }));
+      for (const m of msg.messages || []) {
+        events.push({
+          kind: "message",
+          created_at: m.created_at,
+          data: m,
+        });
+      }
+      events.sort((a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0));
+      for (const ev of events) {
+        if (ev.kind === "message") {
+          const m = ev.data;
+          const who = senderLabel(m.sender_kind, m.sender_id);
+          const kind = m.sender_kind === "dm" ? "dm"
+            : m.sender_kind === "player" ? "player"
+            : "system";
+          appendMessage(kind, who, m.content, isoTimeOf(m.created_at));
+        } else {
+          appendImageReady(ev.image_id, ev.url);
+        }
+      }
+      if (events.length === 0) {
+        const p = document.createElement("p");
+        p.className = "empty-log";
+        p.textContent = "The DM is preparing the scene…";
+        narration.appendChild(p);
+      }
+      presenceRoster = msg.connected || [];
+      renderPresence();
+      currentActor = msg.current_actor || null;
+      renderTurnHints();
+      activeNarration = null;
+    },
+    narration_chunk(msg) {
+      if (!activeNarration || lastFrameType !== "narration_chunk") {
+        activeNarration = appendMessage("dm", "Dungeon Master", "", formatNow());
+        // First chunk of a fresh DM message — light up the streaming
+        // caret so the table sees prose flowing.
+        const article = activeNarration.parentElement;
+        if (article) article.dataset.streaming = "true";
+      }
+      activeNarration.textContent += (msg.content || "");
+      narration.scrollTop = narration.scrollHeight;
+    },
+    narration_complete(msg) {
+      if (activeNarration) {
+        if (msg.content) activeNarration.textContent = msg.content;
+        const article = activeNarration.parentElement;
+        if (article) delete article.dataset.streaming;
+      } else if (msg.content) {
+        appendMessage("dm", "Dungeon Master", msg.content, formatNow());
+      }
+      activeNarration = null;
+    },
+    pc_action(msg) {
+      // De-dupe: the local user already optimistically rendered
+      // their own action.
+      if (msg.user_id && msg.user_id === selfUserId) return;
+      const who = senderLabel("player", msg.character_id);
+      appendMessage("player", who, msg.content, formatNow());
+    },
+    whisper(msg) {
+      const entry = recordWhisper(msg.content || "");
+      if (entry) showWhisper(entry.content);
+    },
+    dice_roll(msg) {
+      const li = document.createElement("li");
+      const code = document.createElement("code");
+      code.textContent = msg.expression || "";
+      const total = document.createElement("strong");
+      total.textContent = String(msg.total ?? "");
+      const empty_span = document.createElement("span");
+      const purpose = document.createElement("span");
+      purpose.className = "purpose";
+      purpose.textContent = msg.purpose || "";
+      li.appendChild(code);
+      li.appendChild(total);
+      li.appendChild(empty_span);
+      li.appendChild(purpose);
+      const empty = diceHistory.querySelector(".empty");
+      if (empty) empty.remove();
+      diceHistory.prepend(li);
+    },
+    state_update(msg) {
+      const kind = msg.side_effects && msg.side_effects.kind;
+      if (kind === "encounter_started") {
+        const initiative = msg.side_effects.initiative || [];
+        const turnIdx = msg.side_effects.current_turn ?? 0;
+        const round = msg.side_effects.round_number ?? 1;
+        const encounterId = msg.side_effects.encounter_id || "";
+        const entry = initiative[Math.max(0, Math.min(turnIdx, initiative.length - 1))];
+        if (entry) {
+          currentActor = {
+            encounter_id: encounterId,
+            participant_id: String(entry.participant_id || ""),
+            name: String(entry.name || ""),
+            is_player: Boolean(entry.is_player),
+            round_number: Number(round),
+          };
+        }
+        body.dataset.mode = "combat";
+        renderInitiative(initiative, turnIdx, round);
+        renderTurnHints();
+      } else if (kind === "encounter_ended") {
+        currentActor = null;
+        body.dataset.mode = "exploration";
+        clearInitiative();
+        renderTurnHints();
+      } else {
+        // hp/ac/etc. — Phase 7 will wire side_effects deltas into
+        // the sidebar PC blocks.
+        console.debug("state_update", msg.side_effects);
+      }
+    },
+    presence(msg) {
+      presenceRoster = msg.connected || [];
+      renderPresence();
+      renderTurnHints();
+    },
+    dm_error(msg) {
+      if (msg.reason === "not_your_turn") {
+        showActionNotice(msg.message || "It's not your turn.");
+        return;
+      }
+      appendSystemMessage("[error]", msg.message || msg.reason || "DM error");
+    },
+    pong(msg) {
+      if (!msg.nonce) return;
+      const sentAt = outstandingPings.get(msg.nonce);
+      if (sentAt !== undefined) {
+        outstandingPings.delete(msg.nonce);
+        consecutiveMissedPings = 0;
+        console.debug(`ws: pong rtt=${Date.now() - sentAt}ms`);
+      }
+    },
+    image_pending(msg) {
+      appendImagePending(msg.image_id, msg.placeholder);
+    },
+    image_ready(msg) {
+      appendImageReady(msg.image_id, msg.url);
+    },
+    image_failed(msg) {
+      console.debug("image_failed", msg.image_id, msg.reason);
+      appendImageFailed(msg.image_id);
+    },
+  };
+
+  // ---- Presence / turn hints --------------------------------------------
+  function renderPresence() {
+    presenceList.replaceChildren();
+    if (!presenceRoster.length) {
+      const li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = "no one connected";
+      presenceList.appendChild(li);
+      return;
+    }
+    for (const entry of presenceRoster) {
+      const li = document.createElement("li");
+      const isCurrent =
+        currentActor &&
+        currentActor.is_player &&
+        entry.character_id &&
+        entry.character_id === currentActor.participant_id;
+      if (isCurrent) li.classList.add("current-actor");
+      const name = document.createElement("span");
+      name.className = "presence-name";
+      name.textContent = entry.username || "?";
+      const charSpan = document.createElement("span");
+      charSpan.className = "presence-character";
+      charSpan.textContent = entry.character_name || "";
+      li.appendChild(name);
+      li.appendChild(charSpan);
+      presenceList.appendChild(li);
+    }
+  }
+
+  function renderInitiative(initiative, currentIdx, round) {
+    initiativeList.replaceChildren();
+    roundPill.textContent = round ? `Round ${round}` : "";
+    for (let i = 0; i < initiative.length; i++) {
+      const entry = initiative[i];
+      const li = document.createElement("li");
+      if (i === currentIdx) li.classList.add("is-current");
+      if (!entry.is_player) li.classList.add("is-foe");
+      if (entry.is_down) li.classList.add("is-down");
+      const roll = document.createElement("span");
+      roll.className = "roll";
+      roll.textContent = entry.initiative ?? "";
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = entry.name || "?";
+      li.appendChild(roll);
+      li.appendChild(name);
+      initiativeList.appendChild(li);
+    }
+  }
+
+  function clearInitiative() {
+    initiativeList.replaceChildren();
+    roundPill.textContent = "";
+  }
+
+  function renderTurnHints() {
+    renderPresence();
+    if (!currentActor) {
+      turnBadge.hidden = true;
+      turnBadge.textContent = "";
+      turnBadge.dataset.state = "";
+      return;
+    }
+    turnBadge.hidden = false;
+    if (
+      currentActor.is_player &&
+      currentActor.participant_id &&
+      ownedCharacterIds.has(currentActor.participant_id)
+    ) {
+      turnBadge.textContent = `Your turn — round ${currentActor.round_number}`;
+      turnBadge.dataset.state = "you";
+    } else {
+      const who = currentActor.name || "the DM";
+      turnBadge.textContent = `${who}'s turn — round ${currentActor.round_number}`;
+      turnBadge.dataset.state = "other";
+    }
+  }
+
+  // ---- Action notice (inline, non-modal) --------------------------------
+  let actionNoticeTimer = null;
+  function showActionNotice(text) {
+    actionNotice.textContent = text;
+    actionNotice.hidden = false;
+    if (actionNoticeTimer) clearTimeout(actionNoticeTimer);
+    actionNoticeTimer = setTimeout(() => {
+      actionNotice.hidden = true;
+      actionNotice.textContent = "";
+    }, 6000);
+  }
+
+  // ---- Whisper overlay --------------------------------------------------
+  function showWhisper(content) {
+    whisperContentEl.textContent = content;
+    whisperOverlay.hidden = false;
+    whisperCloseBtn.focus();
+  }
+  function hideWhisper() {
+    whisperOverlay.hidden = true;
+    whisperContentEl.textContent = "";
+  }
+  whisperCloseBtn.addEventListener("click", hideWhisper);
+  whisperOverlay.addEventListener("click", (ev) => {
+    if (ev.target === whisperOverlay) hideWhisper();
+  });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && !whisperOverlay.hidden) {
+      ev.preventDefault();
+      hideWhisper();
+    }
+  });
+
+  // ---- Help tip "?" -----------------------------------------------------
+  helpBtn.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    const open = helpTip.dataset.open === "true";
+    helpTip.dataset.open = open ? "false" : "true";
+    helpBtn.setAttribute("aria-expanded", String(!open));
+  });
+  document.addEventListener("click", (ev) => {
+    if (!helpTip.contains(ev.target)) {
+      helpTip.dataset.open = "false";
+      helpBtn.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  // ---- Action input -----------------------------------------------------
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const content = input.value.trim();
+    if (!content) return;
+    const characterEl = form.querySelector('[name="character_id"]');
+    const characterId = characterEl ? characterEl.value : null;
+
+    let kind = "other";
+    if (
+      currentActor &&
+      currentActor.is_player &&
+      characterId &&
+      currentActor.participant_id === characterId
+    ) {
+      kind = "combat";
+    }
+
+    const frame = {
+      type: "pc_action",
+      character_id: characterId,
+      content,
+      kind,
+    };
+
+    if (!sendFrame(frame)) {
+      showActionNotice("Not connected — message not sent.");
+      return;
+    }
+
+    input.value = "";
+    const who = characterId && charactersById[characterId]
+      ? charactersById[characterId].name
+      : "You";
+    appendMessage("player", who, content, formatNow());
+  });
+
+  // ---- Cleanup on navigation -------------------------------------------
+  window.addEventListener("beforeunload", () => {
+    manuallyClosed = true;
+    stopHeartbeat();
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      try { socket.close(1000, "page_unload"); } catch (e) { /* ignore */ }
+    }
+  });
+
+  // Kick it off.
+  refreshWhispersList();
+  connect();
+</script>
+{% endblock %}

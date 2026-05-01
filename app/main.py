@@ -153,7 +153,7 @@ def create_app() -> FastAPI:
     async def index(request: Request, user: CurrentUserOrNone) -> HTMLResponse:
         return _TEMPLATES.TemplateResponse(
             request,
-            "base.html",
+            "index.html",
             {"version": VERSION, "user": user},
         )
 
