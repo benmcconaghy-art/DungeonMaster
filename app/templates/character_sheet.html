@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}{{ character.name }} &mdash; Dungeon Master{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/sheet.css" />
+{% endblock %}
+
+{% block body_class %}sheet-screen{% endblock %}
+
+{% block header_campaign_name %}<span class="name" style="font-size: 15px;">Character Sheet</span>{% endblock %}
+{% block header_campaign_meta %}{{ character.name|lower }} · {{ campaign.name|lower if campaign else "no campaign" }} · {{ character.class_name|lower }}{% endblock %}
+
+{% block content %}
+
+<section class="sheet-banner">
+  <div>
+    <h1>{{ character.name }}</h1>
+    <div class="titles">
+      <span>{{ character.race }}</span><span class="sep">·</span>
+      <span>{{ character.class_name }}</span><span class="sep">·</span>
+      <span class="level">Level {{ character.level }}</span>
+      <span class="alignment">{{ character.alignment|capitalize }}</span>
+    </div>
+  </div>
+  <div class="status-pill" data-state="{{ character.status }}">
+    {%- if character.status == "alive" -%}Alive
+    {%- elif character.status == "dying" -%}Dying
+    {%- elif character.status == "dead" -%}Dead
+    {%- elif character.status == "retired" -%}Retired
+    {%- else -%}{{ character.status|capitalize }}
+    {%- endif -%}
+  </div>
+</section>
+
+<main class="sheet-grid">
+
+  <!-- LEFT COLUMN -->
+  <div class="sheet-col-left">
+
+    <!-- Portrait plate -->
+    <figure class="portrait-plate" aria-label="Canonical portrait">
+      <div class="portrait-frame" role="img" aria-label="Portrait of {{ character.name }}">
+        {% if character.canonical_image_id %}
+          <img src="/api/images/{{ character.canonical_image_id }}.png"
+               alt="Portrait of {{ character.name }}"
+               loading="lazy" />
+        {% else %}
+          <div class="placeholder">
+            <span class="initial">{{ character.name[:1]|upper }}</span>
+          </div>
+        {% endif %}
+      </div>
+      <p class="caption">canonical portrait</p>
+      {% if character.is_mine %}
+        <span class="regen-mark" aria-hidden="true">✎</span>
+        <button type="button" class="regen" aria-label="Regenerate portrait" id="regen-portrait">✎ regenerate</button>
+      {% endif %}
+    </figure>
+
+    <!-- Notes (player-editable iff is_mine) -->
+    <section class="s-panel" aria-label="Notes">
+      <h2>
+        Notes
+        {% if character.is_mine %}<span class="meta">player-editable</span>{% endif %}
+      </h2>
+      <textarea
+        class="notes-edit"
+        id="notes-textarea"
+        placeholder="Notes from the road — visible only to you and the DM…"
+        {% if not character.is_mine %}readonly{% endif %}
+      >{{ character.notes }}</textarea>
+      {% if character.is_mine %}
+        <div class="notes-status" id="notes-status"></div>
+      {% endif %}
+    </section>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="sheet-col-right">
+
+    <!-- Vitals -->
+    <section class="s-panel" aria-label="Vitals">
+      <h2>Vitals</h2>
+      <div class="vitals-row">
+        {% set hp_pct = ((character.hp_current / character.hp_max * 100) | round(0, 'floor')) | int if character.hp_max else 0 %}
+        {% set hp_low = (character.hp_current * 3) <= character.hp_max %}
+        <div class="vital hp">
+          <div class="label">Hit Points</div>
+          <div class="value">{{ character.hp_current }}<span class="max">/{{ character.hp_max }}</span></div>
+          <div class="hp-bar{% if hp_low %} low{% endif %}"><span style="width: {{ hp_pct }}%"></span></div>
+        </div>
+        <div class="vital">
+          <div class="label">Armor Class</div>
+          <div class="value">{{ character.ac }}</div>
+        </div>
+        <div class="vital">
+          <div class="label">Experience</div>
+          <div class="value t-mono" style="font-size: 22px;">{{ "{:,}".format(character.xp) }}</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Abilities + Saves -->
+    <div class="dual-grid">
+      <section class="s-panel" aria-label="Ability scores">
+        <h2>Abilities</h2>
+        <div class="abilities">
+          {% for key, label in [("str","Str"),("int","Int"),("wis","Wis"),("dex","Dex"),("con","Con"),("cha","Cha")] %}
+            {% set a = character.abilities[key] %}
+            <div class="ability">
+              <div class="label">{{ label }}</div>
+              <div class="score">{{ a.score }}</div>
+              <div class="mod{% if a.modifier == 0 %} zero{% elif a.modifier < 0 %} neg{% endif %}">{{ "%+d"|format(a.modifier) }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="s-panel" aria-label="Saving throws">
+        <h2>Saves <span class="meta">target ↓</span></h2>
+        {% if character.saves %}
+          <div class="saves">
+            {% for save in character.saves %}
+              <div class="save">
+                <span class="label">{{ save.label }}</span>
+                <span class="target">{{ save.target }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="s-chip empty">no save table for {{ character.class_name|lower }}</p>
+        {% endif %}
+      </section>
+    </div>
+
+    <!-- Inventory -->
+    <section class="s-panel" aria-label="Inventory">
+      <h2>
+        Inventory <span class="meta">{{ character.inventory|length }} item{% if character.inventory|length != 1 %}s{% endif %}</span>
+      </h2>
+
+      {% set wielded = character.inventory|selectattr("equipped")|selectattr("item_type","eq","weapon")|list %}
+      {% set worn = character.inventory|selectattr("equipped")|selectattr("item_type","eq","armor")|list %}
+      {% set offhand = character.inventory|selectattr("equipped")|selectattr("item_type","eq","shield")|list %}
+
+      <div class="loadout" aria-label="Worn and wielded">
+        <div class="loadout-slot{% if not wielded %} empty{% endif %}" data-slot="Wielded">
+          <div class="item-name">{% if wielded %}{{ wielded[0].name }}{% else %}—{% endif %}</div>
+          <div class="item-stat">{% if wielded and wielded[0].quantity > 1 %}×{{ wielded[0].quantity }}{% endif %}</div>
+        </div>
+        <div class="loadout-slot{% if not offhand %} empty{% endif %}" data-slot="Off-hand">
+          <div class="item-name">{% if offhand %}{{ offhand[0].name }}{% else %}—{% endif %}</div>
+          <div class="item-stat">{% if offhand and offhand[0].quantity > 1 %}×{{ offhand[0].quantity }}{% endif %}</div>
+        </div>
+        <div class="loadout-slot{% if not worn %} empty{% endif %}" data-slot="Worn">
+          <div class="item-name">{% if worn %}{{ worn[0].name }}{% else %}—{% endif %}</div>
+          <div class="item-stat">{% if worn and worn[0].quantity > 1 %}×{{ worn[0].quantity }}{% endif %}</div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom: var(--s-2); border-bottom: 1px dotted var(--rule-soft); padding-bottom: var(--s-2);">
+        <span class="gold">{{ character.gold }}<span class="gp">gp</span></span>
+        <span style="font-family: var(--font-display); font-size: 10px; letter-spacing: 0.18em; color: var(--parchment-mute); text-transform: uppercase;">▣ equipped &nbsp; · &nbsp; · unequipped</span>
+      </div>
+
+      <ul class="inventory-list">
+        {% for item in character.inventory %}
+          <li class="inv-item{% if item.equipped %} equipped{% endif %}">
+            <span class="marker">{% if item.equipped %}▣{% else %}·{% endif %}</span>
+            <span class="name">{{ item.name }}</span>
+            <span class="qty">{% if item.quantity > 1 %}×{{ item.quantity }}{% else %}1{% endif %}</span>
+          </li>
+        {% else %}
+          <li class="inv-item empty">no inventory yet — the road provides</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    {% if character.is_spellcaster %}
+      {% set spells_by_level = {} %}
+      {% for spell in character.spells %}
+        {% if spell.spell_level not in spells_by_level %}
+          {% set _ = spells_by_level.update({spell.spell_level: []}) %}
+        {% endif %}
+        {% set _ = spells_by_level[spell.spell_level].append(spell) %}
+      {% endfor %}
+
+      <section class="s-panel" aria-label="Spells">
+        <h2>
+          Spells
+          <span class="meta">prepared today · {{ character.class_name|lower }}</span>
+        </h2>
+
+        {% if spells_by_level %}
+          {% for level in spells_by_level|dictsort %}
+            {% set level_num = level[0] %}
+            {% set level_spells = level[1] %}
+            {% set prepared = level_spells|selectattr("prepared")|list %}
+            <div class="spell-level">
+              <header>
+                <span class="level-label">Level {{ level_num }}</span>
+                <span class="slots">
+                  prepared
+                  {% for _ in prepared %}<span class="pip ready"></span>{% endfor %}
+                </span>
+              </header>
+              <ul class="spell-list">
+                {% for spell in level_spells %}
+                  <li class="spell-item {% if spell.prepared %}prepared{% else %}unprepared{% endif %}">
+                    <span class="pip"></span>
+                    <div>
+                      <div class="name">{{ spell.spell_name }}</div>
+                    </div>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="s-chip empty">no spells learned yet</p>
+        {% endif %}
+      </section>
+    {% endif %}
+
+  </div>
+</main>
+
+<script>
+  // Player-editable notes — debounce + PATCH on change. The textarea
+  // is read-only when ``is_mine`` is false (server-rendered), so the
+  // listener is safe regardless.
+  const notesEl = document.getElementById("notes-textarea");
+  const notesStatus = document.getElementById("notes-status");
+  if (notesEl && notesStatus) {
+    let saveTimer = null;
+    let lastSent = notesEl.value;
+    notesEl.addEventListener("input", () => {
+      clearTimeout(saveTimer);
+      notesStatus.textContent = "editing…";
+      notesStatus.className = "notes-status";
+      saveTimer = setTimeout(async () => {
+        const next = notesEl.value;
+        if (next === lastSent) return;
+        try {
+          const response = await fetch(`/api/characters/{{ character.id }}/notes`, {
+            method: "PATCH",
+            headers: {"Content-Type": "application/json"},
+            credentials: "same-origin",
+            body: JSON.stringify({notes: next}),
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          lastSent = next;
+          notesStatus.textContent = "saved";
+          notesStatus.className = "notes-status ok";
+          setTimeout(() => { notesStatus.textContent = ""; notesStatus.className = "notes-status"; }, 1500);
+        } catch (err) {
+          console.warn("notes save failed", err);
+          notesStatus.textContent = "save failed — retry on next edit";
+          notesStatus.className = "notes-status err";
+        }
+      }, 800);
+    });
+  }
+
+  // Portrait regenerate — POSTs to the existing Phase 5 endpoint and
+  // disables the button while the worker churns. The new portrait
+  // shows up on the next page load (or via a future live event).
+  const regenBtn = document.getElementById("regen-portrait");
+  if (regenBtn) {
+    regenBtn.addEventListener("click", async () => {
+      regenBtn.disabled = true;
+      regenBtn.textContent = "✎ requesting…";
+      try {
+        const response = await fetch(`/api/characters/{{ character.id }}/portrait`, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({}),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        regenBtn.textContent = "✎ requested — the dungeon master will sketch this anew";
+      } catch (err) {
+        console.warn("portrait regen failed", err);
+        regenBtn.textContent = "✎ regenerate failed — try again";
+        setTimeout(() => {
+          regenBtn.textContent = "✎ regenerate";
+          regenBtn.disabled = false;
+        }, 3000);
+      }
+    });
+  }
+</script>
+
+{% endblock %}

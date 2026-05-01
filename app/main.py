@@ -25,7 +25,12 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.auth import router as auth_router
 from app.api.campaigns import router as campaigns_router
-from app.api.characters import router as characters_router
+from app.api.characters import (
+    campaign_scoped_router as characters_campaign_router,
+)
+from app.api.characters import (
+    router as characters_router,
+)
 from app.api.portraits import router as portraits_router
 from app.api.sessions import router as sessions_router
 from app.api.ws import router as ws_router
@@ -140,6 +145,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(campaigns_router)
     app.include_router(characters_router)
+    app.include_router(characters_campaign_router)
     app.include_router(portraits_router)
     app.include_router(sessions_router)
     app.include_router(ws_router)
@@ -170,6 +176,53 @@ def create_app() -> FastAPI:
     ) -> HTMLResponse:
         ctx = await dashboard_view.build_context(db, user=user)
         return _TEMPLATES.TemplateResponse(request, "campaign_dashboard.html", ctx)
+
+    @app.get("/characters/{character_id}", response_class=HTMLResponse)
+    async def character_sheet(
+        request: Request,
+        character_id: str,
+        user: CurrentUser,
+        db: DbSession,
+    ) -> HTMLResponse:
+        from sqlalchemy import select as _sa_select
+
+        from app.api.characters import _detail_response, _require_character_visibility
+
+        character = await _require_character_visibility(
+            db, character_id=character_id, user=user
+        )
+        inventory = list(
+            (
+                await db.execute(
+                    _sa_select(models.InventoryItem)
+                    .where(models.InventoryItem.character_id == character_id)
+                    .order_by(
+                        models.InventoryItem.equipped.desc(),
+                        models.InventoryItem.name,
+                    )
+                )
+            ).scalars()
+        )
+        spells = list(
+            (
+                await db.execute(
+                    _sa_select(models.SpellKnown)
+                    .where(models.SpellKnown.character_id == character_id)
+                    .order_by(
+                        models.SpellKnown.spell_level, models.SpellKnown.spell_name
+                    )
+                )
+            ).scalars()
+        )
+        detail = _detail_response(
+            character, viewer_id=user.id, inventory=inventory, spells=spells
+        )
+        campaign = await db.get(models.Campaign, character.campaign_id)
+        return _TEMPLATES.TemplateResponse(
+            request,
+            "character_sheet.html",
+            {"user": user, "character": detail, "campaign": campaign},
+        )
 
     @app.get("/play/{session_id}", response_class=HTMLResponse)
     async def play_screen(
