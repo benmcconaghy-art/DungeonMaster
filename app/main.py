@@ -168,6 +168,10 @@ def create_app() -> FastAPI:
     async def login_form(request: Request) -> HTMLResponse:
         return _TEMPLATES.TemplateResponse(request, "login.html", {})
 
+    @app.get("/register", response_class=HTMLResponse)
+    async def register_form(request: Request) -> HTMLResponse:
+        return _TEMPLATES.TemplateResponse(request, "register.html", {})
+
     @app.get("/dashboard", response_class=HTMLResponse)
     async def dashboard(
         request: Request,

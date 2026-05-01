@@ -1,0 +1,134 @@
+/* auth.css — sign-in and registration views.
+   Centred parchment-frame card with the design's Cormorant SC small
+   caps + EB Garamond prose stack. Inherits tokens.css. */
+
+.auth-screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.auth-shell {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-7) var(--s-5) var(--s-8);
+}
+
+.auth-card {
+  width: min(440px, 92vw);
+  background: linear-gradient(to bottom, var(--vellum-1), rgba(28,24,18,0.6));
+  border: 1px solid var(--rule-strong);
+  outline: 1px solid var(--rule-soft);
+  outline-offset: 6px;
+  padding: var(--s-7) var(--s-6);
+  position: relative;
+}
+.auth-card::before {
+  content: attr(data-cap);
+  position: absolute;
+  top: -10px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink-bg);
+  padding: 0 var(--s-3);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--ember);
+}
+
+.auth-card h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  color: var(--parchment);
+  margin: 0 0 var(--s-2);
+  text-align: center;
+}
+.auth-card .blurb {
+  font-family: var(--font-prose);
+  font-style: italic;
+  color: var(--parchment-dim);
+  font-size: 14px;
+  text-align: center;
+  margin: 0 0 var(--s-5);
+  line-height: 1.5;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+}
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 10px;
+  color: var(--parchment-mute);
+}
+.auth-form input {
+  font: inherit;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--rule-soft);
+  color: var(--parchment);
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  outline: none;
+  border-radius: var(--radius-sm);
+}
+.auth-form input:focus { border-color: var(--ember); }
+
+.auth-form button {
+  margin-top: var(--s-3);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 13px;
+  padding: var(--s-3) var(--s-6);
+  background: linear-gradient(to bottom, var(--ember), var(--ember-deep));
+  color: var(--ink-bg);
+  border: 1px solid var(--ember-deep);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.auth-form button:hover { background: var(--ember-bright); }
+.auth-form button:disabled {
+  background: var(--vellum-3);
+  color: var(--parchment-mute);
+  cursor: not-allowed;
+}
+
+.auth-error {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--rust);
+  margin: var(--s-3) 0 0;
+  min-height: 16px;
+}
+
+.auth-aside {
+  margin-top: var(--s-5);
+  text-align: center;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 10px;
+  color: var(--parchment-mute);
+}
+.auth-aside a {
+  color: var(--ember);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.auth-aside a:hover { border-bottom-color: var(--ember); }
