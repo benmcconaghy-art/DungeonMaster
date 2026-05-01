@@ -231,6 +231,61 @@ async def test_counters_reset_between_tests_part_two(
 
 
 # ---------------------------------------------------------------------------
+# Production storage backend lifecycle
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_production_storage_backend_handles_full_lifecycle(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The production-default storage backend handles the request
+    lifecycle end-to-end without app-startup async context setup.
+
+    Phase 7 playthrough surfaced two related bugs against the prior
+    Valkey-backed configuration: the ``limits`` library's async-redis
+    backend pulled in coredis as a hard prerequisite (ConfigurationError
+    when missing), and coredis uses an async-context-managed connection
+    pool that the lazy module-singleton ``_ensure_limiter`` couldn't
+    enter (RuntimeError: connection pool not initialized).
+
+    Both bugs trace to a storage backend that needs lifecycle hooks the
+    module doesn't provide; in-process memory storage doesn't. This
+    test exercises the real production storage URI through the real
+    HTTP middleware path with no monkeypatching of the backend itself
+    — so a regression that re-introduced a lifecycle-managed backend
+    would fail at CI rather than only on a real Valkey-equipped deploy.
+    """
+
+    # The contract under test is the storage URI itself; pin it without
+    # patching. Limit calibration is shrunk so the test trips quickly.
+    assert ratelimit._STORAGE_URI == "async+memory://"
+    monkeypatch.setattr(ratelimit, "_LOGIN_ITEM", parse("2/minute"))
+
+    await client.post(
+        "/api/auth/register",
+        json={"username": "rl_lifecycle", "password": _VALID_PW},
+    )
+    await client.post("/api/auth/logout")
+
+    bad = {"username": "rl_lifecycle", "password": "wrong-pw-x"}
+
+    # Two attempts hit the auth check (401, not 429) — the limiter
+    # increments cleanly per request.
+    for _ in range(2):
+        r = await client.post("/api/auth/login", json=bad)
+        assert r.status_code == 401, r.text
+
+    # Third trips the limit. Proves the storage backend's hit/check
+    # cycle survives a complete request — ASGI lifespan never set up
+    # an async context manager for it.
+    r = await client.post("/api/auth/login", json=bad)
+    assert r.status_code == 429
+    assert r.headers["retry-after"] == "60"
+    assert r.json()["detail"] == ratelimit.HUMAN_MESSAGE
+
+
+# ---------------------------------------------------------------------------
 # X-Forwarded-For respect
 # ---------------------------------------------------------------------------
 

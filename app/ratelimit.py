@@ -6,9 +6,7 @@ loop, a player mashing the login button thinking the page froze. The
 limits set here are deliberately generous — set high enough that no
 legitimate human use trips them, low enough that runaway loops do.
 
-Storage backend: Valkey at ``settings.redis_url``. Counters live in the
-same KV store as pubsub / image queue, so there's no second daemon to
-operate. Tests override via ``RATELIMIT_STORAGE_URI=memory://``.
+Storage backend: in-process memory (see ``_STORAGE_URI`` for the why).
 
 Limits applied (per IP):
 - POST /api/auth/login         60/minute   (one per second sustained)
@@ -31,17 +29,22 @@ function's signature stays untouched.
 from __future__ import annotations
 
 import logging
-import os
 
 from fastapi import HTTPException, Request, status
 from limits import RateLimitItem, parse
 from limits.aio.strategies import FixedWindowRateLimiter
 from limits.storage import storage_from_string
 
-from app.config import get_settings
-
 log = logging.getLogger(__name__)
 
+
+# Single-worker deployment per spec §13; rate limits don't need cross-
+# process or restart-durable state on a trusted LAN. Memory storage
+# avoids the coredis pool-lifecycle issue surfaced in Phase 7
+# playthrough — the limits library's async-redis backend depends on
+# coredis, whose async-context-managed connection pool can't be
+# entered from the lazy module-singleton in ``_ensure_limiter``.
+_STORAGE_URI = "async+memory://"
 
 # Limit strings — single source of truth for the route dependencies and
 # any future code that wants to advertise the policy. Format is the
@@ -57,41 +60,17 @@ JOIN_LIMIT = "60/minute"
 HUMAN_MESSAGE = "You're trying that too quickly — please wait a moment before retrying."
 
 
-# Module-level state. Built lazily so tests can flip
-# RATELIMIT_STORAGE_URI between cases via ``reset_for_tests``.
+# Module-level state. Built lazily so tests can clear the counter
+# between cases via ``reset_for_tests``.
 _limiter: FixedWindowRateLimiter | None = None
 
 
-def _resolve_storage_uri() -> str:
-    """Pick the storage URI for the rate-limit counters.
-
-    Production: the configured ``redis_url`` (Valkey on localhost). Tests:
-    ``memory://`` via the env override so unit tests don't need a real
-    Valkey daemon. Setting ``RATELIMIT_STORAGE_URI`` in the systemd unit
-    is also an escape hatch if an operator wants to point counters at a
-    separate Valkey database.
-    """
-
-    override = os.environ.get("RATELIMIT_STORAGE_URI")
-    if override:
-        return override
-    return get_settings().redis_url
-
-
 def _ensure_limiter() -> FixedWindowRateLimiter:
-    """Build (or reuse) the module-level RateLimiter.
-
-    The ``async+`` prefix on the storage URI selects the asyncio
-    backend variant — required so ``limiter.hit(...)`` returns an
-    awaitable rather than a sync result.
-    """
+    """Build (or reuse) the module-level RateLimiter."""
 
     global _limiter
     if _limiter is None:
-        uri = _resolve_storage_uri()
-        if not uri.startswith("async+"):
-            uri = f"async+{uri}"
-        storage = storage_from_string(uri)
+        storage = storage_from_string(_STORAGE_URI)
         _limiter = FixedWindowRateLimiter(storage)
     return _limiter
 

@@ -203,6 +203,15 @@ async model within one worker. See spec §13 for rationale.
 - Mock `vLLM` and `FLUX` clients at the boundary. Never call real services in unit tests.
 - Use in-memory SQLite (`sqlite+aiosqlite:///:memory:`) for fast suites; file-backed only for migration tests.
 - Inject `random.Random(seed)` into rules-engine functions for reproducibility. No module-level `random.*` calls in production code.
+- Rate-limit tests must exercise the real storage backend the
+  application uses, not mocked storage. Phase 7 playthrough surfaced
+  two bugs (coredis prerequisite missing, then coredis pool not
+  initialised in async context) that the original test suite missed
+  because tests overrode the storage URI to `memory://` while
+  production used `redis://`. Pin the production URI in tests; only
+  monkeypatch the *limit thresholds* to keep cases fast. See
+  `tests/test_ratelimit.py::test_production_storage_backend_handles_full_lifecycle`
+  for the canonical pattern.
 
 ## File organisation
 

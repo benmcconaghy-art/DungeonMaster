@@ -31,13 +31,16 @@ dependencies = [
     # dep (~2GB); production deployments that point EMBEDDING_BASE_URL at
     # Ollama or another /v1/embeddings server never load this.
     "sentence-transformers>=3.3,<4",
-    # Phase 7 hardening: rate limiting on auth-shaped endpoints with
-    # Valkey-backed counters. The `limits` library speaks redis://
-    # natively (Valkey is wire-compatible) and provides an async
-    # FixedWindowRateLimiter that we drive from a FastAPI dependency.
-    # We do NOT use slowapi: its decorator wrapper rebinds the route
-    # function's __globals__ to slowapi's module, which breaks FastAPI's
-    # resolution of `from __future__ import annotations` ForwardRefs.
+    # Phase 7 hardening: rate limiting on auth-shaped endpoints, driven
+    # from a FastAPI dependency over the library's async strategy +
+    # in-process memory storage. We do NOT use slowapi: its decorator
+    # wrapper rebinds the route function's __globals__ to slowapi's
+    # module, which breaks FastAPI's resolution of
+    # `from __future__ import annotations` ForwardRefs. We do NOT use
+    # the redis storage backend: spec §13's single-worker deployment
+    # makes cross-process counters unnecessary, and the async-redis
+    # backend's coredis dependency uses an async-context-managed
+    # connection pool that doesn't fit the lazy-singleton pattern.
     "limits>=5.0,<6",
     # Phase 7 hardening: /metrics endpoint (Prometheus exposition format).
     "prometheus-client>=0.21,<0.22",

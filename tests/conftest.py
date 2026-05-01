@@ -25,11 +25,6 @@ import os
 # to the production DB path or speak to real upstream services.
 os.environ.setdefault("DB_PATH", ":memory-sentinel:")
 os.environ.setdefault("SESSION_SECRET", "test-secret-not-used-but-min-length-ok")
-# Rate-limit storage: in-memory so unit tests don't need a real Valkey.
-# Re-resolved when ``app.ratelimit.reset_for_tests`` is called by the
-# ``rate_limited`` fixture below — that's how tests get a fresh
-# zero-counter Limiter between cases.
-os.environ.setdefault("RATELIMIT_STORAGE_URI", "memory://")
 
 from collections.abc import AsyncIterator
 
