@@ -78,13 +78,15 @@
               <span class="arrow" aria-hidden="true">→</span>
             </a>
           {% else %}
-            <form class="resume-broadside" method="post" action="/api/campaigns/{{ fc.id }}/sessions" data-on-success="redirect-to-session" aria-label="Start a new session of {{ fc.name }}">
-              <span class="seal" aria-hidden="true"><span class="seal-glyph">{{ fc.seal_glyph }}</span></span>
-              <span>
-                <span class="verb">Start Session</span>
-                <span class="where">three rolls and a name — the road begins</span>
-              </span>
-              <span class="arrow" aria-hidden="true">→</span>
+            <form method="post" action="/api/campaigns/{{ fc.id }}/sessions" data-on-success="redirect-to-session" class="resume-broadside-form">
+              <button type="submit" class="resume-broadside" aria-label="Start a new session of {{ fc.name }}">
+                <span class="seal" aria-hidden="true"><span class="seal-glyph">{{ fc.seal_glyph }}</span></span>
+                <span>
+                  <span class="verb">Start Session</span>
+                  <span class="where">three rolls and a name — the road begins</span>
+                </span>
+                <span class="arrow" aria-hidden="true">→</span>
+              </button>
             </form>
           {% endif %}
 
@@ -154,19 +156,21 @@
               <span class="arrow" aria-hidden="true">→</span>
             </a>
             {% else %}
-            <form method="post" action="/api/campaigns/{{ c.id }}/sessions" class="campaign-row" data-on-success="redirect-to-session">
-              <div>
-                <h3 class="name">{{ c.name }}</h3>
-                <div class="titles">
-                  {{ c.ruleset }} <span style="color: var(--parchment-mute);">·</span>
-                  {{ c.member_count }} player{% if c.member_count != 1 %}s{% endif %}
+            <form method="post" action="/api/campaigns/{{ c.id }}/sessions" data-on-success="redirect-to-session" class="campaign-row-form">
+              <button type="submit" class="campaign-row" aria-label="Start a new session of {{ c.name }}">
+                <div>
+                  <h3 class="name">{{ c.name }}</h3>
+                  <div class="titles">
+                    {{ c.ruleset }} <span style="color: var(--parchment-mute);">·</span>
+                    {{ c.member_count }} player{% if c.member_count != 1 %}s{% endif %}
+                  </div>
                 </div>
-              </div>
-              <div class="ts-block">
-                <span class="verb">Start session</span>
-                {% if c.last_played_relative %}last played · {{ c.last_played_relative }}{% else %}never played{% endif %}
-              </div>
-              <button type="submit" class="arrow" aria-label="Start session" style="background: transparent; border: none; padding: 0;">→</button>
+                <div class="ts-block">
+                  <span class="verb">Start session</span>
+                  {% if c.last_played_relative %}last played · {{ c.last_played_relative }}{% else %}never played{% endif %}
+                </div>
+                <span class="arrow" aria-hidden="true">→</span>
+              </button>
             </form>
             {% endif %}
           {% endfor %}
@@ -252,10 +256,14 @@
 {% endif %}
 
 <script>
-  // Tiny progressive-enhancement layer for the dashboard's three
+  // Tiny progressive-enhancement layer for the dashboard's
   // form-based actions (start session, create campaign, join). Each
   // form posts JSON, then either redirects to the session it just
-  // created or refreshes the dashboard.
+  // created or refreshes the dashboard. The dashboard is server-
+  // rendered as a snapshot — there is no live polling. A future
+  // End-session UI on /play/{id} should POST /api/sessions/{id}/end
+  // and then `window.location.assign("/dashboard")` so the user
+  // sees Resume → Start swap on the next render.
   document.querySelectorAll("form[data-on-success]").forEach((form) => {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();

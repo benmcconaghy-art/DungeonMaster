@@ -291,7 +291,8 @@ uv run mypy app                                 # type check
 
 ## Current build phase
 
-**Phase 7 complete; Phase 6.5 (chargen UI) landed 2026-05-01 to
+**Phase 7 complete; Phase 6.5 (chargen UI) and Phase 6.6
+(dashboard Start Session click target) landed 2026-05-01 to
 unblock real play; Phase 8 (Adventure modules) ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.
@@ -487,6 +488,45 @@ up. Promote to a real issue / phase task when its trigger fires.
   sentinel filenames so they're invisible. Don't deserve their own
   PR. **Trigger:** anyone cares.
   **Context:** Phase 4 step-4 close-out.
+
+- **Design-as-static-mock empty-state gaps** (added 2026-05-01,
+  Phase 6.6 close-out, ongoing). Phase 6 surfaced a class of bug
+  where the design handoff's mock data always had a populated
+  state, so empty-state affordances were never exercised. The
+  Phase 6.5 chargen UI 404 was one instance; Phase 6.6's "Start
+  Session as a non-interactive `<span>`" was another (the design's
+  mock campaign always had an active session, so the "no active
+  session → Start Session form" path got rendered with span-only
+  visual elements and no submit button). **How to apply:** when
+  translating a design HTML file, *explicitly* enumerate the
+  populated and empty variants of every list, every conditional
+  affordance, and every state-driven swap. Render each path
+  end-to-end against the real backend (or a test fixture) before
+  closing the phase. The pattern that worked in Phase 6.6: write
+  a server-rendering test for both branches of every
+  ``{% if %}/{% else %}`` in the template that wraps an
+  interactive element. **Trigger:** any future UI-heavy phase
+  taking a design handoff. **Context:** Phase 6.6 commit;
+  ``tests/test_dashboard.py`` is the canonical "both branches
+  asserted" pattern.
+
+- **Dashboard freshness is snapshot-on-load, not polling** (added
+  2026-05-01, Phase 6.6 close-out, target if it bites). The
+  ``/dashboard`` view is server-rendered as a snapshot at request
+  time. There is no live polling; ending a session in the database
+  doesn't auto-refresh an open dashboard tab. **How to apply:**
+  any future End-session UI on the play screen must POST
+  ``/api/sessions/{id}/end`` and then
+  ``window.location.assign("/dashboard")`` so the user sees
+  Resume → Start swap on the next render. The dashboard form
+  handler already supports the
+  ``data-on-success="redirect-to-dashboard"`` shape — match it.
+  Polling is overkill for the spec's 2–4-player concurrency
+  profile; revisit only if multi-tab freshness becomes a real
+  player complaint. **Trigger:** an End-session UI lands, OR a
+  player reports stale dashboard. **Context:** Phase 6.6 commit;
+  comment in ``app/templates/campaign_dashboard.html`` form
+  handler at end of file.
 
 - **Chargen UI does not exist** *(resolved 2026-05-01, Phase 6.5)*.
   Built as a deferred Phase 6 piece that landed before Phase 8

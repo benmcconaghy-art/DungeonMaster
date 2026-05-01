@@ -414,6 +414,24 @@
   text-decoration: none;
   color: inherit;
   transition: border-color 200ms ease, background 200ms ease;
+  /* Reset button defaults so a <button class="campaign-row"> matches
+     the <a class="campaign-row"> sibling. The Start Session variant
+     uses the button form so the whole card is the click target — a
+     6.5 fix after a playthrough surfaced the previous span-only
+     arrow as a non-interactive surface. */
+  font: inherit;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Form wrappers around the .resume-broadside / .campaign-row buttons
+   carry the action; they are visually invisible so the layout reads
+   exactly as the <a> variant. */
+.resume-broadside-form,
+.campaign-row-form {
+  margin: 0;
+  padding: 0;
 }
 .campaign-row:hover { border-color: var(--ember); background: rgba(201,147,62,0.03); }
 .campaign-row .name {
