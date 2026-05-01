@@ -291,9 +291,10 @@ uv run mypy app                                 # type check
 
 ## Current build phase
 
-**Phase 7 complete; Phase 6.5 (chargen UI) and Phase 6.6
-(dashboard Start Session click target) landed 2026-05-01 to
-unblock real play; Phase 8 (Adventure modules) ready to start.**
+**Phase 7 complete; Phase 6.5 (chargen UI), Phase 6.6
+(dashboard Start Session click target), and the Phase 5 image-
+serving route landed 2026-05-01 to unblock real play; Phase 8
+(Adventure modules) ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.
 
@@ -462,6 +463,48 @@ up. Promote to a real issue / phase task when its trigger fires.
   swing this 3-5x. If portrait/scene latency complaints surface,
   capture timing again before tuning. **Context:** commits
   `51d09b4`/`c520651` and the post-Step 6 measurement run.
+
+- **Image-serving route missing** *(resolved 2026-05-01, Phase 5
+  close-out follow-up)*. Spec §8 / §13 imagined an
+  ``X-Accel-Redirect`` flow: FastAPI authorises by campaign
+  membership, sets ``X-Accel-Redirect: /images/<id>.png``, nginx
+  ``internal /images/`` location serves the file. The nginx
+  block was deployed; the FastAPI route was never written, so
+  every ``<img src="/api/images/{id}.png">`` 404'd through the
+  playthrough. Fixed by shipping the route as a plain
+  ``FileResponse`` (Starlette → ``os.sendfile()``) with
+  ``Cache-Control: private, max-age=86400, immutable`` and the
+  same campaign-membership gate the spec described. Authorization
+  failures return 404 (not 403) so a probe can't distinguish
+  "image exists, you can't see it" from "no such image" — relevant
+  for unencountered NPC portraits, which are spoilers. The
+  X-Accel-Redirect optimization is left as a future move; for the
+  spec's 2-4-player single-worker target, sendfile from FastAPI is
+  enough. The nginx ``location /images/`` block in deploy/nginx.conf
+  is now vestigial but harmless. **Files:** ``app/api/images.py``,
+  ``tests/api/test_images.py``.
+
+- **Orphaned-PNG cleanup** (added 2026-05-01, target if disk fills
+  up). The portrait-regen flow writes a fresh PNG every time a
+  player asks; the old ``generated_images`` row is no longer
+  referenced by ``characters.canonical_image_id`` after the swap,
+  but the file (and the row) stay on disk forever. Same shape for
+  any scene image whose narrative moment passes. At spec scale
+  (2-4 players, low-tens of campaigns) this is megabytes; under
+  heavy regen it could grow into the gigabytes. Real fix when
+  triggered: a cron timer that scans ``generated_images`` for
+  rows with no FK pointing at them (``characters.canonical_image_id``,
+  ``npcs.canonical_image_id``, ``locations.image_id``,
+  ``session_messages.image_id``, ``generated_images.source_image_id``)
+  and deletes both row and file after a grace period (a week, so a
+  player can recover from regen-regret). The Phase 5 close-out
+  ``GET /api/images`` handler 404s for missing files so cleanup is
+  player-visible only as a re-render of the regen flow. **Trigger:**
+  ``df`` shows ``/var/lib/dungeon-master/images/`` >50% of disk, OR
+  a player asks why their old portrait is still served when they
+  regenerated. **Context:** Phase 5 close-out commit;
+  ``app/images/worker.py`` ``_persist_and_link`` for the row-write
+  point.
 
 - **GPU squatter ops watch** (added 2026-05-01, ongoing). Phase 5 Step
   6 close-out: a 7GB unrelated process squatting on the 5090 pushed

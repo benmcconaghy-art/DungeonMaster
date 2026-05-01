@@ -32,6 +32,7 @@ from app.api.characters import (
     router as characters_router,
 )
 from app.api.chargen import router as chargen_router
+from app.api.images import router as images_router
 from app.api.portraits import router as portraits_router
 from app.api.sessions import router as sessions_router
 from app.api.ws import router as ws_router
@@ -173,6 +174,7 @@ def create_app() -> FastAPI:
     app.include_router(chargen_router)
     app.include_router(characters_router)
     app.include_router(characters_campaign_router)
+    app.include_router(images_router)
     app.include_router(portraits_router)
     app.include_router(sessions_router)
     app.include_router(ws_router)
