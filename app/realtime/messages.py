@@ -81,6 +81,30 @@ class SnapshotMessage(_BaseMessage):
     created_at: str
 
 
+class SnapshotImageEvent(_BaseMessage):
+    """One historical image-card event rendered into a snapshot.
+
+    Phase 6 prep — without this, a player who reconnects mid-session
+    sees narration messages but not the scene illustrations that
+    arrived ~17s later on the live WS stream. The snapshot replays
+    the ``image_ready`` cards so the table stays coherent.
+
+    Scope: only ``ready`` is emitted today, because that's what the
+    worker persists (one ``generated_images`` row per successful
+    generation). ``pending`` doesn't get a row (it lives on the queue)
+    and ``failed`` doesn't get a row either (the worker's failure path
+    publishes ``image_failed`` and bails). The narrow ready-replay
+    covers the common case — long-tail pending/failed snapshot replay
+    would need a separate session_image_events table. Status field
+    stays in the wire shape for forward compatibility.
+    """
+
+    image_id: str
+    url: str
+    status: Literal["ready", "failed"]
+    created_at: str
+
+
 # ---------------------------------------------------------------------------
 # Server → client
 # ---------------------------------------------------------------------------
@@ -229,6 +253,7 @@ class Snapshot(_BaseMessage):
     current_location_id: str | None
     current_actor: CurrentActor | None
     messages: list[SnapshotMessage]
+    image_events: list[SnapshotImageEvent] = Field(default_factory=list)
     connected: list[PresenceEntry]
 
 
@@ -323,6 +348,7 @@ __all__ = [
     "PresenceEntry",
     "ServerMessage",
     "Snapshot",
+    "SnapshotImageEvent",
     "SnapshotMessage",
     "StateUpdate",
     "Whisper",

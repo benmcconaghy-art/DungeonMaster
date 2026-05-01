@@ -360,14 +360,14 @@
       }
 
       // ---- Image cards ------------------------------------------------------
-      // Phase 5 boundary note: image_pending / image_ready / image_failed
-      // arrive only on the live WS event stream — they're NOT in the
-      // `Snapshot.messages` payload (which restates persisted
-      // `session_messages` only). A player who reconnects mid-generation
-      // sees nothing for that scene until the worker emits image_ready;
-      // at that point the live handler appends a fresh card via the
-      // "no placeholder found" fallback in appendImageReady. Phase 6
-      // may revisit by snapshotting in-flight image_jobs.
+      // Phase 6 prep: snapshot now carries `image_events` — the recent
+      // successful images bound to this session — so a reconnecting
+      // client renders the scene illustrations alongside the narration
+      // that produced them. Pending/failed events still flow only on
+      // the live WS stream (the worker doesn't persist a row for
+      // either), so a reconnect during the brief in-flight window
+      // still relies on the live `image_ready` / `image_failed` to
+      // land for that one slot.
 
       function findImageCard(image_id) {
         if (!image_id) return null;
@@ -490,15 +490,42 @@
       const handlers = {
         snapshot(msg) {
           // Authoritative state on (re)connect: rebuild the log fresh.
+          // Messages and image_events are interleaved by created_at so
+          // an illustration that arrived 17s after a narration block
+          // re-renders in its right place — a player reconnecting
+          // mid-session sees the same chronology a steady-state
+          // viewer saw.
           clearNarration();
+          const events = (msg.image_events || []).map((ev) => ({
+            kind: "image",
+            created_at: ev.created_at,
+            image_id: ev.image_id,
+            url: ev.url,
+          }));
           for (const m of msg.messages || []) {
-            const who = senderLabel(m.sender_kind, m.sender_id);
-            const kind = m.sender_kind === "dm" ? "dm"
-              : m.sender_kind === "player" ? "player"
-              : "system";
-            appendMessage(kind, who, m.content, isoTimeOf(m.created_at));
+            events.push({
+              kind: "message",
+              created_at: m.created_at,
+              data: m,
+            });
           }
-          if (!(msg.messages && msg.messages.length)) {
+          // Stable sort: the snapshot's messages are already in
+          // chronological order; images interleave by their own
+          // created_at. Equal timestamps keep snapshot order.
+          events.sort((a, b) => (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0));
+          for (const ev of events) {
+            if (ev.kind === "message") {
+              const m = ev.data;
+              const who = senderLabel(m.sender_kind, m.sender_id);
+              const kind = m.sender_kind === "dm" ? "dm"
+                : m.sender_kind === "player" ? "player"
+                : "system";
+              appendMessage(kind, who, m.content, isoTimeOf(m.created_at));
+            } else {
+              appendImageReady(ev.image_id, ev.url);
+            }
+          }
+          if (events.length === 0) {
             // Restore the placeholder if the snapshot is empty.
             const p = document.createElement("p");
             p.className = "empty-log";

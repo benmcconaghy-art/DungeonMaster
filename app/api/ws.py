@@ -104,6 +104,17 @@ def _session_lock(session_id: str) -> asyncio.Lock:
 
 
 _SNAPSHOT_MSG_LIMIT = 50
+_SNAPSHOT_IMAGE_LIMIT = 20
+
+
+def _image_url(image_id: str) -> str:
+    """Mirror of ``app.images.worker._image_url`` so the snapshot
+    builds the same URL shape as the live ``image_ready`` broadcast.
+    Kept private here to avoid a worker → ws cross-import; the worker's
+    function is process-local and we don't want a pretend dependency
+    edge in either direction."""
+
+    return f"/api/images/{image_id}.png"
 
 
 async def _build_snapshot(
@@ -152,6 +163,10 @@ async def _build_snapshot(
             )
         )
 
+    image_events = await _build_image_events(
+        db, session_id=session_id, message_window_start=_window_start(snapshot_msgs)
+    )
+
     current_actor = await _resolve_current_actor(db, session_id=session_id)
     roster = await get_presence_registry().roster(session_id)
 
@@ -160,8 +175,64 @@ async def _build_snapshot(
         current_location_id=session.current_location_id,
         current_actor=current_actor,
         messages=snapshot_msgs,
+        image_events=image_events,
         connected=roster,
     )
+
+
+def _window_start(snapshot_msgs: list[ws_msgs.SnapshotMessage]) -> str | None:
+    """Earliest ``created_at`` across the snapshot's message window.
+
+    Returned to filter image events to the same time slice. ``None``
+    means the snapshot has no messages — no point fetching images
+    that would visually float without context.
+    """
+
+    if not snapshot_msgs:
+        return None
+    return min(m.created_at for m in snapshot_msgs)
+
+
+async def _build_image_events(
+    db: Any, *, session_id: str, message_window_start: str | None
+) -> list[ws_msgs.SnapshotImageEvent]:
+    """Fetch the recent successful images for ``session_id`` so a
+    reconnecting client renders the scene illustrations alongside the
+    narration that produced them.
+
+    Only images bound to this session via
+    ``generated_images.session_id`` (Phase 6 prep migration) are
+    returned. The order matches the snapshot's chronological
+    ``messages`` ordering so the client can interleave by
+    ``created_at``.
+
+    Scope (matches :class:`~app.realtime.messages.SnapshotImageEvent`):
+    only ``ready`` events are surfaced. The worker doesn't persist a
+    row for failed generations, and ``pending`` lives only on the
+    queue. Reconnecting into a brief in-flight window means the live
+    ``image_ready`` event still has to land for that one slot —
+    accepted gap for Phase 6.
+    """
+
+    if message_window_start is None:
+        return []
+    stmt = (
+        select(models.GeneratedImage)
+        .where(models.GeneratedImage.session_id == session_id)
+        .where(models.GeneratedImage.created_at >= message_window_start)
+        .order_by(models.GeneratedImage.created_at.asc())
+        .limit(_SNAPSHOT_IMAGE_LIMIT)
+    )
+    rows = list((await db.scalars(stmt)).all())
+    return [
+        ws_msgs.SnapshotImageEvent(
+            image_id=row.id,
+            url=_image_url(row.id),
+            status="ready",
+            created_at=row.created_at,
+        )
+        for row in rows
+    ]
 
 
 @dataclass(frozen=True, slots=True)

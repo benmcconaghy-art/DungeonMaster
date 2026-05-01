@@ -212,6 +212,7 @@ async def _persist_and_link(
             prompt=final_prompt,
             prompt_hash=prompt_hash,
             file_path=str(file_path),
+            session_id=job.session_id,
             width=width,
             height=height,
             source_image_id=job.reference_image_id,

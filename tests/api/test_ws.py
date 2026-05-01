@@ -692,6 +692,105 @@ def test_ws_reconnect_replays_snapshot(
         assert snap2["messages"][0]["content"] == "I look around."
 
 
+def test_ws_snapshot_includes_recent_image_events(
+    ws_setup: tuple[TestClient, FakePubsub, async_sessionmaker[AsyncSession]],
+) -> None:
+    """A reconnecting client receives the recent ``image_ready`` events
+    bound to its session, alongside the message history.
+
+    Without this, a player who joins after the worker has already
+    emitted ``image_ready`` would see narration messages with no
+    accompanying scene illustration — Phase 5 / 6 boundary follow-up.
+    The snapshot now carries the worker-persisted images for the
+    session window so the table re-renders the same chronology a
+    steady-state viewer saw.
+    """
+
+    client_a, _, factory = ws_setup
+    _register_user(client_a, username="alice")
+    campaign = _create_campaign(client_a)
+    _create_character(client_a, campaign["id"])
+    session = _create_session(client_a, campaign["id"])
+
+    # Seed: a narration message, then an image bound to the same
+    # session. Order matters — the image's created_at must be >= the
+    # message's created_at so the snapshot's window picks it up.
+    asyncio.run(
+        _insert_session_message(
+            factory,
+            session_id=session["id"],
+            sender_kind="dm",
+            content="The lanterns are not oil.",
+        )
+    )
+    asyncio.run(
+        _insert_generated_image(
+            factory,
+            campaign_id=campaign["id"],
+            session_id=session["id"],
+            kind="scene",
+            prompt="lanterns over a black oak",
+        )
+    )
+    # And one image for a DIFFERENT session of the same campaign,
+    # which should NOT appear in this snapshot.
+    other_session = _create_session(client_a, campaign["id"])
+    asyncio.run(
+        _insert_generated_image(
+            factory,
+            campaign_id=campaign["id"],
+            session_id=other_session["id"],
+            kind="scene",
+            prompt="a misplaced room in a different session",
+        )
+    )
+
+    with client_a.websocket_connect(f"/ws/session/{session['id']}") as ws_a:
+        snap = _drain_until(ws_a, "snapshot")
+
+    assert snap["messages"][0]["content"] == "The lanterns are not oil."
+    image_events = snap["image_events"]
+    assert len(image_events) == 1
+    event = image_events[0]
+    assert event["status"] == "ready"
+    assert event["url"].endswith(".png")
+    assert event["url"].startswith("/api/images/")
+    # Image_id round-trips so the client can de-dupe against any live
+    # image_ready frame that arrives for the same id during reconnect.
+    assert event["image_id"]
+
+
+def test_ws_snapshot_image_events_skipped_when_no_messages(
+    ws_setup: tuple[TestClient, FakePubsub, async_sessionmaker[AsyncSession]],
+) -> None:
+    """Empty message snapshot yields no image events even if the
+    session has images. Without a message window we have no anchor
+    for the time slice — surfacing all images of the session would
+    eventually grow unbounded as a campaign accumulates scenes."""
+
+    client_a, _, factory = ws_setup
+    _register_user(client_a, username="alice")
+    campaign = _create_campaign(client_a)
+    _create_character(client_a, campaign["id"])
+    session = _create_session(client_a, campaign["id"])
+
+    asyncio.run(
+        _insert_generated_image(
+            factory,
+            campaign_id=campaign["id"],
+            session_id=session["id"],
+            kind="scene",
+            prompt="orphan illustration",
+        )
+    )
+
+    with client_a.websocket_connect(f"/ws/session/{session['id']}") as ws_a:
+        snap = _drain_until(ws_a, "snapshot")
+
+    assert snap["messages"] == []
+    assert snap["image_events"] == []
+
+
 # ---------------------------------------------------------------------------
 # Ping / pong
 # ---------------------------------------------------------------------------
@@ -779,3 +878,40 @@ async def _insert_session_message(
             )
         )
         await db.commit()
+
+
+async def _insert_generated_image(
+    factory: async_sessionmaker[AsyncSession],
+    *,
+    campaign_id: str,
+    session_id: str | None,
+    kind: str,
+    prompt: str,
+) -> str:
+    """Insert a ``generated_images`` row standing in for one the
+    image worker would have written. Returns the new image id so the
+    test can assert against it.
+
+    ``prompt_hash`` is unique-constrained — derive it from prompt +
+    kind + a uuid to guarantee uniqueness across rows in one test.
+    """
+
+    import hashlib
+    import uuid
+
+    image_id = str(uuid.uuid4())
+    h = hashlib.sha256(f"{kind}|{prompt}|{image_id}".encode()).hexdigest()
+    async with factory() as db:
+        db.add(
+            models.GeneratedImage(
+                id=image_id,
+                campaign_id=campaign_id,
+                session_id=session_id,
+                kind=kind,
+                prompt=prompt,
+                prompt_hash=h,
+                file_path=f"/tmp/{image_id}.png",
+            )
+        )
+        await db.commit()
+    return image_id

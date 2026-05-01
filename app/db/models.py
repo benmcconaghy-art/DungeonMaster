@@ -167,6 +167,11 @@ class GeneratedImage(Base):
     prompt: Mapped[str] = mapped_column(Text, nullable=False)
     prompt_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
+    session_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("sessions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     width: Mapped[int | None] = mapped_column(Integer, nullable=True)
     height: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source_image_id: Mapped[str | None] = mapped_column(
@@ -174,6 +179,10 @@ class GeneratedImage(Base):
     )
     edit_instruction: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=_NOW)
+
+    __table_args__ = (
+        Index("idx_generated_images_session_id", "session_id"),
+    )
 
 
 # ---------------------------------------------------------------------------
