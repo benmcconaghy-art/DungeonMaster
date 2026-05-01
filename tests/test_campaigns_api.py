@@ -168,3 +168,171 @@ async def test_session_membership_enforced(client: AsyncClient) -> None:
     await _register_and_login(client, "bob")
     response = await client.get(f"/api/sessions/{session['id']}")
     assert response.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Phase 6: dashboard endpoints
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_list_campaigns_returns_member_campaigns(client: AsyncClient) -> None:
+    """``GET /api/campaigns`` returns campaigns the user belongs to —
+    both as owner and as a redeemed-invite player."""
+
+    await _register_and_login(client, "alice")
+    own_id = await _create_campaign(client, "Alice's Hold")
+    listed = await client.get("/api/campaigns")
+    assert listed.status_code == 200
+    rows = listed.json()
+    assert len(rows) == 1
+    assert rows[0]["id"] == own_id
+    assert rows[0]["owner_id"]
+    # No sessions yet → no last_played, not active.
+    assert rows[0]["last_played_at"] is None
+    assert rows[0]["has_active_session"] is False
+
+
+@pytest.mark.asyncio
+async def test_list_campaigns_requires_auth(client: AsyncClient) -> None:
+    response = await client.get("/api/campaigns")
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_list_campaigns_orders_by_last_played(client: AsyncClient) -> None:
+    """Campaigns with the most recent session activity sort first.
+    The first row is flagged ``most_recent=True``; never-played
+    campaigns sort to the end with ``most_recent=False``."""
+
+    await _register_and_login(client, "alice")
+    older = await _create_campaign(client, "Older Camp")
+    newer = await _create_campaign(client, "Newer Camp")
+    quiet = await _create_campaign(client, "Quiet Camp")
+
+    # Older: a closed session.
+    s1 = (await client.post(f"/api/campaigns/{older}/sessions")).json()
+    await client.post(f"/api/sessions/{s1['id']}/end")
+    # Newer: a more recent active session.
+    await client.post(f"/api/campaigns/{newer}/sessions")
+    # Quiet: no sessions.
+
+    rows = (await client.get("/api/campaigns")).json()
+    ids_in_order = [r["id"] for r in rows]
+    # Newer-active first, older-closed second, quiet last.
+    assert ids_in_order[0] == newer
+    assert ids_in_order[1] == older
+    assert ids_in_order[2] == quiet
+    assert rows[0]["most_recent"] is True
+    assert rows[1]["most_recent"] is False
+    assert rows[2]["most_recent"] is False
+    assert rows[0]["has_active_session"] is True
+    assert rows[1]["has_active_session"] is False
+
+
+@pytest.mark.asyncio
+async def test_get_campaign_includes_characters_and_members(
+    client: AsyncClient,
+) -> None:
+    """``GET /api/campaigns/{id}`` returns the full detail composite
+    the dashboard card needs."""
+
+    await _register_and_login(client, "alice")
+    campaign_id = await _create_campaign(client, "Detail Test")
+    await client.post(
+        f"/api/campaigns/{campaign_id}/characters",
+        json={
+            "name": "Vela",
+            "race": "Human",
+            "class_name": "Cleric",
+            "alignment": "lawful",
+            "abilities": {"str": 11, "int": 10, "wis": 15, "dex": 12, "con": 13, "cha": 14},
+        },
+    )
+    await client.post(f"/api/campaigns/{campaign_id}/sessions")
+
+    detail = (await client.get(f"/api/campaigns/{campaign_id}")).json()
+    assert detail["id"] == campaign_id
+    assert detail["active_session_id"]  # the active session shows up
+    assert any(m["username"] == "alice" for m in detail["members"])
+    members_with_classes = [m for m in detail["members"] if m["character_classes"]]
+    assert any("Cleric" in m["character_classes"] for m in members_with_classes)
+    assert len(detail["characters"]) == 1
+    assert detail["characters"][0]["name"] == "Vela"
+    assert detail["characters"][0]["is_mine"] is True
+    assert len(detail["recent_sessions"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_get_campaign_rejects_non_member(client: AsyncClient) -> None:
+    await _register_and_login(client, "alice")
+    campaign_id = await _create_campaign(client, "Private")
+    await client.post("/api/auth/logout")
+
+    await _register_and_login(client, "bob")
+    response = await client.get(f"/api/campaigns/{campaign_id}")
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_get_campaign_404_when_unknown(client: AsyncClient) -> None:
+    await _register_and_login(client, "alice")
+    response = await client.get("/api/campaigns/does-not-exist")
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_invite_then_join_round_trip(client: AsyncClient) -> None:
+    """Owner mints an invite; a different user redeems it and becomes
+    a player member."""
+
+    await _register_and_login(client, "alice")
+    campaign_id = await _create_campaign(client, "Invite Test")
+
+    invite = await client.post(f"/api/campaigns/{campaign_id}/invite")
+    assert invite.status_code == 201
+    code = invite.json()["code"]
+    assert code
+    assert invite.json()["expires_in_seconds"] >= 24 * 3600
+
+    await client.post("/api/auth/logout")
+    await _register_and_login(client, "bob")
+
+    join = await client.post("/api/campaigns/join", json={"code": code})
+    assert join.status_code == 200
+    assert join.json()["campaign_id"] == campaign_id
+
+    # Bob now sees the campaign in his list.
+    listed = (await client.get("/api/campaigns")).json()
+    assert any(row["id"] == campaign_id for row in listed)
+
+    # Re-redeeming is idempotent — no 409.
+    re_redeem = await client.post("/api/campaigns/join", json={"code": code})
+    assert re_redeem.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_invite_owner_only(client: AsyncClient) -> None:
+    """A non-owner member cannot mint invites — owner privilege only."""
+
+    await _register_and_login(client, "alice")
+    campaign_id = await _create_campaign(client, "Owner-Only Invite")
+    invite = await client.post(f"/api/campaigns/{campaign_id}/invite")
+    code = invite.json()["code"]
+
+    await client.post("/api/auth/logout")
+    await _register_and_login(client, "bob")
+    await client.post("/api/campaigns/join", json={"code": code})
+
+    # Bob is now a player; minting should fail.
+    bob_invite = await client.post(f"/api/campaigns/{campaign_id}/invite")
+    assert bob_invite.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_invite_rejects_garbage(client: AsyncClient) -> None:
+    await _register_and_login(client, "bob")
+    response = await client.post(
+        "/api/campaigns/join", json={"code": "not-a-real-token"}
+    )
+    assert response.status_code == 400

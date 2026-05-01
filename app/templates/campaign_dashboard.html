@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}Campaigns &mdash; Dungeon Master{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/dashboard.css" />
+{% endblock %}
+
+{% block body_class %}dash-screen{% endblock %}
+
+{% block header_campaign_name %}<span class="name" style="font-size: 15px;">Campaigns</span>{% endblock %}
+{% block header_campaign_meta %}your tables · between sessions{% endblock %}
+
+{% block content %}
+
+{% if campaigns %}
+<section class="dash-greeting">
+  <div>
+    <h1>Welcome back, <em>{{ user.username }}</em>.</h1>
+    <div class="sub">
+      {{ campaigns|length }} campaign{% if campaigns|length != 1 %}s{% endif %}
+      <em>·</em>
+      {{ total_my_characters }} character{% if total_my_characters != 1 %}s{% endif %}
+      {% if last_played_relative %}<em>·</em>last played {{ last_played_relative }}{% endif %}
+    </div>
+  </div>
+</section>
+
+<main class="dash-grid">
+
+  <!-- ============ MAIN COLUMN ============ -->
+  <div class="dash-col-main">
+
+    <section aria-label="Your campaigns">
+      <div class="dash-section-head">
+        <h2>Your Campaigns</h2>
+        <span class="meta">{{ campaigns|length }} active</span>
+      </div>
+
+      {% if featured %}
+        {% set fc = featured %}
+        <article class="campaign-featured">
+          <header class="head">
+            <div>
+              <h3 class="name">{{ fc.name }}</h3>
+              <div class="titles">
+                <span>{{ fc.ruleset }}</span>
+                {% if fc.has_active_session %}
+                  <span class="sep">·</span>
+                  <span class="ts">in progress</span>
+                {% elif fc.last_played_at %}
+                  <span class="sep">·</span>
+                  <span class="ts">paused {{ fc.last_played_relative }}</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="head-side">
+              {{ fc.member_count }} member{% if fc.member_count != 1 %}s{% endif %}
+            </div>
+          </header>
+
+          <div class="at-the-table">
+            <div class="label">▣ at the table</div>
+            <div class="members">
+              {% for m in fc.members %}
+                <span class="member">{{ m.username }}{% if m.character_classes %} <em>{{ m.character_classes|join(", ")|lower }}</em>{% endif %}</span>
+              {% endfor %}
+            </div>
+          </div>
+
+          {% if fc.active_session_id %}
+            <a class="resume-broadside" href="/play/{{ fc.active_session_id }}" aria-label="Resume current session of {{ fc.name }}">
+              <span class="seal" aria-hidden="true"><span class="seal-glyph">{{ fc.seal_glyph }}</span></span>
+              <span>
+                <span class="verb">Resume Session</span>
+                <span class="where">{{ fc.resume_caption or "the table awaits" }}</span>
+              </span>
+              <span class="arrow" aria-hidden="true">→</span>
+            </a>
+          {% else %}
+            <form class="resume-broadside" method="post" action="/api/campaigns/{{ fc.id }}/sessions" data-on-success="redirect-to-session" aria-label="Start a new session of {{ fc.name }}">
+              <span class="seal" aria-hidden="true"><span class="seal-glyph">{{ fc.seal_glyph }}</span></span>
+              <span>
+                <span class="verb">Start Session</span>
+                <span class="where">three rolls and a name — the road begins</span>
+              </span>
+              <span class="arrow" aria-hidden="true">→</span>
+            </form>
+          {% endif %}
+
+          <div class="dash-section-head" style="margin-bottom: var(--s-3);">
+            <h2 style="font-size: 9px;">Your Characters Here</h2>
+            <span class="meta">
+              {{ fc.my_characters|length }} alive
+            </span>
+          </div>
+
+          {% if fc.my_characters %}
+            <div class="char-strip">
+              {% for character in fc.my_characters %}
+                <a href="/characters/{{ character.id }}" class="char-card{% if loop.first %} last-played{% endif %}" aria-label="Open {{ character.name }}'s character sheet">
+                  <div class="char-avatar">
+                    {% if character.canonical_image_id %}
+                      <img src="/api/images/{{ character.canonical_image_id }}.png"
+                           alt="Portrait of {{ character.name }}" loading="lazy" />
+                    {% else %}
+                      <span class="initial">{{ character.name[:1]|upper }}</span>
+                    {% endif %}
+                  </div>
+                  <div class="body">
+                    <h4 class="name">{{ character.name }}</h4>
+                    <div class="titles">{{ character.race|lower }} · {{ character.class_name|lower }} · lvl {{ character.level }}</div>
+                    <div class="hp-row">
+                      {% set hp_pct = ((character.hp_current / character.hp_max * 100) | round(0, 'floor')) | int if character.hp_max else 0 %}
+                      {% set hp_low = (character.hp_current * 3) <= character.hp_max %}
+                      <div class="hp-bar{% if hp_low %} low{% endif %}"><span style="width: {{ hp_pct }}%"></span></div>
+                      <span class="hp-text{% if hp_low %} low{% endif %}">{{ character.hp_current }}/{{ character.hp_max }}</span>
+                    </div>
+                  </div>
+                  <div class="stat-pill">
+                    <span class="ac">AC {{ character.ac }}</span>
+                    <span>{{ character.xp }} xp</span>
+                  </div>
+                </a>
+              {% endfor %}
+            </div>
+            <a href="/campaigns/{{ fc.id }}/characters/new" class="char-roll" aria-label="Roll a new character for {{ fc.name }}">
+              <span class="glyph">+</span> Roll a new character
+            </a>
+          {% else %}
+            <a href="/campaigns/{{ fc.id }}/characters/new" class="char-roll hero" aria-label="Roll a new character for {{ fc.name }}">
+              <span class="glyph">+</span> Roll a new character
+            </a>
+          {% endif %}
+        </article>
+      {% endif %}
+
+      {% if other_campaigns %}
+        <div style="margin-top: var(--s-2); display: flex; flex-direction: column; gap: var(--s-3);">
+          {% for c in other_campaigns %}
+            {% if c.active_session_id %}
+            <a href="/play/{{ c.active_session_id }}" class="campaign-row">
+              <div>
+                <h3 class="name">{{ c.name }}</h3>
+                <div class="titles">
+                  {{ c.ruleset }} <span style="color: var(--parchment-mute);">·</span>
+                  {{ c.member_count }} player{% if c.member_count != 1 %}s{% endif %}
+                </div>
+              </div>
+              <div class="ts-block">
+                <span class="verb">Resume session</span>
+                {% if c.last_played_relative %}last played · {{ c.last_played_relative }}{% else %}never played{% endif %}
+              </div>
+              <span class="arrow" aria-hidden="true">→</span>
+            </a>
+            {% else %}
+            <form method="post" action="/api/campaigns/{{ c.id }}/sessions" class="campaign-row" data-on-success="redirect-to-session">
+              <div>
+                <h3 class="name">{{ c.name }}</h3>
+                <div class="titles">
+                  {{ c.ruleset }} <span style="color: var(--parchment-mute);">·</span>
+                  {{ c.member_count }} player{% if c.member_count != 1 %}s{% endif %}
+                </div>
+              </div>
+              <div class="ts-block">
+                <span class="verb">Start session</span>
+                {% if c.last_played_relative %}last played · {{ c.last_played_relative }}{% else %}never played{% endif %}
+              </div>
+              <button type="submit" class="arrow" aria-label="Start session" style="background: transparent; border: none; padding: 0;">→</button>
+            </form>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+    </section>
+
+  </div>
+
+  <!-- ============ SIDE RAIL ============ -->
+  <aside class="dash-col-side" aria-label="Recent sessions and quick actions">
+
+    <section class="side-panel" aria-label="Quick actions">
+      <h2>Quick actions</h2>
+      <form class="new-campaign-form" method="post" action="/api/campaigns" data-on-success="redirect-to-dashboard">
+        <input type="text" name="name" required placeholder="New campaign name" aria-label="New campaign name" />
+        <button type="submit"><span class="verb">+ Create campaign</span></button>
+      </form>
+
+      <div style="padding: var(--s-3) 0 0;">
+        <span style="font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.2em; font-size: 10px; color: var(--parchment-mute);">Join via invite</span>
+        <form class="invite-form" method="post" action="/api/campaigns/join" data-on-success="redirect-to-dashboard">
+          <input type="text" name="code" required placeholder="invite code" aria-label="Campaign invite code" />
+          <button type="submit">Join</button>
+        </form>
+      </div>
+    </section>
+
+    {% if recent_sessions %}
+    <section class="side-panel" aria-label="Recent sessions">
+      <h2>Recent sessions</h2>
+      <ul class="recent-list">
+        {% for entry in recent_sessions %}
+          <li>
+            {% if entry.active_session_id %}
+              <a class="recent-item" href="/play/{{ entry.active_session_id }}">
+            {% else %}
+              <div class="recent-item">
+            {% endif %}
+              <div class="head">
+                <span class="campaign-name">{{ entry.campaign_name }}</span>
+                <span class="ts">{{ entry.relative }}</span>
+              </div>
+              {% if entry.summary %}
+                <p class="summary">{{ entry.summary }}</p>
+              {% else %}
+                <p class="summary empty">no summary yet — too early in the chapter</p>
+              {% endif %}
+            {% if entry.active_session_id %}</a>{% else %}</div>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+  </aside>
+</main>
+
+{% else %}
+<!-- Empty state — no campaigns yet. Hero version of the QUICK
+     ACTIONS panel sits centre-stage. -->
+<section class="dash-empty-hero">
+  <h1>Welcome, {{ user.username }}.</h1>
+  <p class="subtitle">
+    A table for two to four travellers, narrated by the wandering DM.
+    Begin a new campaign, or join one you've been invited to.
+  </p>
+  <section class="side-panel" aria-label="Get started">
+    <h2>Begin</h2>
+    <form class="new-campaign-form" method="post" action="/api/campaigns" data-on-success="redirect-to-dashboard">
+      <input type="text" name="name" required placeholder="Name your campaign" aria-label="New campaign name" />
+      <button type="submit"><span class="verb">+ Create campaign</span></button>
+    </form>
+    <div style="padding: var(--s-3) 0 0;">
+      <span style="font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.2em; font-size: 10px; color: var(--parchment-mute);">Join via invite</span>
+      <form class="invite-form" method="post" action="/api/campaigns/join" data-on-success="redirect-to-dashboard">
+        <input type="text" name="code" required placeholder="invite code" aria-label="Campaign invite code" />
+        <button type="submit">Join</button>
+      </form>
+    </div>
+  </section>
+</section>
+{% endif %}
+
+<script>
+  // Tiny progressive-enhancement layer for the dashboard's three
+  // form-based actions (start session, create campaign, join). Each
+  // form posts JSON, then either redirects to the session it just
+  // created or refreshes the dashboard.
+  document.querySelectorAll("form[data-on-success]").forEach((form) => {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const action = form.dataset.onSuccess;
+      const data = Object.fromEntries(new FormData(form));
+      let response;
+      try {
+        response = await fetch(form.action, {
+          method: form.method.toUpperCase() || "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(data),
+          credentials: "same-origin",
+        });
+      } catch (err) {
+        alert("Network error — please try again.");
+        return;
+      }
+      if (!response.ok) {
+        let detail = "Request failed.";
+        try { detail = (await response.json()).detail || detail; } catch (e) { /* ignore */ }
+        alert(detail);
+        return;
+      }
+      const body = await response.json().catch(() => ({}));
+      if (action === "redirect-to-session" && body.id) {
+        window.location.href = `/play/${body.id}`;
+      } else if (action === "redirect-to-dashboard") {
+        window.location.href = "/dashboard";
+      } else {
+        window.location.reload();
+      }
+    });
+  });
+</script>
+
+{% endblock %}

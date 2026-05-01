@@ -37,6 +37,7 @@ from app.images.portrait import get_queue_client
 from app.images.portrait import reset_for_tests as reset_queue_client
 from app.llm.client import DmClientError, get_dm_client
 from app.realtime.pubsub import DmPubsubError, get_pubsub
+from app.views import dashboard as dashboard_view
 
 log = logging.getLogger(__name__)
 
@@ -160,6 +161,15 @@ def create_app() -> FastAPI:
     @app.get("/login", response_class=HTMLResponse)
     async def login_form(request: Request) -> HTMLResponse:
         return _TEMPLATES.TemplateResponse(request, "login.html", {})
+
+    @app.get("/dashboard", response_class=HTMLResponse)
+    async def dashboard(
+        request: Request,
+        user: CurrentUser,
+        db: DbSession,
+    ) -> HTMLResponse:
+        ctx = await dashboard_view.build_context(db, user=user)
+        return _TEMPLATES.TemplateResponse(request, "campaign_dashboard.html", ctx)
 
     @app.get("/play/{session_id}", response_class=HTMLResponse)
     async def play_screen(
