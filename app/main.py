@@ -31,6 +31,7 @@ from app.api.characters import (
 from app.api.characters import (
     router as characters_router,
 )
+from app.api.chargen import router as chargen_router
 from app.api.portraits import router as portraits_router
 from app.api.sessions import router as sessions_router
 from app.api.ws import router as ws_router
@@ -44,6 +45,7 @@ from app.llm.client import DmClientError, get_dm_client
 from app.logging_config import configure_logging
 from app.middleware import AccessLogMiddleware, RequestIdMiddleware
 from app.realtime.pubsub import DmPubsubError, get_pubsub
+from app.views import chargen as chargen_view
 from app.views import dashboard as dashboard_view
 
 log = logging.getLogger(__name__)
@@ -168,6 +170,7 @@ def create_app() -> FastAPI:
 
     app.include_router(auth_router)
     app.include_router(campaigns_router)
+    app.include_router(chargen_router)
     app.include_router(characters_router)
     app.include_router(characters_campaign_router)
     app.include_router(portraits_router)
@@ -204,6 +207,16 @@ def create_app() -> FastAPI:
     ) -> HTMLResponse:
         ctx = await dashboard_view.build_context(db, user=user)
         return _TEMPLATES.TemplateResponse(request, "campaign_dashboard.html", ctx)
+
+    @app.get("/campaigns/{campaign_id}/chargen", response_class=HTMLResponse)
+    async def chargen_page(
+        request: Request,
+        campaign_id: str,
+        user: CurrentUser,
+        db: DbSession,
+    ) -> HTMLResponse:
+        ctx = await chargen_view.build_context(db, campaign_id=campaign_id, user=user)
+        return _TEMPLATES.TemplateResponse(request, "chargen.html", ctx)
 
     @app.get("/characters/{character_id}", response_class=HTMLResponse)
     async def character_sheet(

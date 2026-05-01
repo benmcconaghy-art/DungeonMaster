@@ -1,0 +1,452 @@
+/* chargen.css — character creation view (Phase 6.5).
+   Inherits tokens.css; reuses panel + ability-tile + chip idioms
+   from sheet.css and table.css. Single page, progressive reveal:
+   later sections wear .cg-locked until the prior step has a value. */
+
+.cg-screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* ----- Banner & step pills ----- */
+.cg-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  padding: var(--s-6) clamp(var(--s-6), 5vw, var(--s-8)) var(--s-8);
+  max-width: 1080px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.cg-banner {
+  border-bottom: 1px solid var(--rule-soft);
+  padding-bottom: var(--s-5);
+}
+.cg-banner h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 44px;
+  line-height: 1;
+  margin: 0 0 var(--s-3);
+  letter-spacing: 0.02em;
+  color: var(--parchment);
+}
+.cg-banner .blurb {
+  font-family: var(--font-prose);
+  font-style: italic;
+  color: var(--parchment-2);
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0 0 var(--s-5);
+  max-width: 64ch;
+}
+.cg-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.cg-pill {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  padding: 4px 10px;
+  border: 1px solid var(--rule-strong);
+  color: var(--parchment-mute);
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 2px;
+  transition: color 200ms ease, border-color 200ms ease;
+}
+.cg-pill.is-done {
+  color: var(--ember);
+  border-color: var(--ember);
+}
+
+/* ----- Panel base (mirrors .s-panel from sheet.css) ----- */
+.cg-panel {
+  background: linear-gradient(to bottom, var(--vellum-1), rgba(28, 24, 18, 0.6));
+  border: 1px solid var(--rule-soft);
+  padding: var(--s-5);
+  position: relative;
+  transition: opacity 220ms ease, filter 220ms ease;
+}
+.cg-panel > h2 {
+  margin: 0 0 var(--s-3);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 11px;
+  color: var(--parchment-dim);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 500;
+  border-bottom: 1px solid var(--rule-soft);
+  padding-bottom: var(--s-2);
+}
+.cg-panel > h2 .meta {
+  color: var(--parchment-mute);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+/* Locked sections fade and don't accept clicks until the prior step
+   resolves. Buttons inside still respond to focus styles for a11y;
+   pointer-events:none would hide them entirely. */
+.cg-panel.cg-locked {
+  opacity: 0.42;
+  filter: saturate(0.6);
+  pointer-events: none;
+}
+
+/* ----- Method chips ----- */
+.cg-method {
+  display: flex;
+  gap: var(--s-2);
+  margin-bottom: var(--s-4);
+}
+.cg-method-chip {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  padding: 5px 12px;
+  border: 1px solid var(--rule-strong);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--parchment-dim);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: color 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+.cg-method-chip em {
+  font-style: italic;
+  color: var(--parchment-mute);
+  font-family: var(--font-mono);
+  margin-left: 6px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.cg-method-chip:hover {
+  color: var(--parchment);
+  border-color: var(--ember);
+}
+.cg-method-chip.is-selected {
+  color: var(--ember);
+  border-color: var(--ember);
+  background: rgba(201, 147, 62, 0.08);
+}
+.cg-method-chip.is-selected em {
+  color: var(--ember);
+}
+
+/* ----- Abilities grid (reuses .ability tile from sheet.css) ----- */
+.cg-abilities {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--s-2);
+  margin-bottom: var(--s-4);
+}
+@media (max-width: 720px) {
+  .cg-abilities { grid-template-columns: repeat(3, 1fr); }
+}
+
+.cg-ability {
+  border: 1px solid var(--rule-soft);
+  padding: var(--s-3) var(--s-2);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.2);
+}
+.cg-ability .label {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 10px;
+  color: var(--parchment-mute);
+}
+.cg-ability .score {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  color: var(--parchment);
+  margin: 4px 0 0;
+  line-height: 1;
+  transition: opacity 200ms ease, transform 200ms ease, filter 200ms ease;
+}
+.cg-ability .mod {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ember);
+  margin-top: 2px;
+  transition: opacity 200ms ease;
+}
+.cg-ability .mod.zero { color: var(--parchment-mute); }
+.cg-ability .mod.neg  { color: var(--rust); }
+
+/* Re-roll animation. The "rolling" state holds while we wait for the
+   server; "settling" plays once when the new value arrives. The
+   visual point is that the player sees the dice settle, not a silent
+   number swap. */
+.cg-ability.rolling .score {
+  opacity: 0.18;
+  transform: translateY(-3px) scale(0.92);
+  filter: blur(2px);
+}
+.cg-ability.rolling .mod { opacity: 0.18; }
+
+.cg-ability.settling .score {
+  animation: cg-settle 380ms ease-out;
+}
+@keyframes cg-settle {
+  0%   { transform: translateY(2px) scale(1.05); opacity: 0.6; }
+  50%  { transform: translateY(0)   scale(1.02); opacity: 1; }
+  100% { transform: translateY(0)   scale(1);    opacity: 1; }
+}
+
+.cg-roll-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+.cg-reroll {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 12px;
+  padding: var(--s-2) var(--s-4);
+  background: transparent;
+  border: 1px solid var(--ember);
+  color: var(--ember);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease;
+}
+.cg-reroll:hover {
+  background: rgba(201, 147, 62, 0.12);
+}
+.cg-roll-hint {
+  font-family: var(--font-prose);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--parchment-mute);
+}
+
+/* ----- Card grid (race / class / alignment) ----- */
+.cg-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--s-3);
+}
+@media (max-width: 720px) {
+  .cg-cards { grid-template-columns: 1fr; }
+}
+
+.cg-card {
+  text-align: left;
+  background: linear-gradient(to bottom, var(--vellum-2), var(--vellum-1));
+  border: 1px solid var(--rule-strong);
+  outline: 1px solid var(--rule-soft);
+  outline-offset: 3px;
+  padding: var(--s-4);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  position: relative;
+  transition: border-color 180ms ease, transform 120ms ease, opacity 220ms ease, filter 220ms ease;
+}
+.cg-card:hover:not(:disabled):not(.cg-ineligible) {
+  border-color: var(--ember);
+  transform: translateY(-1px);
+}
+.cg-card.is-selected {
+  border-color: var(--ember);
+  background: linear-gradient(to bottom, var(--vellum-3), var(--vellum-2));
+  box-shadow: 0 0 0 1px var(--ember) inset;
+}
+.cg-card.cg-ineligible {
+  opacity: 0.42;
+  filter: saturate(0.5);
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.cg-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-3);
+  border-bottom: 1px dotted var(--rule-soft);
+  padding-bottom: var(--s-2);
+}
+.cg-card-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--parchment);
+}
+.cg-card-meta {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 10px;
+  color: var(--parchment-mute);
+}
+.cg-card-blurb {
+  font-family: var(--font-prose);
+  font-style: italic;
+  color: var(--parchment-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin: 0;
+}
+.cg-card-reqs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: auto;
+}
+.cg-chip {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  padding: 3px 8px;
+  border: 1px solid var(--rule-strong);
+  color: var(--parchment-dim);
+  background: rgba(0, 0, 0, 0.2);
+}
+.cg-chip-soft {
+  border-style: dashed;
+  color: var(--parchment-mute);
+  text-transform: none;
+  letter-spacing: 0.04em;
+  font-family: var(--font-prose);
+  font-size: 11px;
+  font-style: italic;
+}
+.cg-card-fail {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--rust);
+  letter-spacing: 0.02em;
+  margin-top: 4px;
+}
+
+/* ----- Alignment cards (single row of three) ----- */
+.cg-alignments {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-3);
+}
+@media (max-width: 720px) {
+  .cg-alignments { grid-template-columns: 1fr; }
+}
+.cg-align-card {
+  text-align: center;
+  align-items: center;
+}
+.cg-align-card .cg-card-name {
+  font-size: 17px;
+  letter-spacing: 0.06em;
+}
+
+/* ----- Name + commit ----- */
+.cg-name-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.cg-name-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 10px;
+  color: var(--parchment-mute);
+}
+.cg-name-form input[type="text"] {
+  font: inherit;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--rule-soft);
+  color: var(--parchment);
+  padding: 10px 12px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  outline: none;
+  border-radius: var(--radius-sm);
+}
+.cg-name-form input[type="text"]:focus {
+  border-color: var(--ember);
+}
+
+.cg-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border: 1px solid var(--rule-soft);
+  background: rgba(0, 0, 0, 0.18);
+}
+@media (max-width: 720px) {
+  .cg-summary { grid-template-columns: 1fr; }
+}
+.cg-sum-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cg-sum-key {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 10px;
+  color: var(--parchment-mute);
+}
+.cg-sum-row em {
+  font-style: italic;
+  font-family: var(--font-prose);
+  color: var(--parchment);
+  font-size: 14px;
+}
+
+.cg-commit {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 13px;
+  padding: var(--s-3) var(--s-6);
+  background: linear-gradient(to bottom, var(--ember), var(--ember-deep));
+  color: var(--ink-bg);
+  border: 1px solid var(--ember-deep);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.cg-commit:hover:not(:disabled) { background: var(--ember-bright); }
+.cg-commit:disabled {
+  background: var(--vellum-3);
+  color: var(--parchment-mute);
+  border-color: var(--rule-strong);
+  cursor: not-allowed;
+}
+
+.cg-error {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--rust);
+  margin: 0;
+}

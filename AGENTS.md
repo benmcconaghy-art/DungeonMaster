@@ -291,7 +291,8 @@ uv run mypy app                                 # type check
 
 ## Current build phase
 
-**Phase 7 complete; Phase 8 (Adventure modules) ready to start.**
+**Phase 7 complete; Phase 6.5 (chargen UI) landed 2026-05-01 to
+unblock real play; Phase 8 (Adventure modules) ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.
 
@@ -487,17 +488,24 @@ up. Promote to a real issue / phase task when its trigger fires.
   PR. **Trigger:** anyone cares.
   **Context:** Phase 4 step-4 close-out.
 
-- **Chargen UI does not exist** (added 2026-05-01, Phase 6 close-out,
-  target Phase 7 prep). The dashboard's "Roll a new character" link
-  navigates to `/campaigns/{id}/characters/new` — a route that
-  doesn't exist yet. The chargen API endpoint
-  (`POST /api/campaigns/{id}/characters`) is fully wired and tested,
-  but no HTML form posts to it. Either build the form (race +
-  class + alignment + method picker, ability-roll preview) or
-  redirect the link to the API + a confirm dialog for now.
-  **Trigger:** Phase 7 prep, OR a player notices the broken link.
-  **Context:** `app/templates/campaign_dashboard.html` `.char-roll`
-  hrefs; `app/api/characters.py` `roll_character`.
+- **Chargen UI does not exist** *(resolved 2026-05-01, Phase 6.5)*.
+  Built as a deferred Phase 6 piece that landed before Phase 8
+  because real play blocked on it (the curl-only path was
+  unsustainable for a fresh campaign). Single page at
+  `/campaigns/{id}/chargen` with progressive reveal: abilities
+  (3d6 / 4d6kh3 toggle, re-roll with settle animation) → heritage
+  (eligibility filtered by race ability requirements, ineligible
+  cards dim with their failed minimum) → calling (filtered to
+  `race.allowed_classes`) → alignment → name → commit. New endpoint
+  `POST /api/chargen/roll-abilities` is the only API addition; the
+  commit reuses the existing `POST /api/campaigns/{id}/characters`.
+  Eligibility is a JS data-table lookup, not a BFRPG mechanic, so
+  no rules surface in the frontend; server-side `generate_character`
+  remains authoritative on commit. Files:
+  `app/templates/chargen.html`, `app/static/css/chargen.css`,
+  `app/views/chargen.py`, `app/api/chargen.py`,
+  `tests/api/test_chargen.py`. Dashboard `.char-roll` hrefs now
+  point at `/campaigns/{id}/chargen`.
 
 - **Dashboard list-campaigns N+1 queries** (added 2026-05-01, Phase 6
   close-out, target if it ever bites). `app/api/campaigns.list_campaigns`

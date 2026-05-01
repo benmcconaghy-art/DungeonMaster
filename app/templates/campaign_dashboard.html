@@ -124,11 +124,11 @@
                 </a>
               {% endfor %}
             </div>
-            <a href="/campaigns/{{ fc.id }}/characters/new" class="char-roll" aria-label="Roll a new character for {{ fc.name }}">
+            <a href="/campaigns/{{ fc.id }}/chargen" class="char-roll" aria-label="Roll a new character for {{ fc.name }}">
               <span class="glyph">+</span> Roll a new character
             </a>
           {% else %}
-            <a href="/campaigns/{{ fc.id }}/characters/new" class="char-roll hero" aria-label="Roll a new character for {{ fc.name }}">
+            <a href="/campaigns/{{ fc.id }}/chargen" class="char-roll hero" aria-label="Roll a new character for {{ fc.name }}">
               <span class="glyph">+</span> Roll a new character
             </a>
           {% endif %}

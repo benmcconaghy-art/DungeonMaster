@@ -1,0 +1,522 @@
+{% extends "base.html" %}
+
+{% block title %}Roll a new character &mdash; {{ campaign.name }} &mdash; Dungeon Master{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/chargen.css" />
+{% endblock %}
+
+{% block body_class %}cg-screen{% endblock %}
+
+{% block header_campaign_name %}<span class="name" style="font-size: 15px;">Roll a new character</span>{% endblock %}
+{% block header_campaign_meta %}for {{ campaign.name|lower }} · three rolls and a name{% endblock %}
+
+{% block content %}
+<main class="cg-shell">
+
+  <section class="cg-banner">
+    <h1>A new traveller</h1>
+    <p class="blurb">
+      Six abilities fall in order — strength, intellect, wisdom, dexterity,
+      constitution, charisma. Heritage answers what you are; calling, what you
+      do. The dice settle the rest.
+    </p>
+    <ol class="cg-steps" aria-label="chargen steps">
+      <li class="cg-pill" data-step="abilities">① Abilities</li>
+      <li class="cg-pill" data-step="race">② Heritage</li>
+      <li class="cg-pill" data-step="class">③ Calling</li>
+      <li class="cg-pill" data-step="alignment">④ Alignment</li>
+      <li class="cg-pill" data-step="name">⑤ Name</li>
+    </ol>
+  </section>
+
+  <!-- Step 1: Abilities -->
+  <section class="cg-panel" data-section="abilities">
+    <h2>
+      Abilities
+      <span class="meta" id="cg-method-meta">3d6 in order</span>
+    </h2>
+
+    <div class="cg-method" role="group" aria-label="ability roll method">
+      <button type="button" class="cg-method-chip is-selected" data-method="classic">
+        Classic <em>3d6</em>
+      </button>
+      <button type="button" class="cg-method-chip" data-method="heroic">
+        Heroic <em>4d6 drop lowest</em>
+      </button>
+    </div>
+
+    <div class="cg-abilities" id="cg-abilities">
+      {% for key, label in [("str","Str"),("int","Int"),("wis","Wis"),("dex","Dex"),("con","Con"),("cha","Cha")] %}
+        {% set a = abilities[key] %}
+        <div class="ability cg-ability" data-ability="{{ key }}">
+          <div class="label">{{ label }}</div>
+          <div class="score">{{ a.score }}</div>
+          <div class="mod{% if a.modifier == 0 %} zero{% elif a.modifier < 0 %} neg{% endif %}">
+            {{ "%+d"|format(a.modifier) }}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="cg-roll-row">
+      <button type="button" class="cg-reroll" id="cg-reroll" aria-label="Roll the dice again">
+        ⤿ Roll again
+      </button>
+      <span class="cg-roll-hint">re-rolls replace the current set; nothing persists until you commit</span>
+    </div>
+  </section>
+
+  <!-- Step 2: Heritage / race -->
+  <section class="cg-panel" data-section="race">
+    <h2>
+      Heritage
+      <span class="meta" id="cg-race-meta">eligibility from your roll</span>
+    </h2>
+    <div class="cg-cards" id="cg-races">
+      {% for race in races %}
+        <button type="button" class="cg-card cg-race-card" data-race="{{ race.name }}">
+          <header class="cg-card-head">
+            <span class="cg-card-name">{{ race.name }}</span>
+            <span class="cg-card-meta">{{ race.allowed_classes|join(' · ') }}</span>
+          </header>
+          {% if race.description %}
+            <p class="cg-card-blurb">{{ race.description|trim }}</p>
+          {% endif %}
+          <div class="cg-card-reqs">
+            {% if race.ability_requirements %}
+              {% for ab, req in race.ability_requirements.items() %}
+                <span class="cg-chip">
+                  {{ ab|upper }}
+                  {%- if req.min is not none %} ≥ {{ req.min }}{% endif -%}
+                  {%- if req.max is not none %} ≤ {{ req.max }}{% endif -%}
+                </span>
+              {% endfor %}
+            {% else %}
+              <span class="cg-chip cg-chip-soft">no requirements</span>
+            {% endif %}
+          </div>
+          <div class="cg-card-fail" hidden></div>
+        </button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Step 3: Calling / class -->
+  <section class="cg-panel cg-locked" data-section="class">
+    <h2>
+      Calling
+      <span class="meta" id="cg-class-meta">choose a heritage first</span>
+    </h2>
+    <div class="cg-cards" id="cg-classes">
+      {% for cls in classes %}
+        <button type="button" class="cg-card cg-class-card" data-class="{{ cls.name }}">
+          <header class="cg-card-head">
+            <span class="cg-card-name">{{ cls.name }}</span>
+            <span class="cg-card-meta">hit die {{ cls.hit_die }} · prime {{ cls.prime_requisite }}</span>
+          </header>
+          {% if cls.description %}
+            <p class="cg-card-blurb">{{ cls.description|trim }}</p>
+          {% endif %}
+          <div class="cg-card-reqs">
+            {% if cls.prime_req_bonus_threshold %}
+              <span class="cg-chip">{{ cls.prime_requisite }} {{ cls.prime_req_bonus_threshold }}+ → +5% XP</span>
+            {% endif %}
+            <span class="cg-chip cg-chip-soft">{{ cls.weapon_restrictions }}</span>
+            <span class="cg-chip cg-chip-soft">{{ cls.armour_restrictions }}</span>
+          </div>
+        </button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Step 4: Alignment -->
+  <section class="cg-panel cg-locked" data-section="alignment">
+    <h2>
+      Alignment
+      <span class="meta" id="cg-alignment-meta">choose a calling first</span>
+    </h2>
+    <div class="cg-alignments" id="cg-alignments">
+      <button type="button" class="cg-card cg-align-card" data-alignment="lawful">
+        <span class="cg-card-name">Lawful</span>
+        <p class="cg-card-blurb">Order, oath, the codified path.</p>
+      </button>
+      <button type="button" class="cg-card cg-align-card" data-alignment="neutral">
+        <span class="cg-card-name">Neutral</span>
+        <p class="cg-card-blurb">Balance, kin, the practical road.</p>
+      </button>
+      <button type="button" class="cg-card cg-align-card" data-alignment="chaotic">
+        <span class="cg-card-name">Chaotic</span>
+        <p class="cg-card-blurb">Whim, wildness, the hidden door.</p>
+      </button>
+    </div>
+  </section>
+
+  <!-- Step 5: Name + commit -->
+  <section class="cg-panel cg-locked" data-section="name">
+    <h2>
+      Name
+      <span class="meta">what the chronicles will call you</span>
+    </h2>
+    <form class="cg-name-form" id="cg-form" autocomplete="off">
+      <label class="cg-name-label">
+        <span>Character name</span>
+        <input type="text" name="name" id="cg-name" required minlength="1" maxlength="80"
+               placeholder="a name to ride under" />
+      </label>
+
+      <div class="cg-summary" aria-label="rolled summary">
+        <div class="cg-sum-row"><span class="cg-sum-key">heritage</span><em id="cg-sum-race">—</em></div>
+        <div class="cg-sum-row"><span class="cg-sum-key">calling</span><em id="cg-sum-class">—</em></div>
+        <div class="cg-sum-row"><span class="cg-sum-key">alignment</span><em id="cg-sum-alignment">—</em></div>
+      </div>
+
+      <button type="submit" id="cg-commit" class="cg-commit" disabled>
+        ⚔ Commit — bind the dice
+      </button>
+      <p class="cg-error" id="cg-error" hidden role="status"></p>
+    </form>
+  </section>
+
+</main>
+
+<script id="cg-data" type="application/json">
+{
+  "campaign_id": {{ campaign.id|tojson }},
+  "abilities": {{ abilities|tojson }},
+  "races": {{ races|tojson }}
+}
+</script>
+
+<script>
+  // Chargen client — state machine + eligibility filter + re-roll
+  // animation. Does NOT implement BFRPG mechanics: eligibility is a
+  // data-table lookup (race ability_requirements + allowed_classes
+  // + allowed_alignments). Server-side validation in
+  // generate_character is authoritative on commit.
+  (function () {
+    const data = JSON.parse(document.getElementById("cg-data").textContent);
+    const RACES_BY_NAME = Object.fromEntries(data.races.map((r) => [r.name, r]));
+
+    const state = {
+      method: "classic",
+      abilities: data.abilities, // {str: {score, modifier}, ...}
+      race: null,
+      className: null,
+      alignment: null,
+      rolling: false,
+    };
+
+    function modSign(n) { return (n >= 0 ? "+" : "") + n; }
+
+    function checkRace(race, abilities) {
+      const failures = [];
+      for (const [ab, req] of Object.entries(race.ability_requirements || {})) {
+        const score = abilities[ab].score;
+        if (req.min != null && score < req.min) {
+          failures.push(`${ab.toUpperCase()} ${score} < ${req.min}`);
+        }
+        if (req.max != null && score > req.max) {
+          failures.push(`${ab.toUpperCase()} ${score} > ${req.max}`);
+        }
+      }
+      return { ok: failures.length === 0, failures };
+    }
+
+    function renderAbilities() {
+      document.querySelectorAll(".cg-ability").forEach((tile) => {
+        const key = tile.dataset.ability;
+        const a = state.abilities[key];
+        tile.querySelector(".score").textContent = a.score;
+        const modEl = tile.querySelector(".mod");
+        modEl.textContent = modSign(a.modifier);
+        modEl.classList.toggle("zero", a.modifier === 0);
+        modEl.classList.toggle("neg", a.modifier < 0);
+      });
+    }
+
+    function renderRaceEligibility() {
+      document.querySelectorAll(".cg-race-card").forEach((card) => {
+        const race = RACES_BY_NAME[card.dataset.race];
+        const check = checkRace(race, state.abilities);
+        card.classList.toggle("cg-ineligible", !check.ok);
+        card.disabled = !check.ok;
+        const failEl = card.querySelector(".cg-card-fail");
+        if (check.ok) {
+          failEl.hidden = true;
+          failEl.textContent = "";
+        } else {
+          failEl.hidden = false;
+          failEl.textContent = "needs " + check.failures.join(", ");
+        }
+      });
+    }
+
+    function renderClassesForRace() {
+      const race = state.race ? RACES_BY_NAME[state.race] : null;
+      const allowed = new Set(race ? race.allowed_classes : []);
+      document.querySelectorAll(".cg-class-card").forEach((card) => {
+        const ok = allowed.has(card.dataset.class);
+        card.classList.toggle("cg-ineligible", !ok);
+        card.disabled = !ok;
+      });
+    }
+
+    function renderAlignmentsForRace() {
+      const race = state.race ? RACES_BY_NAME[state.race] : null;
+      const allowed = new Set(race ? race.allowed_alignments : []);
+      document.querySelectorAll(".cg-align-card").forEach((card) => {
+        const ok = allowed.has(card.dataset.alignment);
+        card.classList.toggle("cg-ineligible", !ok);
+        card.disabled = !ok;
+      });
+    }
+
+    function updateGates() {
+      // Section gating: each panel unlocks once the prior step has a value.
+      const classPanel = document.querySelector('[data-section="class"]');
+      const alignPanel = document.querySelector('[data-section="alignment"]');
+      const namePanel = document.querySelector('[data-section="name"]');
+
+      classPanel.classList.toggle("cg-locked", !state.race);
+      alignPanel.classList.toggle("cg-locked", !state.className);
+      namePanel.classList.toggle("cg-locked", !state.alignment);
+
+      document.getElementById("cg-class-meta").textContent =
+        state.race ? `for ${state.race.toLowerCase()}` : "choose a heritage first";
+      document.getElementById("cg-alignment-meta").textContent =
+        state.className ? `for the ${state.className.toLowerCase()}` : "choose a calling first";
+
+      document.getElementById("cg-sum-race").textContent = state.race || "—";
+      document.getElementById("cg-sum-class").textContent = state.className || "—";
+      document.getElementById("cg-sum-alignment").textContent = state.alignment || "—";
+
+      // Step pills indicate progress.
+      const stepProgress = {
+        abilities: true,
+        race: !!state.race,
+        class: !!state.className,
+        alignment: !!state.alignment,
+        name: false, // becomes true on submit
+      };
+      document.querySelectorAll(".cg-pill").forEach((pill) => {
+        pill.classList.toggle("is-done", stepProgress[pill.dataset.step] === true);
+      });
+
+      // Commit gating — name is checked separately in the input listener.
+      const nameVal = document.getElementById("cg-name").value.trim();
+      document.getElementById("cg-commit").disabled = !(
+        state.race && state.className && state.alignment && nameVal.length > 0
+      );
+    }
+
+    function resetDownstreamFromAbilities() {
+      // After a re-roll, if the previously-picked race no longer
+      // qualifies, drop race + class + alignment so we don't carry
+      // a stale selection into commit.
+      if (state.race) {
+        const r = RACES_BY_NAME[state.race];
+        if (!checkRace(r, state.abilities).ok) {
+          state.race = null;
+          state.className = null;
+          state.alignment = null;
+        }
+      }
+      renderRaceSelection();
+      renderClassSelection();
+      renderAlignmentSelection();
+      updateGates();
+    }
+
+    function renderRaceSelection() {
+      document.querySelectorAll(".cg-race-card").forEach((card) => {
+        card.classList.toggle("is-selected", card.dataset.race === state.race);
+      });
+    }
+    function renderClassSelection() {
+      document.querySelectorAll(".cg-class-card").forEach((card) => {
+        card.classList.toggle("is-selected", card.dataset.class === state.className);
+      });
+    }
+    function renderAlignmentSelection() {
+      document.querySelectorAll(".cg-align-card").forEach((card) => {
+        card.classList.toggle("is-selected", card.dataset.alignment === state.alignment);
+      });
+    }
+
+    // ---- Re-roll with settle animation ----------------------------------
+    async function reroll() {
+      if (state.rolling) return;
+      state.rolling = true;
+      const tiles = document.querySelectorAll(".cg-ability");
+      tiles.forEach((t) => { t.classList.add("rolling"); t.classList.remove("settling"); });
+
+      let response;
+      try {
+        response = await fetch("/api/chargen/roll-abilities", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ method: state.method }),
+        });
+      } catch (e) {
+        tiles.forEach((t) => t.classList.remove("rolling"));
+        state.rolling = false;
+        return;
+      }
+
+      // Hold the "rolling" state visible briefly so the player sees
+      // the dice settle rather than a silent number swap.
+      const wait = new Promise((r) => setTimeout(r, 260));
+      const body = await response.json().catch(() => null);
+      await wait;
+
+      if (!response.ok || !body || !body.abilities) {
+        tiles.forEach((t) => t.classList.remove("rolling"));
+        state.rolling = false;
+        return;
+      }
+
+      state.abilities = body.abilities;
+      renderAbilities();
+      tiles.forEach((t) => {
+        t.classList.remove("rolling");
+        t.classList.add("settling");
+      });
+      // Cleanup the settle class once the animation finishes.
+      setTimeout(() => {
+        tiles.forEach((t) => t.classList.remove("settling"));
+      }, 420);
+
+      renderRaceEligibility();
+      resetDownstreamFromAbilities();
+      state.rolling = false;
+    }
+
+    // ---- Wiring --------------------------------------------------------
+
+    document.querySelectorAll(".cg-method-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        state.method = chip.dataset.method;
+        document.querySelectorAll(".cg-method-chip").forEach((c) =>
+          c.classList.toggle("is-selected", c === chip));
+        document.getElementById("cg-method-meta").textContent =
+          state.method === "heroic" ? "4d6 drop lowest, in order" : "3d6 in order";
+        // Switching method auto-re-rolls so the player sees the new
+        // distribution immediately — they're already saying "I want
+        // a different roll".
+        reroll();
+      });
+    });
+
+    document.getElementById("cg-reroll").addEventListener("click", reroll);
+
+    document.querySelectorAll(".cg-race-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        if (card.disabled) return;
+        state.race = card.dataset.race;
+        // Picking a new race invalidates downstream picks if they no
+        // longer fit (e.g. dwarf can't be a magic-user).
+        const race = RACES_BY_NAME[state.race];
+        if (state.className && !race.allowed_classes.includes(state.className)) {
+          state.className = null;
+        }
+        if (state.alignment && !race.allowed_alignments.includes(state.alignment)) {
+          state.alignment = null;
+        }
+        renderRaceSelection();
+        renderClassSelection();
+        renderAlignmentSelection();
+        renderClassesForRace();
+        renderAlignmentsForRace();
+        updateGates();
+      });
+    });
+
+    document.querySelectorAll(".cg-class-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        if (card.disabled) return;
+        state.className = card.dataset.class;
+        renderClassSelection();
+        updateGates();
+      });
+    });
+
+    document.querySelectorAll(".cg-align-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        if (card.disabled) return;
+        state.alignment = card.dataset.alignment;
+        renderAlignmentSelection();
+        updateGates();
+      });
+    });
+
+    document.getElementById("cg-name").addEventListener("input", updateGates);
+
+    document.getElementById("cg-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const nameVal = document.getElementById("cg-name").value.trim();
+      if (!state.race || !state.className || !state.alignment || !nameVal) return;
+
+      const submit = document.getElementById("cg-commit");
+      const errEl = document.getElementById("cg-error");
+      errEl.hidden = true;
+      submit.disabled = true;
+      submit.textContent = "⚔ committing…";
+
+      const abilitiesForCommit = {
+        str: state.abilities.str.score,
+        int: state.abilities.int.score,
+        wis: state.abilities.wis.score,
+        dex: state.abilities.dex.score,
+        con: state.abilities.con.score,
+        cha: state.abilities.cha.score,
+      };
+
+      let response;
+      try {
+        response = await fetch(
+          `/api/campaigns/${data.campaign_id}/characters`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({
+              name: nameVal,
+              race: state.race,
+              class_name: state.className,
+              alignment: state.alignment,
+              method: state.method,
+              abilities: abilitiesForCommit,
+            }),
+          }
+        );
+      } catch (e) {
+        errEl.textContent = "Network error — please try again.";
+        errEl.hidden = false;
+        submit.disabled = false;
+        submit.textContent = "⚔ Commit — bind the dice";
+        return;
+      }
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        errEl.textContent = body.detail || "The dice refuse — try a different combination.";
+        errEl.hidden = false;
+        submit.disabled = false;
+        submit.textContent = "⚔ Commit — bind the dice";
+        return;
+      }
+
+      const character = await response.json();
+      window.location.assign(`/characters/${character.id}`);
+    });
+
+    // Initial paint.
+    renderRaceEligibility();
+    renderClassesForRace();
+    renderAlignmentsForRace();
+    updateGates();
+  })();
+</script>
+{% endblock %}
