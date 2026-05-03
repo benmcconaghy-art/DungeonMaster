@@ -134,6 +134,26 @@ modules. Single-server deployment on AlmaLinux 10.1, trusted internal LAN.
     still writes one `dm` `SessionMessage` per turn — `stream_id` is
     purely a streaming-UX construct.
 
+16. **Tool-call args that fail to parse must not propagate to
+    subsequent prompt history.** The OpenAI assistant-message shape
+    requires `tool_calls[].function.arguments` to be a JSON-encoded
+    string; vLLM re-renders the conversation through Nemotron's chat
+    template before sending the next request, so a malformed
+    `arguments` string embedded there trips an HTTP 400
+    ("Expecting property name…") that wedges every subsequent turn in
+    the session. The orchestrator's `_classify_tool_call` gate runs
+    before the assistant audit message is built — calls that fail
+    JSON parse, schema validation, or handler resolution are dropped
+    from history and replaced with a single sanitised system note
+    (`_TOOL_REJECTION_RECOVERY_NOTE`); honourable calls land in the
+    audit unchanged. `_safe_arguments_string` is a defence-in-depth
+    fallback inside `_assistant_message_for_audit`. A regression that
+    let a malformed `arguments` string propagate (by adding a new
+    failure path that doesn't classify, or by appending the assistant
+    audit before classification) would re-introduce the Phase 6.9
+    wedge bug. Real-traffic evidence: 2026-05-03 playthrough,
+    `deploy/PLAYTHROUGH_2026-05-03.md`.
+
 ## Tech stack
 
 - Python 3.12
@@ -234,6 +254,21 @@ async model within one worker. See spec §13 for rationale.
   unit-testing them locally with stubbed paths and a mock alert hook
   doesn't require root or a real systemd.
 
+### Orchestrator
+- **Every Nemotron-shaped failure mode the orchestrator catches must
+  produce conversation history that is itself a valid prompt for
+  vLLM.** The orchestrator's job is not to record what happened; it's
+  to keep the model in a state where it can continue. When you add a
+  new failure path (a new tool, a new validation check, a new error
+  class), audit two things: (a) does the resulting `messages` list
+  still send cleanly to vLLM on the next iteration? (b) does the
+  model have enough context to recover, or does it need a sanitised
+  recovery note? "Catch the error and surface a tool result" is the
+  right shape *only* when the resulting prompt is itself well-formed.
+  See Critical Invariant #16 and Phase 6.9 close-out for the canonical
+  case where this got it wrong (malformed tool-call `arguments`
+  poisoned the next request).
+
 ### Tests
 - Each new module gets a parallel `tests/test_<module>.py` from day one.
 - pytest + pytest-asyncio. `@pytest.mark.asyncio` on async tests.
@@ -333,8 +368,12 @@ uv run mypy app                                 # type check
 serving route, and the Phase 6.8 playthrough fixes (per-iteration
 narration stream_id, dice multiplier parser, transition_location
 name resolver, ID-discipline prompt rule, opening DM turn on
-session create) landed 2026-05-01 to unblock real play; Phase 8
-(Adventure modules) ready to start.**
+session create) landed 2026-05-01 to unblock real play; Phase 6.9
+(tool-error history hygiene — classify-then-dispatch in
+`_dispatch_one`, malformed calls dropped from prompt history,
+sanitised recovery system note) landed 2026-05-03 from the same
+day's 90-minute playthrough findings; Phase 8 (Adventure modules)
+ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.
 

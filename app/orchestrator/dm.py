@@ -191,6 +191,29 @@ _MAX_TOOL_ITERATIONS = 10
 _JSON_FENCE_RE = re.compile(r"```json\s*(?P<body>.+?)\s*```", re.DOTALL)
 
 
+# System note appended to ``messages`` when the orchestrator rejects one
+# or more tool calls in an iteration. The wording is deliberate:
+#
+#   * honest about what happened ("rejected as malformed and discarded")
+#     so the model doesn't try to narrate a phantom outcome;
+#   * instructive about recovery ("describe what you intended in
+#     narration or try again") so the next iteration has a clear path;
+#   * neutral in tone — no apology framing that would leak into the
+#     model's narration as in-character contrition.
+#
+# Frozen as a module constant so future edits to the recovery message
+# are deliberate and so tests can assert against the exact string.
+# Critical Invariant: this note replaces the rejected tool call in
+# prompt history; the malformed assistant message itself MUST NOT be
+# appended (vLLM re-parses ``tool_calls[].function.arguments`` when
+# rendering the conversation, and an invalid string there wedges every
+# subsequent turn with HTTP 400).
+_TOOL_REJECTION_RECOVERY_NOTE = (
+    "[engine: an attempted tool call was rejected as malformed and discarded;"
+    " describe what you intended in narration or try again]"
+)
+
+
 # ---------------------------------------------------------------------------
 # Streaming helpers
 # ---------------------------------------------------------------------------
@@ -246,6 +269,70 @@ class _AccumulatedToolCall:
 # ---------------------------------------------------------------------------
 # JSON-block fallback parser
 # ---------------------------------------------------------------------------
+
+
+def _classify_tool_call(tc: _AccumulatedToolCall) -> tuple[str, str] | None:
+    """Pre-flight gate: can this tool call be safely honoured?
+
+    Returns ``None`` if the call parses as JSON, validates against the
+    registered Pydantic schema, and has a registered handler. Returns
+    ``(reason, message)`` if any of those gates fails.
+
+    Rejected calls must NOT propagate to subsequent prompt history. The
+    OpenAI assistant-message shape requires ``tool_calls[].function.
+    arguments`` to be a JSON-encoded string; vLLM re-renders the
+    conversation through Nemotron's chat template before sending the
+    next request, and a malformed ``arguments`` string there trips an
+    HTTP 400 ("Expecting property name…") that wedges every subsequent
+    turn in the session. This is the Phase 6.9 close-out fix's
+    structural gate: classify up-front, then assemble the assistant
+    audit from the surviving subset only.
+    """
+
+    if not tc.is_complete():
+        return (
+            "incomplete_tool_call",
+            f"tool-call fragment never finished assembling: name={tc.name!r}",
+        )
+    try:
+        raw_args = tc.parsed_arguments()
+    except ValueError as exc:
+        return ("invalid_tool_args", f"invalid arguments JSON: {exc}")
+    try:
+        parse_tool_args(tc.name, raw_args)
+    except KeyError as exc:
+        return ("unknown_tool", f"unknown tool: {exc}")
+    except Exception as exc:
+        return ("invalid_tool_args", f"tool args failed validation: {exc}")
+    if get_handler(tc.name) is None:
+        return (
+            "not_implemented",
+            f"tool {tc.name!r} is declared but has no Phase 2 handler;"
+            " try a different approach.",
+        )
+    return None
+
+
+def _safe_arguments_string(raw: str) -> str:
+    """Coerce a tool-call ``arguments`` string to a JSON-valid object.
+
+    Defence-in-depth: :func:`_classify_tool_call` rejects malformed
+    calls before the assistant audit message is built, so in normal
+    operation ``raw`` is already a JSON object string. This helper is
+    regression insurance — if a future code path ever lets a malformed
+    string slip through to :func:`_assistant_message_for_audit`, the
+    assistant audit message stays vLLM-valid by substituting ``"{}"``.
+    """
+
+    if not raw:
+        return "{}"
+    try:
+        parsed = json.loads(raw)
+    except ValueError:
+        return "{}"
+    if not isinstance(parsed, dict):
+        return "{}"
+    return raw
 
 
 def _extract_fallback_tool_call(content: str) -> tuple[str, dict[str, Any]] | None:
@@ -439,22 +526,62 @@ async def take_turn(
                 accumulated_content = _JSON_FENCE_RE.sub("", accumulated_content).strip()
 
         if accumulated_tool_calls:
-            # Append the assistant message that *requested* the tool calls
-            # so the next round's prompt has the audit trail.
-            assistant_audit = _assistant_message_for_audit(
-                accumulated_content, accumulated_tool_calls
-            )
-            messages.append(assistant_audit)
+            # Classify each tool call up-front (Phase 6.9 close-out fix).
+            # Honourable calls — parse cleanly, validate against the
+            # schema, have a registered handler — dispatch normally and
+            # land in the assistant audit message. Rejected calls are
+            # dropped from prompt history because their malformed
+            # ``arguments`` string would re-poison the next vLLM request
+            # and wedge the session.
+            honourable_calls: dict[int, _AccumulatedToolCall] = {}
+            rejection_events: list[DmEvent] = []
+            for idx, tc in accumulated_tool_calls.items():
+                rejection = _classify_tool_call(tc)
+                if rejection is None:
+                    honourable_calls[idx] = tc
+                else:
+                    reason, message = rejection
+                    log.warning(
+                        "dm.py: rejecting tool call (reason=%s, name=%s, message=%s)",
+                        reason,
+                        tc.name,
+                        message,
+                    )
+                    rejection_events.append(DmError(reason=reason, message=message))
 
-            for tc in sorted(accumulated_tool_calls.values(), key=lambda t: t.index):
-                async for event, audit_msg in _dispatch_one(db, dispatch_ctx, tc):
-                    if audit_msg is not None:
-                        messages.append(audit_msg)
-                        final_tool_calls_audit.append(_tool_call_audit_record(tc))
-                    if event is not None:
-                        yield event
-            # Loop back for another stream; the model now sees the tool
-            # results in the message history.
+            if honourable_calls:
+                # Build the assistant audit message from honourable
+                # calls only — by construction the resulting message is
+                # a vLLM-valid OpenAI shape.
+                assistant_audit = _assistant_message_for_audit(
+                    accumulated_content, honourable_calls
+                )
+                messages.append(assistant_audit)
+                for tc in sorted(honourable_calls.values(), key=lambda t: t.index):
+                    async for event, audit_msg in _dispatch_one(db, dispatch_ctx, tc):
+                        if audit_msg is not None:
+                            messages.append(audit_msg)
+                            final_tool_calls_audit.append(_tool_call_audit_record(tc))
+                        if event is not None:
+                            yield event
+            elif accumulated_content.strip():
+                # No tool calls survived classification but the model
+                # did narrate. Preserve the prose (without any
+                # ``tool_calls`` field) so the next iteration's prompt
+                # still carries the model's intent.
+                messages.append({"role": "assistant", "content": accumulated_content})
+
+            # Surface rejection events to the WS layer (the player sees
+            # them as in-log [ERROR] entries) and append a single
+            # sanitised system note so the next iteration's model has a
+            # clean recovery signal without seeing the malformed call.
+            for event in rejection_events:
+                yield event
+            if rejection_events:
+                messages.append({"role": "system", "content": _TOOL_REJECTION_RECOVERY_NOTE})
+
+            # Loop back for another stream; the model now sees the
+            # honourable tool results (and any recovery note) in history.
             continue
 
         # No tool calls — this is the final narration.
@@ -783,6 +910,13 @@ def _assistant_message_for_audit(
     immediately preceding the ``tool`` messages — without it, sending
     the next stream raises ``messages.X.role: ...``. Build the
     canonical shape here.
+
+    The orchestrator's :func:`_classify_tool_call` gate filters out any
+    call whose ``arguments`` aren't valid JSON before this builder is
+    invoked, so in normal operation the embedded strings are already
+    safe. :func:`_safe_arguments_string` is regression insurance: if a
+    future code path lets a malformed string slip through, we substitute
+    ``"{}"`` rather than embed a vLLM-poisoning value.
     """
 
     tool_calls = []
@@ -793,7 +927,7 @@ def _assistant_message_for_audit(
                 "type": "function",
                 "function": {
                     "name": tc.name,
-                    "arguments": tc.arguments or "{}",
+                    "arguments": _safe_arguments_string(tc.arguments),
                 },
             }
         )
