@@ -32,7 +32,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import metrics
-from app.db.models import SessionMessage
+from app.db.models import Character, SessionMessage
 from app.db.session import SessionLocal
 from app.llm.client import RunawayTokenError, get_dm_client
 from app.llm.memory import (
@@ -630,9 +630,21 @@ async def take_turn(
     # Each task opens its OWN database session — we don't pass ``db`` in
     # because the caller (SSE bridge) closes it as soon as this generator
     # returns.
+    #
+    # Speaker attribution (AGENTS.md invariant #17): the fact extractor
+    # sees only ``player_action`` / ``dm_response`` strings, not the
+    # raw SessionMessage row, so we attach the same ``[Name, Class]:``
+    # prefix the prompt builder uses. Otherwise facts extracted from a
+    # multi-PC turn ("I ask the bartender for rumours") get attributed
+    # to the wrong character. Opening turns have no player speaker.
+    attributed_action = content
+    if not opening and sender_character_id is not None:
+        speaker = await db.get(Character, sender_character_id)
+        if speaker is not None:
+            attributed_action = f"[{speaker.name}, {speaker.class_name}]: {content}"
     _schedule_post_turn_memory(
         session_id=session_id,
-        player_action=content,
+        player_action=attributed_action,
         dm_response=final_assistant_text,
     )
 

@@ -273,3 +273,187 @@ async def test_build_dm_prompt_unknown_session_raises(db_session) -> None:  # ty
 
     with pytest.raises(ValueError, match="unknown session_id"):
         await build_dm_prompt(db_session, session_id="nonexistent")
+
+
+# ---------------------------------------------------------------------------
+# Phase 6.10 — speaker attribution (AGENTS.md invariant #17)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_role_block_explains_attribution_prefix(db_session) -> None:  # type: ignore[no-untyped-def]
+    """Phase 6.10: the [ROLE] block tells the model how to interpret the
+    ``[Name, Class]:`` prefix on player messages — otherwise the model
+    would treat the brackets as part of the player's words.
+    """
+
+    user = await make_user(db_session)
+    campaign = await make_campaign(db_session, owner_id=user.id)
+    session = await make_session(db_session, campaign_id=campaign.id)
+    await db_session.commit()
+
+    messages = await build_dm_prompt(db_session, session_id=session.id)
+    body = messages[0]["content"]
+
+    role_start = body.index("[ROLE]")
+    rules_start = body.index("[RULES SUMMARY]")
+    role_block = body[role_start:rules_start]
+
+    # The instruction must (a) name the prefix shape, (b) flag it as
+    # engine metadata not fiction, (c) tell the model to address the
+    # named character.
+    assert "PLAYER ATTRIBUTION" in role_block
+    assert "[Character Name, Class]" in role_block
+    assert "engine metadata" in role_block
+    assert "not fiction" in role_block.lower() or "NOT part of" in role_block
+
+
+@pytest.mark.asyncio
+async def test_player_message_carries_attribution_prefix(db_session) -> None:  # type: ignore[no-untyped-def]
+    """Phase 6.10: a player message persisted with sender_id=character_id
+    is rendered with ``[Name, Class]:`` prepended in the chat-completions
+    list. Without this prefix the DM cannot disambiguate speakers in a
+    multi-PC party."""
+
+    user = await make_user(db_session)
+    campaign = await make_campaign(db_session, owner_id=user.id)
+    char = await make_character(
+        db_session,
+        user_id=user.id,
+        campaign_id=campaign.id,
+        name="Slowhand",
+        class_name="Fighter",
+    )
+    session = await make_session(db_session, campaign_id=campaign.id)
+    await make_message(
+        db_session,
+        session_id=session.id,
+        sender_kind="player",
+        sender_id=char.id,
+        content="I draw my axe and charge the goblin.",
+    )
+    await db_session.commit()
+
+    messages = await build_dm_prompt(db_session, session_id=session.id)
+    user_messages = [m for m in messages[1:] if m["role"] == "user"]
+    assert len(user_messages) == 1
+    assert user_messages[0]["content"] == (
+        "[Slowhand, Fighter]: I draw my axe and charge the goblin."
+    )
+
+
+@pytest.mark.asyncio
+async def test_attribution_disambiguates_multi_character_party(db_session) -> None:  # type: ignore[no-untyped-def]
+    """Phase 6.10: the canonical multi-PC case — Slowhand and Lila both
+    speak in turn, and each user message must carry the right
+    attribution. This is the bug that motivated the fix.
+    """
+
+    user = await make_user(db_session)
+    campaign = await make_campaign(db_session, owner_id=user.id)
+    slowhand = await make_character(
+        db_session,
+        user_id=user.id,
+        campaign_id=campaign.id,
+        name="Slowhand",
+        class_name="Fighter",
+    )
+    lila = await make_character(
+        db_session,
+        user_id=user.id,
+        campaign_id=campaign.id,
+        name="Lila",
+        class_name="Magic-User",
+    )
+    session = await make_session(db_session, campaign_id=campaign.id)
+    await make_message(
+        db_session,
+        session_id=session.id,
+        sender_kind="player",
+        sender_id=slowhand.id,
+        content="I need help, I got beat up bad.",
+    )
+    await asyncio.sleep(0.005)
+    await make_message(
+        db_session,
+        session_id=session.id,
+        sender_kind="player",
+        sender_id=lila.id,
+        content="I rummage in my pack for a healing potion.",
+    )
+    await db_session.commit()
+
+    messages = await build_dm_prompt(db_session, session_id=session.id)
+    user_msgs = [m for m in messages[1:] if m["role"] == "user"]
+    assert len(user_msgs) == 2
+    assert user_msgs[0]["content"] == ("[Slowhand, Fighter]: I need help, I got beat up bad.")
+    assert user_msgs[1]["content"] == (
+        "[Lila, Magic-User]: I rummage in my pack for a healing potion."
+    )
+
+
+@pytest.mark.asyncio
+async def test_attribution_resolves_dead_character_from_history(db_session) -> None:  # type: ignore[no-untyped-def]
+    """Phase 6.10: a recently-deceased PC's earlier messages still carry
+    their attribution. The character index includes all statuses so
+    the prompt history stays consistent across the death event.
+    """
+
+    user = await make_user(db_session)
+    campaign = await make_campaign(db_session, owner_id=user.id)
+    mort = await make_character(
+        db_session,
+        user_id=user.id,
+        campaign_id=campaign.id,
+        name="Mort",
+        class_name="Cleric",
+        status="dead",
+    )
+    session = await make_session(db_session, campaign_id=campaign.id)
+    await make_message(
+        db_session,
+        session_id=session.id,
+        sender_kind="player",
+        sender_id=mort.id,
+        content="I cast cure light wounds on myself.",
+    )
+    await db_session.commit()
+
+    messages = await build_dm_prompt(db_session, session_id=session.id)
+    user_msgs = [m for m in messages[1:] if m["role"] == "user"]
+    assert user_msgs[0]["content"] == ("[Mort, Cleric]: I cast cure light wounds on myself.")
+
+
+@pytest.mark.asyncio
+async def test_attribution_skipped_when_sender_id_unresolvable(db_session) -> None:  # type: ignore[no-untyped-def]
+    """Phase 6.10: a player row whose sender_id doesn't resolve (legacy
+    data, missing character) degrades gracefully to a bare user message
+    rather than emitting a half-formed prefix. Better silent than wrong.
+    """
+
+    user = await make_user(db_session)
+    campaign = await make_campaign(db_session, owner_id=user.id)
+    session = await make_session(db_session, campaign_id=campaign.id)
+    # No sender_id at all — same as legacy Phase 2 fixtures.
+    await make_message(
+        db_session,
+        session_id=session.id,
+        sender_kind="player",
+        content="I look around.",
+    )
+    # And a sender_id that doesn't reference any character row.
+    await make_message(
+        db_session,
+        session_id=session.id,
+        sender_kind="player",
+        sender_id="no-such-character-id",
+        content="I keep looking.",
+    )
+    await db_session.commit()
+
+    messages = await build_dm_prompt(db_session, session_id=session.id)
+    user_msgs = [m for m in messages[1:] if m["role"] == "user"]
+    # No prefix on either — graceful degradation, not a malformed
+    # ``[None, None]:`` shape.
+    assert all("[" not in m["content"][:1] for m in user_msgs)
+    assert [m["content"] for m in user_msgs] == ["I look around.", "I keep looking."]

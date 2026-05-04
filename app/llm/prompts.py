@@ -67,6 +67,23 @@ _ROLE_TEXT = (
     "    against the campaign's existing entities or creates new ones as needed.\n"
     "    Surfacing a database id to the player is a fourth-wall break.\n"
     "\n"
+    "PLAYER ATTRIBUTION — multi-character parties:\n"
+    "  - Player messages arrive prefixed with [Character Name, Class]:\n"
+    '    e.g. "[Slowhand, Fighter]: I draw my axe and charge the goblin."\n'
+    "    The bracketed prefix is engine metadata identifying the speaking\n"
+    "    character — it is NOT part of what the player typed. Do not echo\n"
+    "    it back, do not treat it as fiction.\n"
+    "  - Address the named character. Resolve the action that character\n"
+    "    declared, and never mistake one PC's action for another's. Never\n"
+    "    ask the player to clarify which character is speaking — the\n"
+    "    prefix tells you.\n"
+    "  - When more than one PC is in the scene, name the speaker once at\n"
+    '    the start of the response so "you" is unambiguous to everyone\n'
+    '    at the table — e.g. "Lila, you scan the common room…".\n'
+    "    Otherwise the other players cannot tell who acted.\n"
+    "  - A message without a prefix is engine context (a system note),\n"
+    "    not a player utterance.\n"
+    "\n"
     "PACING — give the player a turn back (critical for agency):\n"
     "  - Always narrate. Always describe what happens. Pacing is about\n"
     "    when to wrap up, not whether to write — close the message with a\n"
@@ -134,6 +151,14 @@ async def build_dm_prompt(
     )
     characters = list((await db.scalars(characters_stmt)).all())
 
+    # Speaker-attribution index: every character in the campaign, regardless
+    # of status, so a recently-deceased PC's earlier turns still get attributed
+    # in the prompt history. AGENTS.md invariant #17.
+    attribution_stmt = select(Character).where(Character.campaign_id == campaign.id)
+    character_index: dict[str, tuple[str, str]] = {
+        ch.id: (ch.name, ch.class_name) for ch in (await db.scalars(attribution_stmt)).all()
+    }
+
     encounters_stmt = (
         select(Encounter)
         .where(Encounter.session_id == session.id)
@@ -167,7 +192,7 @@ async def build_dm_prompt(
     )
 
     messages: list[dict[str, Any]] = [{"role": "system", "content": system_text}]
-    messages.extend(_recent_turns_to_messages(turns))
+    messages.extend(_recent_turns_to_messages(turns, character_index=character_index))
     return messages
 
 
@@ -338,7 +363,11 @@ def _render_encounters(encounters: list[Encounter]) -> str:
     return "\n".join(parts)
 
 
-def _recent_turns_to_messages(turns: list[SessionMessage]) -> list[dict[str, Any]]:
+def _recent_turns_to_messages(
+    turns: list[SessionMessage],
+    *,
+    character_index: dict[str, tuple[str, str]] | None = None,
+) -> list[dict[str, Any]]:
     """Convert verbatim ``SessionMessage`` rows into chat-completions messages.
 
     Mapping:
@@ -351,12 +380,25 @@ def _recent_turns_to_messages(turns: list[SessionMessage]) -> list[dict[str, Any
     see what it whispered so it stays consistent. Phase 5+ multi-player
     will filter for the *receiving* player but the DM-side prompt
     always sees everything.
+
+    Player messages are prefixed with ``[Name, Class]:`` when the
+    speaker resolves through ``character_index``. The OpenAI chat format
+    has no per-message speaker field that vLLM/Nemotron's chat template
+    is guaranteed to honour, so attribution lives in the message body.
+    See AGENTS.md invariant #17.
     """
+
+    index = character_index or {}
 
     out: list[dict[str, Any]] = []
     for msg in turns:
         if msg.sender_kind == "player":
-            out.append({"role": "user", "content": msg.content})
+            content = msg.content
+            speaker = index.get(msg.sender_id) if msg.sender_id else None
+            if speaker is not None:
+                name, class_name = speaker
+                content = f"[{name}, {class_name}]: {content}"
+            out.append({"role": "user", "content": content})
         elif msg.sender_kind == "dm":
             entry: dict[str, Any] = {"role": "assistant", "content": msg.content}
             if msg.tool_calls:

@@ -154,6 +154,33 @@ modules. Single-server deployment on AlmaLinux 10.1, trusted internal LAN.
     wedge bug. Real-traffic evidence: 2026-05-03 playthrough,
     `deploy/PLAYTHROUGH_2026-05-03.md`.
 
+17. **Player messages in DM prompts must carry character
+    attribution.** The OpenAI chat format has no per-message
+    speaker field that vLLM's chat-template render is guaranteed
+    to honour, so attribution lives in the message body as a
+    `[Character Name, Class]:` prefix on every player turn.
+    Without this, multi-PC parties drive the DM to ask "who's
+    speaking?" mid-scene (Phase 6.10 playthrough symptom: a
+    Lila-typed action was attributed to Slowhand, then the model
+    asked the player to disambiguate). The pieces, all required:
+    `app/llm/prompts.py::_recent_turns_to_messages` reads
+    `SessionMessage.sender_id` and looks it up in a
+    campaign-scoped `character_index` (built in
+    `build_dm_prompt`) covering every status, including dead
+    characters, so back-references stay attributed across PC
+    death; the ROLE block contains the `PLAYER ATTRIBUTION`
+    rule explaining that the prefix is engine metadata, not
+    fiction; and `app/orchestrator/dm.py::take_turn` passes the
+    same prefixed string to the post-turn fact extractor so
+    extracted `world_facts` carry the right attribution. A
+    regression that emits bare `{role: "user", content: text}`
+    on a multi-PC party would re-introduce the Phase 6.10
+    speaker-confusion bug. The pattern also applies to any
+    future "named speaker into chat history" surface (NPC
+    dialogue, in-content whisper attribution); use the same
+    in-content bracket prefix rather than relying on
+    chat-template-specific fields.
+
 ## Tech stack
 
 - Python 3.12
@@ -372,8 +399,12 @@ session create) landed 2026-05-01 to unblock real play; Phase 6.9
 (tool-error history hygiene — classify-then-dispatch in
 `_dispatch_one`, malformed calls dropped from prompt history,
 sanitised recovery system note) landed 2026-05-03 from the same
-day's 90-minute playthrough findings; Phase 8 (Adventure modules)
-ready to start.**
+day's 90-minute playthrough findings; Phase 6.10 (player
+speaker attribution — `[Name, Class]:` prefix in
+`_recent_turns_to_messages`, ROLE-block interpretation rule,
+attributed `player_action` into the post-turn fact extractor)
+landed 2026-05-04 from the multi-PC who's-speaking gap; Phase 8
+(Adventure modules) ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.
 
