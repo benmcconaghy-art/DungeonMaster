@@ -226,6 +226,62 @@ class RevealSecret(_ToolArgs):
     secret_id: str
 
 
+class ApplyRevival(_ToolArgs):
+    """Revive a downed character (hp_current <= 0) to 1 HP.
+
+    This is the *only* tool that bypasses the 0-HP rule — ordinary
+    ``heal`` cannot revive a downed character (BFRPG-canonical). Use
+    ``apply_revival`` when narrating a successful revival regardless of
+    source: a cleric's prayer, a potion of life, divine intervention,
+    or any other narrative event that brings a downed PC back.
+
+    ``source`` is a freeform narrative string logged for coherence —
+    "Mother Serra's prayer", "potion of life", "divine intervention".
+    """
+
+    character_id: str
+    source: str = Field(
+        default="",
+        description="Narrative source of revival, e.g. 'Mother Serra\\'s prayer'.",
+    )
+
+
+class ApplyStatusEffect(_ToolArgs):
+    """Apply a transient status effect to a character.
+
+    Effects are free-form strings — common BFRPG conditions include
+    "poisoned", "paralyzed", "charmed", "blessed", "dying", "stable",
+    "unconscious". Module-specific effects ("cursed by the shrine",
+    "marked by Vance") are also valid; this is intentionally not an
+    enum.
+
+    ``duration_hint`` is freeform text because BFRPG doesn't strictly
+    time-track most effects ("until cured", "1d6 rounds", "permanent
+    until dispelled").
+    """
+
+    character_id: str
+    effect: str = Field(
+        description="Status effect to apply, e.g. 'poisoned', 'paralyzed', 'dying'."
+    )
+    duration_hint: str = Field(
+        default="",
+        description="Freeform duration hint, e.g. 'until cured', '1d6 rounds'.",
+    )
+
+
+class ClearStatusEffect(_ToolArgs):
+    """Remove a previously applied status effect from a character.
+
+    A no-op (with a note in the tool result) if the effect is not
+    currently applied — the model shouldn't be penalised for clearing
+    an effect that already lapsed.
+    """
+
+    character_id: str
+    effect: str = Field(description="Status effect to remove, e.g. 'poisoned'.")
+
+
 # ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
@@ -351,6 +407,37 @@ TOOLS: dict[str, ToolSpec] = {
         args_model=RevealSecret,
         implemented=False,
     ),
+    "apply_revival": ToolSpec(
+        name="apply_revival",
+        description=(
+            "Revive a downed character (HP ≤ 0) to 1 HP. Use this — not heal —"
+            " when narrating any successful revival: a cleric's prayer, a potion of life,"
+            " divine intervention, or any other event that brings a downed PC back."
+            " This is the only tool that bypasses the 0-HP rule."
+        ),
+        args_model=ApplyRevival,
+        implemented=True,
+    ),
+    "apply_status_effect": ToolSpec(
+        name="apply_status_effect",
+        description=(
+            "Apply a transient status effect to a character. Common BFRPG effects:"
+            " poisoned, paralyzed, charmed, blessed, dying, stable, unconscious."
+            " Module-specific effects are also valid (free-form string, not an enum)."
+            " Pair with clear_status_effect when the condition ends."
+        ),
+        args_model=ApplyStatusEffect,
+        implemented=True,
+    ),
+    "clear_status_effect": ToolSpec(
+        name="clear_status_effect",
+        description=(
+            "Remove a previously applied status effect from a character."
+            " No-op if the effect is not currently applied."
+        ),
+        args_model=ClearStatusEffect,
+        implemented=True,
+    ),
 }
 
 
@@ -456,8 +543,11 @@ def parse_tool_args(name: str, raw: dict[str, Any]) -> _ToolArgs:
 __all__ = [
     "TOOLS",
     "ApplyDamage",
+    "ApplyRevival",
+    "ApplyStatusEffect",
     "AwardTreasure",
     "AwardXp",
+    "ClearStatusEffect",
     "DiceTarget",
     "EncounterMonster",
     "EndEncounter",

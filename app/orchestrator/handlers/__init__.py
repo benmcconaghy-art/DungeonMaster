@@ -11,7 +11,13 @@ Per-tool modules:
   - ``request_dice_roll`` — evaluate dice and write an audit row.
   - ``apply_damage`` — read HP from DB, subtract, persist;
     triggers Death and Dismemberment if HP drops to zero.
-  - ``heal`` — restore HP, capped at hp_max.
+  - ``heal`` — restore HP, capped at hp_max. Refuses 0-HP targets
+    (ordinary healing cannot revive a downed character — BFRPG-correct).
+  - ``apply_revival`` — revive a downed (HP ≤ 0) character to 1 HP;
+    the only tool that bypasses the 0-HP rule. Phase 6.12.
+  - ``apply_status_effect`` — apply a transient status condition
+    (poisoned, paralyzed, dying, etc.) to a character. Phase 6.12.
+  - ``clear_status_effect`` — remove a status condition. Phase 6.12.
   - ``transition_location`` — move the party between locations.
   - ``whisper`` — DM-to-one-player private message.
   - ``start_encounter`` — create an active encounter, roll initiative.
@@ -43,6 +49,9 @@ ToolHandler.model_rebuild()
 # imports look unused but they're load-bearing — keep them.
 from app.orchestrator.handlers import (  # noqa: E402
     apply_damage,
+    apply_revival,
+    apply_status_effect,
+    clear_status_effect,
     end_encounter,
     generate_scene_image,
     heal,
@@ -55,6 +64,9 @@ from app.orchestrator.handlers import (  # noqa: E402
 
 __all__ = [
     "apply_damage",
+    "apply_revival",
+    "apply_status_effect",
+    "clear_status_effect",
     "end_encounter",
     "generate_scene_image",
     "heal",

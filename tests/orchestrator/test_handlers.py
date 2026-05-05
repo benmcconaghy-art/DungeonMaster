@@ -28,6 +28,9 @@ from app.images.portrait import reset_for_tests as reset_queue_client
 from app.images.portrait import set_queue_client_for_tests
 from app.llm.tools import (
     ApplyDamage,
+    ApplyRevival,
+    ApplyStatusEffect,
+    ClearStatusEffect,
     DiceTarget,
     EncounterMonster,
     EndEncounter,
@@ -1095,3 +1098,324 @@ class TestGenerateSceneImage:
 
         assert result.side_effects.get("kind") == "error"
         assert result.side_effects.get("reason") == "queue_unavailable"
+
+
+# ---------------------------------------------------------------------------
+# apply_revival (Phase 6.12)
+# ---------------------------------------------------------------------------
+
+
+class TestApplyRevival:
+    @pytest.mark.asyncio
+    async def test_revives_downed_character(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """A character at hp_current=0 (survivable Death-table outcome) is
+        revived to hp_current=1 and status='alive'."""
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        char = await make_character(
+            db_session,
+            user_id=user.id,
+            campaign_id=campaign.id,
+            hp_current=0,
+            hp_max=10,
+            status="alive",
+        )
+        await db_session.commit()
+
+        handler = get_handler("apply_revival")
+        assert handler is not None
+        args = ApplyRevival(character_id=char.id, source="Mother Serra's prayer")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        await db_session.commit()
+
+        refreshed = await db_session.get(Character, char.id)
+        assert refreshed is not None
+        assert refreshed.hp_current == 1
+        assert refreshed.status == "alive"
+        assert result.side_effects["kind"] == "state_update"
+        assert result.side_effects["new"] == 1
+        assert "Serra" in result.content
+
+    @pytest.mark.asyncio
+    async def test_revives_dead_character(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """A character with status='dead' (Death-table fatal outcome) is
+        also revivable — divine intervention or a resurrection spell can
+        override even the death outcome."""
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        char = await make_character(
+            db_session,
+            user_id=user.id,
+            campaign_id=campaign.id,
+            hp_current=0,
+            hp_max=8,
+            status="dead",
+        )
+        await db_session.commit()
+
+        handler = get_handler("apply_revival")
+        assert handler is not None
+        args = ApplyRevival(character_id=char.id, source="resurrection ritual")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        await db_session.commit()
+
+        refreshed = await db_session.get(Character, char.id)
+        assert refreshed is not None
+        assert refreshed.hp_current == 1
+        assert refreshed.status == "alive"
+        assert result.side_effects["previous_status"] == "dead"
+        assert result.side_effects["new_status"] == "alive"
+
+    @pytest.mark.asyncio
+    async def test_clears_dying_effects_on_revival(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """apply_revival must clear dying/stable/unconscious effects automatically
+        so the DM doesn't need to follow up with clear_status_effect."""
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        char = await make_character(
+            db_session,
+            user_id=user.id,
+            campaign_id=campaign.id,
+            hp_current=0,
+            hp_max=10,
+            status="alive",
+        )
+        # Manually set effects as if the model called apply_status_effect earlier.
+        char.status_effects = ["dying", "poisoned"]
+        await db_session.commit()
+
+        handler = get_handler("apply_revival")
+        assert handler is not None
+        args = ApplyRevival(character_id=char.id, source="healing potion")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        await db_session.commit()
+
+        refreshed = await db_session.get(Character, char.id)
+        assert refreshed is not None
+        assert refreshed.hp_current == 1
+        # "dying" cleared automatically; "poisoned" should survive.
+        assert "dying" not in refreshed.status_effects
+        assert "poisoned" in refreshed.status_effects
+        assert "dying" in result.side_effects["cleared_effects"]
+
+    @pytest.mark.asyncio
+    async def test_refuses_already_alive(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """apply_revival on a character that is alive (hp_current > 0) must
+        return a structured error and leave HP unchanged."""
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        char = await make_character(
+            db_session,
+            user_id=user.id,
+            campaign_id=campaign.id,
+            hp_current=5,
+            hp_max=10,
+        )
+        await db_session.commit()
+
+        handler = get_handler("apply_revival")
+        assert handler is not None
+        args = ApplyRevival(character_id=char.id)
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+
+        refreshed = await db_session.get(Character, char.id)
+        assert refreshed is not None
+        assert refreshed.hp_current == 5  # unchanged
+        assert result.side_effects.get("kind") == "error"
+        assert result.side_effects.get("reason") == "target_not_downed"
+
+    @pytest.mark.asyncio
+    async def test_unknown_target_returns_error(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        handler = get_handler("apply_revival")
+        assert handler is not None
+        args = ApplyRevival(character_id="nonexistent")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        assert result.side_effects.get("kind") == "error"
+        assert result.side_effects.get("reason") == "unknown_target"
+
+
+# ---------------------------------------------------------------------------
+# apply_status_effect (Phase 6.12)
+# ---------------------------------------------------------------------------
+
+
+class TestApplyStatusEffect:
+    @pytest.mark.asyncio
+    async def test_adds_effect_to_list(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        char = await make_character(db_session, user_id=user.id, campaign_id=campaign.id)
+        await db_session.commit()
+
+        handler = get_handler("apply_status_effect")
+        assert handler is not None
+        args = ApplyStatusEffect(
+            character_id=char.id,
+            effect="poisoned",
+            duration_hint="until cured",
+        )
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        await db_session.commit()
+
+        refreshed = await db_session.get(Character, char.id)
+        assert refreshed is not None
+        assert "poisoned" in refreshed.status_effects
+        assert result.side_effects["kind"] == "state_update"
+        assert result.side_effects["effect"] == "poisoned"
+        assert result.side_effects["already_present"] is False
+        assert "poisoned" in result.content
+
+    @pytest.mark.asyncio
+    async def test_idempotent_if_already_present(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """Applying an effect that is already present must not duplicate it
+        in the list — idempotent semantics prevent accidental stacking."""
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        char = await make_character(db_session, user_id=user.id, campaign_id=campaign.id)
+        char.status_effects = ["poisoned"]
+        await db_session.commit()
+
+        handler = get_handler("apply_status_effect")
+        assert handler is not None
+        args = ApplyStatusEffect(character_id=char.id, effect="poisoned")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        await db_session.commit()
+
+        refreshed = await db_session.get(Character, char.id)
+        assert refreshed is not None
+        assert refreshed.status_effects.count("poisoned") == 1  # not duplicated
+        assert result.side_effects["already_present"] is True
+
+    @pytest.mark.asyncio
+    async def test_module_specific_effect(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """Module-specific effects like 'cursed by the shrine' must be
+        accepted — the field is free-form, not an enum."""
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        char = await make_character(db_session, user_id=user.id, campaign_id=campaign.id)
+        await db_session.commit()
+
+        handler = get_handler("apply_status_effect")
+        assert handler is not None
+        args = ApplyStatusEffect(character_id=char.id, effect="cursed by the shrine")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        await db_session.commit()
+
+        refreshed = await db_session.get(Character, char.id)
+        assert refreshed is not None
+        assert "cursed by the shrine" in refreshed.status_effects
+        assert result.side_effects["kind"] == "state_update"
+
+    @pytest.mark.asyncio
+    async def test_unknown_target_returns_error(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        handler = get_handler("apply_status_effect")
+        assert handler is not None
+        args = ApplyStatusEffect(character_id="nonexistent", effect="poisoned")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        assert result.side_effects.get("kind") == "error"
+        assert result.side_effects.get("reason") == "unknown_target"
+
+
+# ---------------------------------------------------------------------------
+# clear_status_effect (Phase 6.12)
+# ---------------------------------------------------------------------------
+
+
+class TestClearStatusEffect:
+    @pytest.mark.asyncio
+    async def test_removes_effect(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        char = await make_character(db_session, user_id=user.id, campaign_id=campaign.id)
+        char.status_effects = ["poisoned", "blessed"]
+        await db_session.commit()
+
+        handler = get_handler("clear_status_effect")
+        assert handler is not None
+        args = ClearStatusEffect(character_id=char.id, effect="poisoned")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        await db_session.commit()
+
+        refreshed = await db_session.get(Character, char.id)
+        assert refreshed is not None
+        assert "poisoned" not in refreshed.status_effects
+        assert "blessed" in refreshed.status_effects  # unaffected
+        assert result.side_effects["kind"] == "state_update"
+        assert result.side_effects["was_present"] is True
+        assert "no longer" in result.content
+
+    @pytest.mark.asyncio
+    async def test_no_op_if_not_present(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        """Clearing an effect that was never applied must succeed (no-op),
+        not error — the DM shouldn't be penalised for a safe cleanup call."""
+
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        char = await make_character(db_session, user_id=user.id, campaign_id=campaign.id)
+        char.status_effects = ["blessed"]
+        await db_session.commit()
+
+        handler = get_handler("clear_status_effect")
+        assert handler is not None
+        args = ClearStatusEffect(character_id=char.id, effect="poisoned")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        await db_session.commit()
+
+        refreshed = await db_session.get(Character, char.id)
+        assert refreshed is not None
+        assert refreshed.status_effects == ["blessed"]  # unchanged
+        assert result.side_effects["kind"] == "state_update"
+        assert result.side_effects["was_present"] is False
+        # Must not be an error — just a note.
+        assert result.side_effects.get("reason") != "unknown_target"
+
+    @pytest.mark.asyncio
+    async def test_unknown_target_returns_error(self, db_session) -> None:  # type: ignore[no-untyped-def]
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        handler = get_handler("clear_status_effect")
+        assert handler is not None
+        args = ClearStatusEffect(character_id="nonexistent", effect="poisoned")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        assert result.side_effects.get("kind") == "error"
+        assert result.side_effects.get("reason") == "unknown_target"
