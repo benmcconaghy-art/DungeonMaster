@@ -181,6 +181,23 @@ modules. Single-server deployment on AlmaLinux 10.1, trusted internal LAN.
     in-content bracket prefix rather than relying on
     chat-template-specific fields.
 
+18. **BFRPG rule enforcement on HP tools is non-negotiable; special-case
+    mechanics get their own tools.** `heal` correctly refuses 0-HP
+    targets (BFRPG: ordinary healing cannot revive a downed character).
+    When a narrative event should revive a downed PC — a cleric's
+    prayer, a potion of life, divine intervention — call `apply_revival`.
+    `apply_revival` is the *only* tool authorised to bypass the 0-HP
+    rule. Adding a `source` argument to `heal` or removing the 0-HP
+    guard would be wrong; the distinction between healing and revival
+    is BFRPG-canonical. The same pattern applies to any future
+    mechanic: if a new narrative outcome conflicts with an existing
+    tool's rule check, add a focused new tool rather than weakening the
+    rule check. Tool inventory gaps should be visible (a failing tool
+    call surfaces the gap) rather than hidden behind loosened rules.
+    Phase 6.12 also adds `apply_status_effect` and `clear_status_effect`
+    for transient conditions (poisoned, paralyzed, dying, etc.) — this
+    completes the Phase 3 deferred work noted in `apply_damage.py:121`.
+
 ## Tech stack
 
 - Python 3.12
@@ -282,6 +299,17 @@ async model within one worker. See spec §13 for rationale.
   doesn't require root or a real systemd.
 
 ### Orchestrator
+- **When the DM faces a state change with no fitting tool, add a
+  focused new tool rather than loosening an existing tool's rule
+  check.** Tool inventory gaps should surface as visible, recoverable
+  errors (the existing tool refuses with a structured `kind=error`
+  result) rather than being hidden by weakening rules that are
+  BFRPG-canonical. The canonical example is `heal` refusing 0-HP
+  targets — the fix was `apply_revival`, not removing the guard. If a
+  gap produces a session wedge (model narrates confusion instead of
+  acting), trace the gap, add the tool, and document the new
+  invariant. Phase 6.12 close-out.
+
 - **Every Nemotron-shaped failure mode the orchestrator catches must
   produce conversation history that is itself a valid prompt for
   vLLM.** The orchestrator's job is not to record what happened; it's
@@ -433,7 +461,13 @@ landed 2026-05-04 from the multi-PC who's-speaking gap; Phase 6.11
 bubble suppression — JS bubble creation gated on non-whitespace
 content so Nemotron's whitespace-before-tool-call tokeniser
 artefact produces no visible DOM node) landed 2026-05-05;
-Phase 8 (Adventure modules) ready to start.**
+Phase 6.12 (tool-inventory gap for 0-HP revival — `apply_revival`
+unblocks the session-wedge when a downed PC is revived; also ships
+`apply_status_effect` / `clear_status_effect` completing the Phase 3
+deferred status-flags work noted in `apply_damage.py:121`; adds
+`status_effects` JSON column to `characters`; system-prompt
+REVIVAL AND STATUS EFFECTS block; Critical Invariant #18)
+landed 2026-05-05; Phase 8 (Adventure modules) ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.
 

@@ -67,6 +67,22 @@ _ROLE_TEXT = (
     "    against the campaign's existing entities or creates new ones as needed.\n"
     "    Surfacing a database id to the player is a fourth-wall break.\n"
     "\n"
+    "REVIVAL AND STATUS EFFECTS:\n"
+    "  - A downed character (HP ≤ 0) cannot be healed by ordinary means.\n"
+    "    ``heal`` will refuse with an error. Use ``apply_revival`` instead\n"
+    "    whenever narrating a successful revival — a cleric's prayer, a potion\n"
+    "    of life, divine intervention, or any other event that restores life.\n"
+    "    ``apply_revival`` is the only tool that can restore a downed character.\n"
+    "  - When a character acquires a condition, call ``apply_status_effect``.\n"
+    "    Common BFRPG effects: poisoned, paralyzed, charmed, blessed, dying,\n"
+    "    stable, unconscious. Module-specific effects are also valid (free-form).\n"
+    "    Pass a duration_hint when relevant ('until cured', '1d6 rounds').\n"
+    "  - When a condition ends (cure spell, rest, natural expiry), call\n"
+    "    ``clear_status_effect``. It is a no-op if the effect isn't present —\n"
+    "    safe to call even if unsure whether the effect is still active.\n"
+    "  - After calling ``apply_revival``, the dying/stable/unconscious effects\n"
+    "    are cleared automatically — no need to call clear_status_effect for those.\n"
+    "\n"
     "PLAYER ATTRIBUTION — multi-character parties:\n"
     "  - Player messages arrive prefixed with [Character Name, Class]:\n"
     '    e.g. "[Slowhand, Fighter]: I draw my axe and charge the goblin."\n'
@@ -327,12 +343,14 @@ def _render_characters(characters: list[Character]) -> str:
         return "(none)"
     lines: list[str] = []
     for ch in characters:
+        effects: list[str] = list(ch.status_effects or [])
+        effects_str = f", effects: {', '.join(effects)}" if effects else ""
         lines.append(
             f"  - {ch.name} ({ch.race} {ch.class_name} L{ch.level}) — "
             f"HP {ch.hp_current}/{ch.hp_max}, AC {ch.ac}, "
             f"STR {ch.str_score} DEX {ch.dex_score} CON {ch.con_score} "
             f"INT {ch.int_score} WIS {ch.wis_score} CHA {ch.cha_score}, "
-            f"status: {ch.status} [id={ch.id}]"
+            f"status: {ch.status}{effects_str} [id={ch.id}]"
         )
     return "\n".join(lines)
 
