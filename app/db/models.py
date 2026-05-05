@@ -253,6 +253,14 @@ class Character(Base):
     gold: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     alignment: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'alive'"))
+    # Free-form status effects — transient conditions applied by the rules
+    # engine: "poisoned", "paralyzed", "blessed", "dying", etc. Module-specific
+    # effects ("cursed by the shrine", "marked by Vance") are also permitted.
+    # Closed enums would prevent module-specific effects.
+    # Phase 3 deferred these as "finer status flags"; Phase 6.12 delivers them.
+    status_effects: Mapped[list[str]] = mapped_column(
+        JSON, nullable=False, default=list, server_default=_EMPTY_ARR
+    )
     sheet: Mapped[dict[str, Any]] = mapped_column(
         JSON, nullable=False, default=dict, server_default=_EMPTY_OBJ
     )
@@ -263,6 +271,7 @@ class Character(Base):
     updated_at: Mapped[str] = mapped_column(Text, nullable=False, server_default=_NOW)
 
     __table_args__ = (
+        CheckConstraint("json_valid(status_effects)", name="ck_characters_status_effects_json"),
         CheckConstraint("json_valid(sheet)", name="ck_characters_sheet_json"),
         Index("idx_characters_campaign", "campaign_id"),
     )
