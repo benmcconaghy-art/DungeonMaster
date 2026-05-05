@@ -104,6 +104,10 @@ class _FakeDmClient:
         # (e.g. malformed tool-call ``arguments`` strings must never
         # appear in a subsequent call's messages list — Phase 6.9 fix).
         self.received_messages_log: list[list[dict[str, Any]]] = []
+        # One snapshot of keyword arguments per ``stream_dm`` invocation.
+        # Phase 6.11 tests inspect ``reasoning_mode`` and ``max_tokens``
+        # to verify the retry switches to ``"low"`` / 2048 on first empty.
+        self.received_kwargs_log: list[dict[str, Any]] = []
 
     async def stream_dm(
         self,
@@ -121,6 +125,7 @@ class _FakeDmClient:
         # Snapshot a deep-ish copy: the orchestrator may mutate the list
         # between calls (appends), and we want the per-call view.
         self.received_messages_log.append([dict(m) for m in messages])
+        self.received_kwargs_log.append(dict(kwargs))
         chunks = self._streams[self.call_count]
         self.call_count += 1
 
@@ -418,10 +423,16 @@ async def test_runaway_token_error_surfaces(db_session, patch_client) -> None:  
 
 @pytest.mark.asyncio
 async def test_empty_completion_yields_dm_error(db_session, patch_client) -> None:  # type: ignore[no-untyped-def]
-    """An assistant message with neither content nor tool_calls -> dm_error."""
+    """Two consecutive empty completions (first triggers retry, second falls
+    back) yield a ``dm_error`` with reason ``empty_completion``.
+
+    Phase 6.11: the first empty completion retries once with low reasoning
+    before giving up. Two empty streams are needed to exercise the fallback.
+    """
 
     _, _, session, _ = await _setup_session(db_session)
-    patch_client([[_content_chunk("")]])
+    # Two empty streams: first triggers the retry, second triggers dm_error.
+    patch_client([[_content_chunk("")], [_content_chunk("")]])
 
     events: list[Any] = []
     async for event in take_turn(
@@ -933,3 +944,204 @@ async def test_recovery_message_text_is_constant() -> None:
         "[engine: an attempted tool call was rejected as malformed and discarded;"
         " describe what you intended in narration or try again]"
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 6.11: empty-completion two-tier recovery
+#
+# Bug 1: the orchestrator previously emitted dm_error on the first empty
+# completion in a turn, regardless of turn complexity. Real-traffic evidence
+# showed this firing on ordinary single-tool-dispatch turns.
+#
+# Fix: one retry at reasoning_mode="low" / max_tokens=2048, then dm_error.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_empty_completion_retries_once_then_succeeds(  # type: ignore[no-untyped-def]
+    db_session, patch_client
+) -> None:
+    """First stream is empty; second stream has narration → turn completes.
+
+    The retry must succeed: NarrationComplete is emitted, no dm_error,
+    and the DM message is persisted.
+    """
+
+    _, _, session, _ = await _setup_session(db_session)
+    fake = patch_client(
+        [
+            [_content_chunk("")],  # iteration 1: empty → retry
+            [_content_chunk("The mist clears.")],  # iteration 2: narration → complete
+        ]
+    )
+
+    events: list[Any] = []
+    async for event in take_turn(
+        db_session,
+        session_id=session.id,
+        sender_user_id="test-user",
+        sender_character_id=None,
+        content="Look around.",
+    ):
+        events.append(event)
+
+    # No dm_error; the retry produced narration.
+    assert not any(
+        isinstance(e, DmError) for e in events
+    ), f"expected no DmError but got: {[e for e in events if isinstance(e, DmError)]}"
+    completes = [e for e in events if isinstance(e, NarrationComplete)]
+    assert len(completes) == 1
+    assert "mist" in completes[0].content
+
+    # Both stream_dm calls happened.
+    assert fake.call_count == 2
+
+    # DM message persisted.
+    await db_session.commit()
+    msgs = list(
+        (
+            await db_session.scalars(
+                select(SessionMessage).where(
+                    SessionMessage.session_id == session.id,
+                    SessionMessage.sender_kind == "dm",
+                )
+            )
+        ).all()
+    )
+    assert len(msgs) == 1
+    assert "mist" in msgs[0].content
+
+
+@pytest.mark.asyncio
+async def test_retry_uses_low_reasoning_mode_and_doubled_tokens(  # type: ignore[no-untyped-def]
+    db_session, patch_client
+) -> None:
+    """On the first empty completion, the orchestrator retries with
+    ``reasoning_mode="low"`` and ``max_tokens=2048``. The first call
+    uses ``reasoning_mode="full"`` and ``max_tokens=1024``.
+    """
+
+    _, _, session, _ = await _setup_session(db_session)
+    fake = patch_client(
+        [
+            [_content_chunk("")],  # empty → retry
+            [_content_chunk("Narration after retry.")],
+        ]
+    )
+
+    async for _ in take_turn(
+        db_session,
+        session_id=session.id,
+        sender_user_id="test-user",
+        sender_character_id=None,
+        content="action",
+    ):
+        pass
+
+    assert fake.call_count == 2
+
+    first_kwargs = fake.received_kwargs_log[0]
+    assert (
+        first_kwargs.get("reasoning_mode") == "full"
+    ), f"first call should use full reasoning; got {first_kwargs}"
+    assert first_kwargs.get("max_tokens") == 1024
+
+    retry_kwargs = fake.received_kwargs_log[1]
+    assert (
+        retry_kwargs.get("reasoning_mode") == "low"
+    ), f"retry should use low reasoning; got {retry_kwargs}"
+    assert retry_kwargs.get("max_tokens") == 2048
+
+
+@pytest.mark.asyncio
+async def test_consecutive_empty_completions_yield_dm_error(  # type: ignore[no-untyped-def]
+    db_session, patch_client
+) -> None:
+    """Two empty completions in a row yield ``dm_error(empty_completion)``.
+
+    The first empty triggers the retry (reasoning_mode="low"); the second
+    exhausts the recovery budget and falls back to dm_error.
+    """
+
+    _, _, session, _ = await _setup_session(db_session)
+    fake = patch_client(
+        [
+            [_content_chunk("")],  # iteration 1: empty → retry
+            [_content_chunk("")],  # iteration 2: empty again → dm_error
+        ]
+    )
+
+    events: list[Any] = []
+    async for event in take_turn(
+        db_session,
+        session_id=session.id,
+        sender_user_id="test-user",
+        sender_character_id=None,
+        content="hi",
+    ):
+        events.append(event)
+
+    # Both streams were consumed.
+    assert fake.call_count == 2
+
+    errors = [e for e in events if isinstance(e, DmError)]
+    assert any(
+        e.reason == "empty_completion" for e in errors
+    ), f"expected empty_completion DmError; got reasons: {[e.reason for e in errors]}"
+    # No narration completed.
+    assert not any(isinstance(e, NarrationComplete) for e in events)
+
+
+@pytest.mark.asyncio
+async def test_empty_completion_count_independent_of_iteration_counter(  # type: ignore[no-untyped-def]
+    db_session, patch_client
+) -> None:
+    """The empty-completion counter and the iteration counter are independent.
+
+    A turn that dispatches two tool calls then hits one empty completion
+    should retry (the empty_completion_count is 1, not 3), and succeed on
+    the retry. The iteration counter advances separately.
+    """
+
+    _, _, session, _ = await _setup_session(db_session)
+
+    roll_args = json.dumps({"expression": "1d20", "purpose": "stealth", "actor": "dm"})
+
+    fake = patch_client(
+        [
+            # Iteration 1: tool call
+            [_tool_call_chunk(index=0, id="c-1", name="request_dice_roll", arguments=roll_args)],
+            # Iteration 2: another tool call
+            [_tool_call_chunk(index=0, id="c-2", name="request_dice_roll", arguments=roll_args)],
+            # Iteration 3: empty completion → retry (empty_completion_count == 1)
+            [_content_chunk("")],
+            # Iteration 4: narration → success
+            [_content_chunk("You slip past the guard.")],
+        ]
+    )
+
+    events: list[Any] = []
+    async for event in take_turn(
+        db_session,
+        session_id=session.id,
+        sender_user_id="test-user",
+        sender_character_id=None,
+        content="Sneak past.",
+    ):
+        events.append(event)
+
+    # No dm_error — the retry recovered.
+    assert not any(
+        isinstance(e, DmError) for e in events
+    ), f"unexpected DmErrors: {[e for e in events if isinstance(e, DmError)]}"
+    completes = [e for e in events if isinstance(e, NarrationComplete)]
+    assert len(completes) == 1
+    assert "guard" in completes[0].content
+
+    # All four streams consumed.
+    assert fake.call_count == 4
+
+    # Iterations 1-2 used full reasoning; iteration 3 (empty) triggered
+    # the retry at iteration 4 with low reasoning.
+    assert fake.received_kwargs_log[3].get("reasoning_mode") == "low"
+    assert fake.received_kwargs_log[3].get("max_tokens") == 2048

@@ -34,7 +34,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import metrics
 from app.db.models import Character, SessionMessage
 from app.db.session import SessionLocal
-from app.llm.client import RunawayTokenError, get_dm_client
+from app.llm.client import ReasoningMode, RunawayTokenError, get_dm_client
 from app.llm.memory import (
     extract_and_persist_facts,
     maybe_regenerate_session_summary,
@@ -458,6 +458,14 @@ async def take_turn(
     # Track the most recent iteration's stream_id so the trailing
     # NarrationComplete pairs with the correct bubble on the client.
     final_stream_id: str = ""
+    # Two-tier empty-completion recovery (Phase 6.11). Counts consecutive
+    # empty completions within this turn. First empty → retry at low
+    # reasoning + doubled token budget. Second empty → dm_error fallback.
+    # Independent of ``iteration``: one turn can have many tool hops before
+    # encountering an empty completion; the two counters track different
+    # things. Resets per-turn automatically (local var; take_turn is fresh
+    # each call).
+    empty_completion_count = 0
 
     while iteration < _MAX_TOOL_ITERATIONS:
         iteration += 1
@@ -468,11 +476,21 @@ async def take_turn(
         stream_id = uuid.uuid4().hex
         final_stream_id = stream_id
         try:
-            # reasoning_mode="full" (the default) — the DM's tool-call
-            # accuracy is load-bearing on the full reasoning trace. The
-            # Phase 5 prep tuned summarisers + fact extractor down to
-            # "low"; this call site stays at "full" deliberately.
-            stream = await client.stream_dm(messages, tools=tools, tool_choice="auto")
+            # reasoning_mode: "full" on ordinary iterations — tool-call
+            # accuracy depends on the full reasoning trace. Switched to
+            # "low" on the first empty-completion retry so reduced-effort
+            # reasoning is sufficient for a recovery narration (the model
+            # already has tool results in context).  max_tokens doubles on
+            # retry to give the model more room if the budget was the cause.
+            _reasoning_mode: ReasoningMode = "low" if empty_completion_count > 0 else "full"
+            _max_tokens = 2048 if empty_completion_count > 0 else 1024
+            stream = await client.stream_dm(
+                messages,
+                tools=tools,
+                tool_choice="auto",
+                reasoning_mode=_reasoning_mode,
+                max_tokens=_max_tokens,
+            )
         except Exception as exc:
             log.exception("dm.py: stream_dm() failed before first chunk")
             yield DmError(
@@ -586,13 +604,24 @@ async def take_turn(
 
         # No tool calls — this is the final narration.
         if not accumulated_content.strip():
-            log.warning("dm.py: assistant emitted empty completion (iteration %d)", iteration)
+            empty_completion_count += 1
+            if empty_completion_count < 2:
+                log.warning(
+                    "dm.py: empty completion (iteration %d); retrying with low reasoning",
+                    iteration,
+                )
+                continue
+            log.warning(
+                "dm.py: consecutive empty completions (iteration %d); aborting turn",
+                iteration,
+            )
             yield DmError(
                 reason="empty_completion",
                 message="DM produced an empty response. Try again.",
             )
             return
 
+        empty_completion_count = 0
         final_assistant_text = accumulated_content
         break
     else:

@@ -296,6 +296,30 @@ async model within one worker. See spec §13 for rationale.
   case where this got it wrong (malformed tool-call `arguments`
   poisoned the next request).
 
+- **The DM has two-tier recovery from empty completions.** When an
+  iteration produces neither content nor tool calls, the orchestrator
+  retries once with `reasoning_mode="low"` and `max_tokens=2048` (the
+  model already has tool results in context; lower-effort reasoning is
+  sufficient for recovery narration). If the retry also empties, it
+  falls back to `dm_error(reason="empty_completion")`. No recovery
+  note is injected — same DM system prompt, just different inference
+  settings. The counter (`empty_completion_count`) is a local variable
+  per `take_turn` call, so it resets between turns automatically and is
+  independent of the tool-call iteration counter. See Phase 6.11
+  close-out; real-traffic evidence confirmed this fires on ordinary
+  single-tool-dispatch turns, not only complex multi-actor scenes.
+
+- **DM iterations that emit only tool calls (no narration text) produce
+  no visible message bubble on the client.** The bubble lifecycle is
+  driven by narration content, not by iteration boundaries. `narration_chunk`
+  events that carry only whitespace (Nemotron sometimes prefixes a tool
+  call with a newline or space token) must not create a bubble — the JS
+  dispatcher gates bubble creation on `content.trim()` being truthy.
+  `narration_complete` on a stream_id that never had a non-whitespace
+  chunk creates no DOM node. A regression that let whitespace-only
+  chunks open a bubble would produce an empty-header artefact that is
+  never closed (Phase 6.11 Bug 2 symptom).
+
 ### Tests
 - Each new module gets a parallel `tests/test_<module>.py` from day one.
 - pytest + pytest-asyncio. `@pytest.mark.asyncio` on async tests.
@@ -403,8 +427,13 @@ day's 90-minute playthrough findings; Phase 6.10 (player
 speaker attribution — `[Name, Class]:` prefix in
 `_recent_turns_to_messages`, ROLE-block interpretation rule,
 attributed `player_action` into the post-turn fact extractor)
-landed 2026-05-04 from the multi-PC who's-speaking gap; Phase 8
-(Adventure modules) ready to start.**
+landed 2026-05-04 from the multi-PC who's-speaking gap; Phase 6.11
+(empty-completion two-tier recovery — retry at low reasoning /
+2048 tokens on first empty, dm_error fallback on second; empty
+bubble suppression — JS bubble creation gated on non-whitespace
+content so Nemotron's whitespace-before-tool-call tokeniser
+artefact produces no visible DOM node) landed 2026-05-05;
+Phase 8 (Adventure modules) ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.
 
@@ -430,11 +459,13 @@ up. Promote to a real issue / phase task when its trigger fires.
   facts on the same 25-turn fixture; "what merits long-term memory"
   is salience judgement, not structuring). Latency cost at "full":
   ~+8s/turn extractor delta (mean turn 8.6s → 18.6s on the same
-  fixture). DM turn loop stays "full" for tool-call accuracy. Phase
-  8 module extractor will start at "full" for the same salience
-  reason. **Future watch:** if a multi-session campaign shows
-  campaign-summary drift (the "low" summariser missing arcs), revisit
-  promoting the campaign summariser to "full" too.
+  fixture). DM turn loop uses "full" by default for tool-call
+  accuracy; on an empty-completion retry it drops to "low" with a
+  doubled token budget (Phase 6.11 two-tier recovery). Phase 8 module
+  extractor will start at "full" for the same salience reason.
+  **Future watch:** if a multi-session campaign shows campaign-summary
+  drift (the "low" summariser missing arcs), revisit promoting the
+  campaign summariser to "full" too.
 
 - **Per-class spell levels** (added 2026-04-30, target: when it bites).
   Spells like Hold Person and Continual Light have different levels per
