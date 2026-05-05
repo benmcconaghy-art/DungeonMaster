@@ -667,16 +667,22 @@
       // ('dice_roll', 'state_update', 'whisper') no longer cause
       // mid-turn bubble splits because they don't carry a
       // stream_id and we key off the id, not on adjacency.
+      //
+      // Phase 6.11 Bug 2: Nemotron sometimes prefixes a tool call with
+      // whitespace tokens. Gate bubble creation on non-whitespace content
+      // so those tokeniser artefacts never produce an empty visible bubble.
       const sid = msg.stream_id || "";
+      const content = msg.content || "";
       let bubble = narrationBubbles[sid];
       if (!bubble) {
+        if (!content.trim()) return;
         bubble = appendMessage("dm", "Dungeon Master", "", formatNow());
         // Light up the streaming caret so the table sees prose flowing.
         const article = bubble.parentElement;
         if (article) article.dataset.streaming = "true";
         narrationBubbles[sid] = bubble;
       }
-      bubble.textContent += (msg.content || "");
+      bubble.textContent += content;
       narration.scrollTop = narration.scrollHeight;
     },
     narration_complete(msg) {
@@ -689,10 +695,11 @@
         const article = bubble.parentElement;
         if (article) delete article.dataset.streaming;
         delete narrationBubbles[sid];
-      } else if (msg.content) {
+      } else if (msg.content && msg.content.trim()) {
         // Defensive: no chunks landed for this stream (e.g. server
-        // skipped streaming). Render the canonical text as a fresh
-        // bubble so the player still sees the narration.
+        // skipped streaming). Only create a bubble for non-whitespace
+        // content — whitespace-only completions must not produce an
+        // empty-header artefact.
         appendMessage("dm", "Dungeon Master", msg.content, formatNow());
       }
     },
