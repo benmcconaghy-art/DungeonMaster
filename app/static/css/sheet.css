@@ -554,3 +554,106 @@
 }
 .notes-status.ok { color: var(--moss); }
 .notes-status.err { color: var(--rust); }
+
+/* ----- Appearance panel ----- */
+.appearance-panel .appearance-field {
+  display: flex;
+  gap: var(--s-2);
+  align-items: baseline;
+  margin-bottom: var(--s-2);
+}
+.appearance-panel .field-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--parchment-mute);
+  min-width: 70px;
+}
+.appearance-panel .field-value {
+  color: var(--ink, var(--parchment));
+  font-size: 14px;
+}
+.appearance-panel .appearance-desc {
+  font-size: 13px;
+  color: var(--ink-muted, var(--parchment-2));
+  line-height: 1.5;
+  margin: var(--s-2) 0;
+}
+.appearance-panel .appearance-desc.empty {
+  color: var(--parchment-mute);
+  font-style: italic;
+}
+.appearance-panel .ap-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+}
+/* Pronoun chips inside the sheet reuse .cg-method-chip from chargen.css;
+   override the display-uppercase treatment for readability. */
+.appearance-panel .cg-method-chip {
+  text-transform: none;
+  letter-spacing: 0.04em;
+  font-size: 12px;
+}
+.appearance-panel #ap-pronouns-input {
+  display: block;
+  margin-top: var(--s-2);
+  width: 100%;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid var(--rule-soft);
+  color: var(--parchment);
+  padding: var(--s-2);
+  font-family: var(--font-body, var(--font-prose));
+  font-size: 13px;
+  border-radius: 4px;
+  outline: none;
+}
+.appearance-panel #ap-pronouns-input:focus { border-color: var(--ember); }
+.appearance-panel #ap-pronouns-input::placeholder { color: var(--parchment-mute); font-style: italic; }
+.appearance-panel .cg-desc-area {
+  width: 100%;
+  resize: vertical;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid var(--rule-soft);
+  color: var(--parchment);
+  padding: var(--s-2);
+  font-family: var(--font-body, var(--font-prose));
+  font-size: 13px;
+  border-radius: 4px;
+  margin-top: var(--s-2);
+  outline: none;
+  line-height: 1.5;
+}
+.appearance-panel .cg-desc-area:focus { border-color: var(--ember); }
+.appearance-panel .cg-desc-area::placeholder { color: var(--parchment-mute); font-style: italic; }
+.appearance-panel .ap-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+}
+/* "✎ edit" / "cancel" buttons in appearance panel — match portrait .regen style
+   but are always visible (not hover-gated). */
+.appearance-panel .regen {
+  display: inline-block;
+  background: transparent;
+  border: 1px solid var(--rule-soft);
+  color: var(--parchment-dim);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 10px;
+  padding: 5px 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: color 200ms ease, border-color 200ms ease;
+}
+.appearance-panel .regen:hover { color: var(--ember); border-color: var(--ember); }
+/* Pronouns span in the header titles line */
+.sheet-banner .titles .pronouns {
+  color: var(--parchment-2);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}

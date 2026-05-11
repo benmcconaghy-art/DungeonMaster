@@ -261,6 +261,8 @@ class Character(Base):
     status_effects: Mapped[list[str]] = mapped_column(
         JSON, nullable=False, default=list, server_default=_EMPTY_ARR
     )
+    pronouns: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     sheet: Mapped[dict[str, Any]] = mapped_column(
         JSON, nullable=False, default=dict, server_default=_EMPTY_OBJ
     )

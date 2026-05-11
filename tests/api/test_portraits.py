@@ -269,3 +269,114 @@ async def test_npc_portrait_enqueues_job(client: AsyncClient, fake_queue: _FakeQ
     payload = json.loads(fake_queue.pushed[0][1])
     assert payload["subject_npc_id"] == npc_id
     assert payload["subject_character_id"] is None
+
+
+# ---------------------------------------------------------------------------
+# Phase 6.13: character.description feeds the portrait prompt
+# ---------------------------------------------------------------------------
+
+
+async def _create_character_with_description(
+    client: AsyncClient,
+    campaign_id: str,
+    *,
+    description: str | None = None,
+) -> str:
+    """Create a PC, optionally with a description, and return its id."""
+
+    payload: dict = {
+        "name": "Sigrid",
+        "race": "Human",
+        "class_name": "Fighter",
+        "alignment": "neutral",
+        "abilities": {
+            "str": 14,
+            "int": 10,
+            "wis": 10,
+            "dex": 12,
+            "con": 12,
+            "cha": 10,
+        },
+    }
+    if description is not None:
+        payload["description"] = description
+    response = await client.post(
+        f"/api/campaigns/{campaign_id}/characters",
+        json=payload,
+    )
+    assert response.status_code == 201, response.text
+    return response.json()["id"]  # type: ignore[no-any-return]
+
+
+@pytest.mark.asyncio
+async def test_character_description_feeds_portrait_prompt(
+    client: AsyncClient, fake_queue: _FakeQueueClient
+) -> None:
+    """character.description becomes part of the auto-composed prompt
+    when no explicit prompt is passed and no payload description is given."""
+
+    await _register_and_login(client)
+    campaign_id = await _create_campaign(client)
+    character_id = await _create_character_with_description(
+        client,
+        campaign_id,
+        description="Scar across left eye",
+    )
+
+    response = await client.post(
+        f"/api/characters/{character_id}/portrait",
+        json={},
+    )
+    assert response.status_code == 202, response.text
+    body = response.json()
+    assert "Scar across left eye" in body["prompt"]
+
+    queued = json.loads(fake_queue.pushed[0][1])
+    assert "Scar across left eye" in queued["prompt"]
+
+
+@pytest.mark.asyncio
+async def test_payload_description_used_when_character_description_is_null(
+    client: AsyncClient, fake_queue: _FakeQueueClient
+) -> None:
+    """When character.description is None, payload.description enriches
+    the auto-composed prompt."""
+
+    await _register_and_login(client)
+    campaign_id = await _create_campaign(client)
+    # No description on the character row.
+    character_id = await _create_character_with_description(client, campaign_id, description=None)
+
+    response = await client.post(
+        f"/api/characters/{character_id}/portrait",
+        json={"description": "Overridden description"},
+    )
+    assert response.status_code == 202, response.text
+    body = response.json()
+    assert "Overridden description" in body["prompt"]
+
+
+@pytest.mark.asyncio
+async def test_character_description_takes_priority_over_payload_description(
+    client: AsyncClient, fake_queue: _FakeQueueClient
+) -> None:
+    """character.description wins over payload.description — the endpoint
+    uses ``character.description or payload.description``, so when the
+    character row already has a description the payload one is ignored."""
+
+    await _register_and_login(client)
+    campaign_id = await _create_campaign(client)
+    character_id = await _create_character_with_description(
+        client,
+        campaign_id,
+        description="From character",
+    )
+
+    response = await client.post(
+        f"/api/characters/{character_id}/portrait",
+        json={"description": "From payload"},
+    )
+    assert response.status_code == 202, response.text
+    body = response.json()
+    assert "From character" in body["prompt"]
+    assert "From payload" not in body["prompt"]

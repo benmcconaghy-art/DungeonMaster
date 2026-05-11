@@ -54,6 +54,19 @@ class CreateCharacterRequest(BaseModel):
             "Optional fixed ability scores to skip the roll. Keys: str/int/wis/dex/con/cha."
         ),
     )
+    pronouns: str | None = Field(
+        default=None,
+        max_length=40,
+        description="Free-form pronouns (e.g. 'she/her', 'they/them'). NULL = unspecified.",
+    )
+    description: str | None = Field(
+        default=None,
+        max_length=500,
+        description=(
+            "Player-supplied appearance flavor text. 500-char limit protects prompt budget "
+            "— at ~125 tokens per character this keeps a 4-PC party under 500 extra tokens."
+        ),
+    )
 
 
 class CharacterResponse(BaseModel):
@@ -73,6 +86,8 @@ class CharacterResponse(BaseModel):
     dex_score: int
     con_score: int
     cha_score: int
+    pronouns: str | None = None
+    description: str | None = None
 
 
 def _character_to_response(character: models.Character) -> CharacterResponse:
@@ -93,6 +108,8 @@ def _character_to_response(character: models.Character) -> CharacterResponse:
         dex_score=character.dex_score,
         con_score=character.con_score,
         cha_score=character.cha_score,
+        pronouns=character.pronouns,
+        description=character.description,
     )
 
 
@@ -195,6 +212,8 @@ async def roll_character(
         cha_score=rolled.abilities.cha_score,
         gold=rolled.starting_gold,
         alignment=rolled.alignment,
+        pronouns=payload.pronouns,
+        description=payload.description,
     )
     db.add(character)
     await db.commit()
@@ -274,6 +293,8 @@ class CharacterDetailResponse(BaseModel):
     spells: list[SpellResponse]
     is_spellcaster: bool
     notes: str
+    pronouns: str | None
+    description: str | None
     canonical_image_id: str | None
     is_mine: bool
 
@@ -282,6 +303,15 @@ class UpdateNotesRequest(BaseModel):
     """Player-editable notes update. Empty string clears them."""
 
     notes: str = Field(max_length=5000)
+
+
+class UpdateAppearanceRequest(BaseModel):
+    """Owner-only appearance update. Either field may be None to clear it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    pronouns: str | None = Field(default=None, max_length=40)
+    description: str | None = Field(default=None, max_length=500)
 
 
 def _signed_modifier(score: int) -> int:
@@ -402,6 +432,8 @@ def _detail_response(
         ],
         is_spellcaster=character.class_name in SPELLCASTER_CLASSES,
         notes=notes,
+        pronouns=character.pronouns,
+        description=character.description,
         canonical_image_id=character.canonical_image_id,
         is_mine=character.user_id == viewer_id,
     )
@@ -488,6 +520,55 @@ async def update_notes(
     return _detail_response(character, viewer_id=user.id, inventory=inventory, spells=spells)
 
 
+@router.patch(
+    "/api/characters/{character_id}/appearance",
+    response_model=CharacterDetailResponse,
+)
+async def update_appearance(
+    character_id: str,
+    payload: UpdateAppearanceRequest,
+    user: CurrentUser,
+    db: DbSession,
+) -> CharacterDetailResponse:
+    """Owner-only: set or clear pronouns and appearance description.
+
+    Both fields are nullable — passing None clears the field. The 500-char
+    limit on description protects per-turn DM prompt budget (see
+    AGENTS.md convention on player-supplied freeform fields).
+    """
+
+    character = await _require_character_visibility(db, character_id=character_id, user=user)
+    if character.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="only the owning player can edit appearance",
+        )
+    character.pronouns = payload.pronouns
+    character.description = payload.description
+    await db.commit()
+    await db.refresh(character)
+
+    inventory = list(
+        (
+            await db.execute(
+                select(models.InventoryItem)
+                .where(models.InventoryItem.character_id == character_id)
+                .order_by(models.InventoryItem.equipped.desc(), models.InventoryItem.name)
+            )
+        ).scalars()
+    )
+    spells = list(
+        (
+            await db.execute(
+                select(models.SpellKnown)
+                .where(models.SpellKnown.character_id == character_id)
+                .order_by(models.SpellKnown.spell_level, models.SpellKnown.spell_name)
+            )
+        ).scalars()
+    )
+    return _detail_response(character, viewer_id=user.id, inventory=inventory, spells=spells)
+
+
 __all__ = [
     "AbilityDetail",
     "CharacterDetailResponse",
@@ -496,6 +577,7 @@ __all__ = [
     "InventoryItemResponse",
     "SaveDetail",
     "SpellResponse",
+    "UpdateAppearanceRequest",
     "UpdateNotesRequest",
     "campaign_scoped_router",
     "router",

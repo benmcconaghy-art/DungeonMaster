@@ -125,7 +125,7 @@ async def request_character_portrait(
         race=character.race,
         class_name=character.class_name,
         alignment=character.alignment,
-        description=payload.description,
+        description=character.description or payload.description,
     )
     image_id = await enqueue_portrait(
         get_queue_client(),

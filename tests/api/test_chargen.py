@@ -192,3 +192,159 @@ async def test_roll_then_commit_creates_character(client: AsyncClient) -> None:
     # The sheet view route resolves and serves a 200.
     sheet = await client.get(f"/characters/{character['id']}")
     assert sheet.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Phase 6.13: pronouns + description on chargen
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_chargen_accepts_pronouns_and_description(client: AsyncClient) -> None:
+    """POST /api/campaigns/{id}/characters with pronouns and description →
+    201, both fields echoed back in the response."""
+
+    await _register_and_login(client)
+    campaign_id = await _create_campaign(client, "Presentation Test")
+
+    response = await client.post(
+        f"/api/campaigns/{campaign_id}/characters",
+        json={
+            "name": "Mira Ashvale",
+            "race": "Human",
+            "class_name": "Magic-User",
+            "alignment": "neutral",
+            "abilities": {
+                "str": 9,
+                "int": 15,
+                "wis": 12,
+                "dex": 13,
+                "con": 10,
+                "cha": 11,
+            },
+            "pronouns": "she/her",
+            "description": "Dark braided hair",
+        },
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["pronouns"] == "she/her"
+    assert body["description"] == "Dark braided hair"
+
+
+@pytest.mark.asyncio
+async def test_chargen_without_presentation_fields_gives_nulls(client: AsyncClient) -> None:
+    """POST without pronouns/description → 201 with both fields None."""
+
+    await _register_and_login(client)
+    campaign_id = await _create_campaign(client, "Null Presentation")
+
+    response = await client.post(
+        f"/api/campaigns/{campaign_id}/characters",
+        json={
+            "name": "Borin",
+            "race": "Human",
+            "class_name": "Fighter",
+            "alignment": "lawful",
+            "abilities": {
+                "str": 14,
+                "int": 10,
+                "wis": 10,
+                "dex": 12,
+                "con": 12,
+                "cha": 10,
+            },
+        },
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["pronouns"] is None
+    assert body["description"] is None
+
+
+@pytest.mark.asyncio
+async def test_chargen_null_presentation_fields_explicit(client: AsyncClient) -> None:
+    """POST with explicit null for pronouns/description → 201, both still None."""
+
+    await _register_and_login(client)
+    campaign_id = await _create_campaign(client, "Explicit Null")
+
+    response = await client.post(
+        f"/api/campaigns/{campaign_id}/characters",
+        json={
+            "name": "Dagna",
+            "race": "Dwarf",
+            "class_name": "Fighter",
+            "alignment": "lawful",
+            "abilities": {
+                "str": 14,
+                "int": 10,
+                "wis": 10,
+                "dex": 12,
+                "con": 12,
+                "cha": 10,
+            },
+            "pronouns": None,
+            "description": None,
+        },
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["pronouns"] is None
+    assert body["description"] is None
+
+
+@pytest.mark.asyncio
+async def test_chargen_description_over_500_chars_rejected(client: AsyncClient) -> None:
+    """description > 500 chars → 422 Unprocessable Entity."""
+
+    await _register_and_login(client)
+    campaign_id = await _create_campaign(client, "Oversize Desc")
+
+    response = await client.post(
+        f"/api/campaigns/{campaign_id}/characters",
+        json={
+            "name": "Tomas",
+            "race": "Human",
+            "class_name": "Thief",
+            "alignment": "neutral",
+            "abilities": {
+                "str": 10,
+                "int": 13,
+                "wis": 10,
+                "dex": 14,
+                "con": 11,
+                "cha": 12,
+            },
+            "description": "x" * 501,
+        },
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_chargen_pronouns_over_40_chars_rejected(client: AsyncClient) -> None:
+    """pronouns > 40 chars → 422 Unprocessable Entity."""
+
+    await _register_and_login(client)
+    campaign_id = await _create_campaign(client, "Oversize Pronouns")
+
+    response = await client.post(
+        f"/api/campaigns/{campaign_id}/characters",
+        json={
+            "name": "Zena",
+            "race": "Human",
+            "class_name": "Cleric",
+            "alignment": "lawful",
+            "abilities": {
+                "str": 10,
+                "int": 11,
+                "wis": 15,
+                "dex": 10,
+                "con": 12,
+                "cha": 13,
+            },
+            "pronouns": "z" * 41,
+        },
+    )
+    assert response.status_code == 422

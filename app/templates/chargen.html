@@ -26,7 +26,8 @@
       <li class="cg-pill" data-step="race">② Heritage</li>
       <li class="cg-pill" data-step="class">③ Calling</li>
       <li class="cg-pill" data-step="alignment">④ Alignment</li>
-      <li class="cg-pill" data-step="name">⑤ Name</li>
+      <li class="cg-pill" data-step="appearance">⑤ Appearance</li>
+      <li class="cg-pill" data-step="name">⑥ Name</li>
     </ol>
   </section>
 
@@ -152,7 +153,41 @@
     </div>
   </section>
 
-  <!-- Step 5: Name + commit -->
+  <!-- Step 5: Appearance (optional) -->
+  <section class="cg-panel cg-locked" data-section="appearance">
+    <h2>
+      Appearance
+      <span class="meta" id="cg-appearance-meta">how the chronicles describe you</span>
+    </h2>
+
+    <div class="cg-appearance-field">
+      <label class="cg-name-label">
+        <span>Pronouns <span class="meta">(optional)</span></span>
+      </label>
+      <div class="cg-pronoun-chips" role="group" aria-label="common pronoun sets">
+        <button type="button" class="cg-method-chip" data-pronouns="she/her">she/her</button>
+        <button type="button" class="cg-method-chip" data-pronouns="he/him">he/him</button>
+        <button type="button" class="cg-method-chip" data-pronouns="they/them">they/them</button>
+        <button type="button" class="cg-method-chip" data-pronouns="she/they">she/they</button>
+        <button type="button" class="cg-method-chip" data-pronouns="he/they">he/they</button>
+        <button type="button" class="cg-method-chip" data-pronouns="any">any</button>
+      </div>
+      <input type="text" id="cg-pronouns" name="pronouns" maxlength="40"
+             placeholder="or type your own…" autocomplete="off" />
+    </div>
+
+    <div class="cg-appearance-field">
+      <label class="cg-name-label" for="cg-description">
+        <span>Description <span class="meta">(optional · 500 chars)</span></span>
+      </label>
+      <textarea id="cg-description" name="description" maxlength="500" rows="3"
+                placeholder="Dark braided hair, scar above left eye, dwarven beard…"
+                class="cg-desc-area"></textarea>
+      <div class="cg-desc-count" id="cg-desc-count">0/500</div>
+    </div>
+  </section>
+
+  <!-- Step 6: Name + commit -->
   <section class="cg-panel cg-locked" data-section="name">
     <h2>
       Name
@@ -169,6 +204,9 @@
         <div class="cg-sum-row"><span class="cg-sum-key">heritage</span><em id="cg-sum-race">—</em></div>
         <div class="cg-sum-row"><span class="cg-sum-key">calling</span><em id="cg-sum-class">—</em></div>
         <div class="cg-sum-row"><span class="cg-sum-key">alignment</span><em id="cg-sum-alignment">—</em></div>
+        <div class="cg-sum-row" id="cg-sum-pronouns-row" style="display:none">
+          <span class="cg-sum-key">pronouns</span><em id="cg-sum-pronouns">—</em>
+        </div>
       </div>
 
       <button type="submit" id="cg-commit" class="cg-commit" disabled>
@@ -204,6 +242,8 @@
       race: null,
       className: null,
       alignment: null,
+      pronouns: null,
+      description: "",
       rolling: false,
     };
 
@@ -276,10 +316,14 @@
       // Section gating: each panel unlocks once the prior step has a value.
       const classPanel = document.querySelector('[data-section="class"]');
       const alignPanel = document.querySelector('[data-section="alignment"]');
+      const appearancePanel = document.querySelector('[data-section="appearance"]');
       const namePanel = document.querySelector('[data-section="name"]');
 
       classPanel.classList.toggle("cg-locked", !state.race);
       alignPanel.classList.toggle("cg-locked", !state.className);
+      // Appearance unlocks once alignment is set; name also unlocks then
+      // (appearance is optional — don't re-gate name behind it).
+      appearancePanel.classList.toggle("cg-locked", !state.alignment);
       namePanel.classList.toggle("cg-locked", !state.alignment);
 
       document.getElementById("cg-class-meta").textContent =
@@ -291,12 +335,23 @@
       document.getElementById("cg-sum-class").textContent = state.className || "—";
       document.getElementById("cg-sum-alignment").textContent = state.alignment || "—";
 
+      // Pronouns summary row — only show when a pronoun is set.
+      const pronounsRow = document.getElementById("cg-sum-pronouns-row");
+      const pronounsVal = state.pronouns;
+      if (pronounsVal) {
+        document.getElementById("cg-sum-pronouns").textContent = pronounsVal;
+        pronounsRow.style.display = "";
+      } else {
+        pronounsRow.style.display = "none";
+      }
+
       // Step pills indicate progress.
       const stepProgress = {
         abilities: true,
         race: !!state.race,
         class: !!state.className,
         alignment: !!state.alignment,
+        appearance: !!state.alignment, // optional step, unlocked = counts as reachable
         name: false, // becomes true on submit
       };
       document.querySelectorAll(".cg-pill").forEach((pill) => {
@@ -395,10 +450,12 @@
 
     // ---- Wiring --------------------------------------------------------
 
-    document.querySelectorAll(".cg-method-chip").forEach((chip) => {
+    // Scope to the roll-method row only — pronoun chips in step 5 also
+    // carry .cg-method-chip for visual consistency but must not trigger reroll.
+    document.querySelectorAll(".cg-method .cg-method-chip").forEach((chip) => {
       chip.addEventListener("click", () => {
         state.method = chip.dataset.method;
-        document.querySelectorAll(".cg-method-chip").forEach((c) =>
+        document.querySelectorAll(".cg-method .cg-method-chip").forEach((c) =>
           c.classList.toggle("is-selected", c === chip));
         document.getElementById("cg-method-meta").textContent =
           state.method === "heroic" ? "4d6 drop lowest, in order" : "3d6 in order";
@@ -451,6 +508,40 @@
       });
     });
 
+    // ---- Appearance step wiring ----------------------------------------
+
+    document.querySelectorAll('.cg-pronoun-chips button').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const val = chip.dataset.pronouns;
+        const input = document.getElementById('cg-pronouns');
+        if (state.pronouns === val) {
+          // toggle off
+          state.pronouns = null;
+          input.value = '';
+          chip.classList.remove('is-selected');
+        } else {
+          state.pronouns = val;
+          input.value = val;
+          document.querySelectorAll('.cg-pronoun-chips button').forEach(c => c.classList.remove('is-selected'));
+          chip.classList.add('is-selected');
+        }
+        updateGates();
+      });
+    });
+
+    document.getElementById('cg-pronouns').addEventListener('input', (e) => {
+      state.pronouns = e.target.value.trim() || null;
+      document.querySelectorAll('.cg-pronoun-chips button').forEach(chip => {
+        chip.classList.toggle('is-selected', chip.dataset.pronouns === state.pronouns);
+      });
+      updateGates();
+    });
+
+    document.getElementById('cg-description').addEventListener('input', (e) => {
+      state.description = e.target.value;
+      document.getElementById('cg-desc-count').textContent = e.target.value.length + '/500';
+    });
+
     document.getElementById("cg-name").addEventListener("input", updateGates);
 
     document.getElementById("cg-form").addEventListener("submit", async (event) => {
@@ -488,6 +579,8 @@
               alignment: state.alignment,
               method: state.method,
               abilities: abilitiesForCommit,
+              pronouns: state.pronouns || null,
+              description: state.description || null,
             }),
           }
         );

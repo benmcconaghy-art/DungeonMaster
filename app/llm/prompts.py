@@ -345,13 +345,17 @@ def _render_characters(characters: list[Character]) -> str:
     for ch in characters:
         effects: list[str] = list(ch.status_effects or [])
         effects_str = f", effects: {', '.join(effects)}" if effects else ""
-        lines.append(
-            f"  - {ch.name} ({ch.race} {ch.class_name} L{ch.level}) — "
+        pronouns_str = f", pronouns: {ch.pronouns}" if ch.pronouns else ""
+        line = (
+            f"  - {ch.name} ({ch.race} {ch.class_name} L{ch.level}{pronouns_str}) — "
             f"HP {ch.hp_current}/{ch.hp_max}, AC {ch.ac}, "
             f"STR {ch.str_score} DEX {ch.dex_score} CON {ch.con_score} "
             f"INT {ch.int_score} WIS {ch.wis_score} CHA {ch.cha_score}, "
             f"status: {ch.status}{effects_str} [id={ch.id}]"
         )
+        if ch.description:
+            line += f"\n    Appearance: {ch.description}"
+        lines.append(line)
     return "\n".join(lines)
 
 

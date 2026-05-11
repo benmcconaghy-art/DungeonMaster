@@ -275,6 +275,15 @@ async model within one worker. See spec §13 for rationale.
   annotations like `RegisterRequest`/`DbSession` — body and dep parameters
   silently degrade to query params. Drive the `limits` library directly via
   FastAPI `Depends` instead. See `app/ratelimit.py` for the pattern.
+- **Player-supplied freeform fields that feed prompts carry explicit length
+  limits at the API boundary, not in the database.** The constraint protects
+  per-turn prompt budget, not storage. Example: `character.description` is
+  capped at 500 chars in `CreateCharacterRequest` / `UpdateAppearanceRequest`
+  (`Field(max_length=500)`) and the chargen/sheet textarea (`maxlength="500"`).
+  At ~125 tokens per character and a 4-PC table, this keeps the ACTIVE PCs
+  section under 500 extra tokens — well within budget without crowding out
+  retrieved world facts. No CHECK constraint in the DB; the boundary is the
+  Pydantic model.
 
 ### Operational scripts (systemd-driven, watchdogs, cron)
 - **Any systemd-driven script in this codebase MUST exit 0
@@ -467,7 +476,10 @@ unblocks the session-wedge when a downed PC is revived; also ships
 deferred status-flags work noted in `apply_damage.py:121`; adds
 `status_effects` JSON column to `characters`; system-prompt
 REVIVAL AND STATUS EFFECTS block; Critical Invariant #18)
-landed 2026-05-05; Phase 8 (Adventure modules) ready to start.**
+landed 2026-05-05; Phase 6.13 (character presentation — `pronouns` and
+`description` columns on `characters`; chargen appearance step; inline edit
+on character sheet; DM prompt and FLUX portrait feed updated) landed
+2026-05-11; Phase 8 (Adventure modules) ready to start.**
 
 Update this line as phases complete. The phased plan is in spec §14.
 

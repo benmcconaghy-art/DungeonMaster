@@ -1,12 +1,13 @@
-"""Tests for ``app.llm.prompts.build_dm_prompt``."""
+"""Tests for ``app.llm.prompts.build_dm_prompt`` and section renderers."""
 
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 
 import pytest
 
-from app.llm.prompts import build_dm_prompt
+from app.llm.prompts import _render_characters, build_dm_prompt
 from tests.orchestrator.factories import (
     make_campaign,
     make_character,
@@ -457,3 +458,95 @@ async def test_attribution_skipped_when_sender_id_unresolvable(db_session) -> No
     # ``[None, None]:`` shape.
     assert all("[" not in m["content"][:1] for m in user_msgs)
     assert [m["content"] for m in user_msgs] == ["I look around.", "I keep looking."]
+
+
+# ---------------------------------------------------------------------------
+# Phase 6.13: _render_characters — pronouns and description rendering
+# ---------------------------------------------------------------------------
+
+
+def _make_char(**kwargs) -> SimpleNamespace:  # type: ignore[type-arg]
+    """Minimal fake Character object for _render_characters unit tests.
+
+    Only the fields _render_characters actually accesses are required;
+    everything else gets a sensible default so the function doesn't blow up.
+    """
+    defaults = {
+        "id": "test-id-0001",
+        "name": "Brunhild",
+        "race": "Human",
+        "class_name": "Fighter",
+        "level": 1,
+        "hp_current": 8,
+        "hp_max": 8,
+        "ac": 14,
+        "str_score": 14,
+        "dex_score": 12,
+        "con_score": 12,
+        "int_score": 10,
+        "wis_score": 10,
+        "cha_score": 10,
+        "status": "alive",
+        "status_effects": [],
+        "pronouns": None,
+        "description": None,
+    }
+    return SimpleNamespace(**(defaults | kwargs))
+
+
+def test_render_characters_with_pronouns_and_description() -> None:
+    """Both pronouns and description appear in the rendered block."""
+
+    ch = _make_char(
+        pronouns="she/her",
+        description="Dark braided hair, scar above left eye",
+    )
+    out = _render_characters([ch])
+    assert "pronouns: she/her" in out
+    assert "Appearance: Dark braided hair, scar above left eye" in out
+
+
+def test_render_characters_null_presentation_omits_both() -> None:
+    """Neither pronouns nor Appearance line renders when both are None."""
+
+    ch = _make_char(pronouns=None, description=None)
+    out = _render_characters([ch])
+    assert "pronouns" not in out
+    assert "Appearance" not in out
+
+
+def test_render_characters_pronouns_only() -> None:
+    """pronouns renders in the parenthetical; no Appearance line when description is None."""
+
+    ch = _make_char(pronouns="they/them", description=None)
+    out = _render_characters([ch])
+    assert "pronouns: they/them" in out
+    assert "Appearance" not in out
+
+
+def test_render_characters_description_only() -> None:
+    """Appearance line renders; no pronouns when pronouns is None."""
+
+    ch = _make_char(pronouns=None, description="Tall with copper-red hair")
+    out = _render_characters([ch])
+    assert "pronouns" not in out
+    assert "Appearance: Tall with copper-red hair" in out
+
+
+def test_render_characters_empty_list_returns_none_placeholder() -> None:
+    """Empty character list renders the canonical (none) placeholder."""
+
+    out = _render_characters([])
+    assert out == "(none)"
+
+
+def test_render_characters_multiple_pcs_each_rendered() -> None:
+    """All characters in the list appear in the output."""
+
+    alice = _make_char(name="Alice", pronouns="she/her", description="Short and quick")
+    bob = _make_char(name="Bob", pronouns=None, description=None)
+    out = _render_characters([alice, bob])
+    assert "Alice" in out
+    assert "pronouns: she/her" in out
+    assert "Appearance: Short and quick" in out
+    assert "Bob" in out

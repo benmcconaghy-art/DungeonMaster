@@ -21,6 +21,10 @@
       <span>{{ character.class_name }}</span><span class="sep">·</span>
       <span class="level">Level {{ character.level }}</span>
       <span class="alignment">{{ character.alignment|capitalize }}</span>
+      {% if character.pronouns %}
+        <span class="sep">·</span>
+        <span class="pronouns">{{ character.pronouns }}</span>
+      {% endif %}
     </div>
   </div>
   <div class="status-pill" data-state="{{ character.status }}">
@@ -57,6 +61,66 @@
         <button type="button" class="regen" aria-label="Regenerate portrait" id="regen-portrait">✎ regenerate</button>
       {% endif %}
     </figure>
+
+    <!-- Appearance panel (pronouns + description) -->
+    <section class="s-panel appearance-panel" aria-label="Appearance">
+      <h2>
+        Appearance
+        {% if character.is_mine %}<span class="meta">player-editable</span>{% endif %}
+      </h2>
+
+      {% if character.is_mine %}
+        <!-- Owner: inline edit form -->
+        <div id="appearance-view">
+          <div class="appearance-field">
+            <span class="field-label">Pronouns</span>
+            <span class="field-value" id="ap-pronouns-display">{{ character.pronouns or "—" }}</span>
+          </div>
+          {% if character.description %}
+            <p class="appearance-desc" id="ap-desc-display">{{ character.description }}</p>
+          {% else %}
+            <p class="appearance-desc empty" id="ap-desc-display">no description yet</p>
+          {% endif %}
+          <button type="button" class="regen" id="appearance-edit-btn">✎ edit</button>
+        </div>
+
+        <div id="appearance-edit" style="display:none">
+          <div class="cg-pronoun-chips ap-chips" role="group" aria-label="pronoun chips">
+            {% for pron in ["she/her","he/him","they/them","she/they","he/they","any"] %}
+              <button type="button" class="cg-method-chip ap-pronoun-chip{% if character.pronouns == pron %} is-selected{% endif %}"
+                      data-pronouns="{{ pron }}">{{ pron }}</button>
+            {% endfor %}
+          </div>
+          <input type="text" id="ap-pronouns-input" maxlength="40"
+                 value="{{ character.pronouns or '' }}"
+                 placeholder="or type your own…" />
+          <textarea id="ap-desc-input" maxlength="500" rows="3"
+                    placeholder="Dark braided hair, scar above left eye…"
+                    class="cg-desc-area">{{ character.description or '' }}</textarea>
+          <div class="ap-actions">
+            <button type="button" class="cg-commit ap-save" id="appearance-save-btn">Save appearance</button>
+            <button type="button" class="regen" id="appearance-cancel-btn">cancel</button>
+            <span class="notes-status" id="appearance-status"></span>
+          </div>
+        </div>
+
+      {% else %}
+        <!-- Viewer: read-only -->
+        {% if character.pronouns or character.description %}
+          {% if character.pronouns %}
+            <div class="appearance-field">
+              <span class="field-label">Pronouns</span>
+              <span class="field-value">{{ character.pronouns }}</span>
+            </div>
+          {% endif %}
+          {% if character.description %}
+            <p class="appearance-desc">{{ character.description }}</p>
+          {% endif %}
+        {% else %}
+          <p class="s-chip empty">no appearance set</p>
+        {% endif %}
+      {% endif %}
+    </section>
 
     <!-- Notes (player-editable iff is_mine) -->
     <section class="s-panel" aria-label="Notes">
@@ -288,6 +352,104 @@
           regenBtn.textContent = "✎ regenerate";
           regenBtn.disabled = false;
         }, 3000);
+      }
+    });
+  }
+
+  // Appearance inline edit — owner-only (appearance-edit-btn only exists for is_mine)
+  const apEditBtn = document.getElementById('appearance-edit-btn');
+  const apCancelBtn = document.getElementById('appearance-cancel-btn');
+  const apSaveBtn = document.getElementById('appearance-save-btn');
+  const apView = document.getElementById('appearance-view');
+  const apEdit = document.getElementById('appearance-edit');
+
+  if (apEditBtn && apEdit && apView) {
+    apEditBtn.addEventListener('click', () => {
+      apView.style.display = 'none';
+      apEdit.style.display = '';
+    });
+
+    apCancelBtn.addEventListener('click', () => {
+      apEdit.style.display = 'none';
+      apView.style.display = '';
+    });
+
+    // Chips in the appearance edit form sync the pronouns input
+    document.querySelectorAll('.ap-pronoun-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const val = chip.dataset.pronouns;
+        const input = document.getElementById('ap-pronouns-input');
+        const current = input.value.trim();
+        if (current === val) {
+          input.value = '';
+          chip.classList.remove('is-selected');
+        } else {
+          input.value = val;
+          document.querySelectorAll('.ap-pronoun-chip').forEach(c => c.classList.remove('is-selected'));
+          chip.classList.add('is-selected');
+        }
+      });
+    });
+
+    document.getElementById('ap-pronouns-input').addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      document.querySelectorAll('.ap-pronoun-chip').forEach(chip => {
+        chip.classList.toggle('is-selected', chip.dataset.pronouns === val);
+      });
+    });
+
+    apSaveBtn.addEventListener('click', async () => {
+      const statusEl = document.getElementById('appearance-status');
+      apSaveBtn.disabled = true;
+      statusEl.textContent = 'saving…';
+      statusEl.className = 'notes-status';
+
+      const pronounsVal = document.getElementById('ap-pronouns-input').value.trim() || null;
+      const descVal = document.getElementById('ap-desc-input').value || null;
+
+      try {
+        const response = await fetch(`/api/characters/{{ character.id }}/appearance`, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          credentials: 'same-origin',
+          body: JSON.stringify({pronouns: pronounsVal, description: descVal}),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        // Update the view
+        document.getElementById('ap-pronouns-display').textContent = pronounsVal || '—';
+        const descDisplay = document.getElementById('ap-desc-display');
+        if (descVal) {
+          descDisplay.textContent = descVal;
+          descDisplay.classList.remove('empty');
+        } else {
+          descDisplay.textContent = 'no description yet';
+          descDisplay.classList.add('empty');
+        }
+        // Update pronouns in header if present
+        const pronounsHeader = document.querySelector('.titles .pronouns');
+        const sep = pronounsHeader?.previousElementSibling;
+        if (pronounsVal) {
+          if (pronounsHeader) {
+            pronounsHeader.textContent = pronounsVal;
+          }
+          // If header element doesn't exist yet, reload to pick up server-rendered state
+        } else if (pronounsHeader) {
+          pronounsHeader.remove();
+          sep?.remove();
+        }
+
+        statusEl.textContent = 'saved';
+        statusEl.className = 'notes-status ok';
+        setTimeout(() => { statusEl.textContent = ''; apSaveBtn.disabled = false; }, 1500);
+
+        apEdit.style.display = 'none';
+        apView.style.display = '';
+      } catch (err) {
+        console.warn('appearance save failed', err);
+        statusEl.textContent = 'save failed — try again';
+        statusEl.className = 'notes-status err';
+        apSaveBtn.disabled = false;
       }
     });
   }

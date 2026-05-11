@@ -450,3 +450,47 @@
   color: var(--rust);
   margin: 0;
 }
+
+/* ----- Appearance step ----- */
+.cg-appearance-field { margin-bottom: var(--s-4); }
+.cg-pronoun-chips { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-bottom: var(--s-2); }
+.cg-desc-area {
+  width: 100%;
+  resize: vertical;
+  background: var(--parchment-bg, rgba(0,0,0,0.3));
+  border: 1px solid var(--rule-soft);
+  color: var(--parchment);
+  padding: var(--s-2);
+  font-family: var(--font-prose);
+  font-size: 14px;
+  border-radius: 4px;
+  outline: none;
+  line-height: 1.5;
+}
+.cg-desc-area:focus { border-color: var(--ember); }
+.cg-desc-area::placeholder { color: var(--parchment-mute); font-style: italic; }
+.cg-desc-count {
+  font-size: 11px;
+  color: var(--parchment-mute);
+  text-align: right;
+  margin-top: var(--s-1);
+  font-family: var(--font-mono);
+}
+/* Pronouns free-text input in chargen (appearance section) */
+[data-section="appearance"] input[type="text"] {
+  display: block;
+  width: 100%;
+  font: inherit;
+  letter-spacing: 0.02em;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--rule-soft);
+  color: var(--parchment);
+  padding: 8px 12px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  outline: none;
+  border-radius: var(--radius-sm);
+  margin-top: 0;
+}
+[data-section="appearance"] input[type="text"]:focus { border-color: var(--ember); }
+[data-section="appearance"] input[type="text"]::placeholder { color: var(--parchment-mute); font-style: italic; }
