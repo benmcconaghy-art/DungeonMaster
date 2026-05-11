@@ -225,6 +225,25 @@ class ImageFailed(_BaseMessage):
     reason: str
 
 
+class NpcIntroduced(_BaseMessage):
+    """An NPC has been introduced into the session.
+
+    Broadcast on ``spawn_npc`` side-effect so the right-rail NPC roster
+    can add a card immediately. ``portrait_image_id`` is the pending image
+    job id — a later ``image_ready`` with the same id carries the portrait
+    URL the client can use to update the card.
+
+    The message is self-contained (name, brief, portrait_image_id) so the
+    client never needs to fetch the NPC row separately.
+    """
+
+    type: Literal["npc_introduced"] = "npc_introduced"
+    npc_id: str
+    name: str
+    brief: str
+    portrait_image_id: str | None = None
+
+
 class Presence(_BaseMessage):
     """Who is currently connected to this session.
 
@@ -285,6 +304,7 @@ ServerMessage = Annotated[
     | ImagePending
     | ImageReady
     | ImageFailed
+    | NpcIntroduced
     | Presence
     | DmError
     | Pong
@@ -356,10 +376,12 @@ __all__ = [
     "CurrentActor",
     "DiceRoll",
     "DmError",
+    "ImageFailed",
     "ImagePending",
     "ImageReady",
     "NarrationChunk",
     "NarrationComplete",
+    "NpcIntroduced",
     "PcAction",
     "Pong",
     "Presence",

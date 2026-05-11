@@ -865,6 +865,18 @@ up. Promote to a real issue / phase task when its trigger fires.
   smoke after a hardening change. **Context:**
   `deploy/PHASE_7_VERIFICATION.md`.
 
+- **Tool-rejection errors visible to player** (added 2026-05-11,
+  Phase 8.1 validation finding). Phase 6.9's `_classify_tool_call`
+  gate correctly drops malformed LLM tool calls (e.g. empty-args
+  Nemotron emission) and the session continues cleanly. However the
+  recovery surfaces as a player-visible `[error]` bubble containing
+  the raw validation diagnostic. The recovery is designed to be
+  invisible; operator-grade error detail should not reach the player
+  UI. **Trigger:** Phase 9 polish pass, OR a player complains about
+  seeing technical error messages during play. **Context:** Phase 6.9
+  `_TOOL_REJECTION_RECOVERY_NOTE` in `app/orchestrator/dm.py`; the
+  WS broadcast path that emits `dm_error` frames to the client.
+
 - **Dev-default `session_secret` not rejected at boot** (added
   2026-05-01, Phase 7 step 3D, target if posture changes from
   trusted-LAN). `app/config.py` declares

@@ -27,6 +27,7 @@ from app.realtime.messages import (
     ImageReady,
     NarrationChunk,
     NarrationComplete,
+    NpcIntroduced,
     PcAction,
     Pong,
     Presence,
@@ -77,6 +78,13 @@ def _client_round_trip(msg: ClientMessage) -> ClientMessage:
         StateUpdate(tool_call_id="tc-3", side_effects={"kind": "hp", "delta": -3}),
         ImagePending(image_id="img-1", placeholder="loading…"),
         ImageReady(image_id="img-1", url="/static/img/img-1.png"),
+        NpcIntroduced(npc_id="npc-1", name="Castellan Thorvald", brief="Greying veteran."),
+        NpcIntroduced(
+            npc_id="npc-2",
+            name="Jeb the Smith",
+            brief="Barrel-chested dwarf.",
+            portrait_image_id="img-portrait-1",
+        ),
         Presence(
             connected=[
                 PresenceEntry(
@@ -254,3 +262,44 @@ def test_dump_json_is_bytes() -> None:
 
     raw: Any = _SERVER_ADAPTER.dump_json(NarrationChunk(stream_id="s-1", content="hi"))
     assert isinstance(raw, bytes)
+
+
+# ---------------------------------------------------------------------------
+# Phase 8 Commit 2 — NpcIntroduced bridge mapping
+# ---------------------------------------------------------------------------
+
+
+def test_npc_introduced_bridge_mapping() -> None:
+    """NpcIntroducedEvent from the orchestrator must map to ws.NpcIntroduced
+    via orchestrator_event_to_ws — the bridge is the seam between the
+    orchestrator and the WS fan-out."""
+
+    from app.orchestrator.dm import NpcIntroducedEvent
+    from app.realtime.bridge import orchestrator_event_to_ws
+
+    ev = NpcIntroducedEvent(
+        npc_id="npc-abc",
+        name="Mother Serra",
+        brief="The keep's cleric, warm but unsparing.",
+        portrait_image_id="img-456",
+    )
+    ws_msg = orchestrator_event_to_ws(ev)
+    assert ws_msg is not None
+    assert isinstance(ws_msg, NpcIntroduced)
+    assert ws_msg.npc_id == "npc-abc"
+    assert ws_msg.name == "Mother Serra"
+    assert ws_msg.brief == "The keep's cleric, warm but unsparing."
+    assert ws_msg.portrait_image_id == "img-456"
+
+
+def test_npc_introduced_bridge_no_portrait() -> None:
+    """NpcIntroducedEvent without a portrait (auto_portrait=False NPC)
+    maps correctly with portrait_image_id=None."""
+
+    from app.orchestrator.dm import NpcIntroducedEvent
+    from app.realtime.bridge import orchestrator_event_to_ws
+
+    ev = NpcIntroducedEvent(npc_id="npc-xyz", name="Stable Hand", brief="A quiet lad.")
+    ws_msg = orchestrator_event_to_ws(ev)
+    assert isinstance(ws_msg, NpcIntroduced)
+    assert ws_msg.portrait_image_id is None

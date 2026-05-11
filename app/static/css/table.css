@@ -804,6 +804,79 @@
 .tag.t-warn { color: var(--rust); border-color: var(--rust-deep); }
 .tag.t-buff { color: var(--moss); border-color: var(--moss); }
 
+/* NPC roster panel */
+.npc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.npc-list li.empty {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--parchment-mute);
+  padding: var(--s-2) 0;
+}
+
+.npc-card {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border-bottom: 1px dashed var(--rule-soft);
+}
+.npc-card:last-child { border-bottom: 0; }
+
+.npc-portrait {
+  width: 44px; height: 56px;
+  background: linear-gradient(135deg, var(--vellum-3), var(--vellum-1));
+  border: 1px solid var(--rule-strong);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.npc-portrait::after {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(201,147,62,0.08) 0 1px,
+    transparent 1px 6px
+  );
+  pointer-events: none;
+}
+.npc-portrait img { width: 100%; height: 100%; object-fit: cover; display: block; position: relative; z-index: 1; }
+.npc-portrait .initial {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--parchment-dim);
+  letter-spacing: 0.05em;
+}
+
+.npc-card h3 {
+  margin: 0 0 2px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: var(--parchment);
+}
+.npc-brief {
+  margin: 0;
+  font-family: var(--font-prose);
+  font-size: 11px;
+  color: var(--parchment-dim);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* Initiative tracker (only visible when encounter active) */
 .initiative {
   display: none;

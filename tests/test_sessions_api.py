@@ -70,6 +70,39 @@ async def test_create_session_schedules_opening_turn(
 
 
 @pytest.mark.asyncio
+async def test_play_view_renders_npc_panel(
+    client: AsyncClient,
+) -> None:
+    """Phase 8 Commit 2: the play screen must render the NPC roster panel
+    so the JS can accumulate npc_introduced events into it. Tests both
+    the section element and the npc-list empty-state placeholder."""
+
+    await _register(client)
+    campaign_id = await _create_campaign(client)
+    r = await client.post(f"/api/campaigns/{campaign_id}/sessions")
+    assert r.status_code == 201, r.text
+    session_id = r.json()["id"]
+
+    page = await client.get(f"/play/{session_id}")
+    assert page.status_code == 200
+
+    html = page.text
+    # Section element with the expected class and id.
+    assert 'class="panel npcs"' in html
+    assert 'id="npcs-panel"' in html
+    assert 'id="npc-list"' in html
+    # Empty-state placeholder present on first load.
+    assert 'id="npc-list-empty"' in html
+    # Panel is positioned between party and rolls (order check).
+    npcs_pos = html.index('id="npcs-panel"')
+    party_pos = html.index('class="panel party"')
+    rolls_pos = html.index('class="panel rolls"')
+    assert npcs_pos < party_pos < rolls_pos, (
+        "NPC panel must appear before Party panel, Party before Rolls"
+    )
+
+
+@pytest.mark.asyncio
 async def test_create_session_does_not_block_on_opening_turn(
     client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,

@@ -753,6 +753,9 @@ class TestSpawnNpc:
         assert result.side_effects["kind"] == "npc_spawned"
         assert result.side_effects["npc_id"] == npc.id
         assert "portrait_image_id" in result.side_effects
+        # Phase 8 Commit 2: brief carries the description so npc_introduced
+        # WS message is self-contained (no DB round-trip from the client).
+        assert result.side_effects["brief"] == "Greying veteran, missing two fingers."
 
     @pytest.mark.asyncio
     async def test_auto_portrait_false_skips_enqueue(self, db_session) -> None:  # type: ignore[no-untyped-def]

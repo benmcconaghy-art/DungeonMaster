@@ -90,6 +90,7 @@ async def handle(db: AsyncSession, args: SpawnNpc) -> ToolResult:
         "kind": "npc_spawned",
         "npc_id": npc.id,
         "name": args.name,
+        "brief": args.description or "",
     }
     if portrait_image_id is not None:
         side_effects["portrait_image_id"] = portrait_image_id

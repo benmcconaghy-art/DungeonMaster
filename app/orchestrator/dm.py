@@ -140,6 +140,17 @@ class WhisperEvent(_Event):
     content: str
 
 
+class NpcIntroducedEvent(_Event):
+    """An NPC was spawned into the campaign. The rail panel uses this to
+    add a card immediately; a later ``image_ready`` supplies the portrait."""
+
+    type: Literal["npc_introduced"] = "npc_introduced"
+    npc_id: str
+    name: str
+    brief: str
+    portrait_image_id: str | None = None
+
+
 class DmError(_Event):
     """Something went wrong. ``reason`` is short and machine-readable;
     ``message`` is human-readable."""
@@ -156,6 +167,7 @@ DmEvent = (
     | DiceRollEvent
     | StateUpdate
     | WhisperEvent
+    | NpcIntroducedEvent
     | DmError
 )
 
@@ -916,6 +928,17 @@ async def _dispatch_one(
             ),
             None,
         )
+    elif kind == "npc_spawned":
+        pid = side.get("portrait_image_id")
+        yield (
+            NpcIntroducedEvent(
+                npc_id=str(side.get("npc_id", "")),
+                name=str(side.get("name", "")),
+                brief=str(side.get("brief", "")),
+                portrait_image_id=str(pid) if pid else None,
+            ),
+            None,
+        )
 
     # Tool message that goes back into the prompt for the next stream.
     yield (None, _tool_audit_message(tc, result.content))
@@ -999,6 +1022,7 @@ __all__ = [
     "DmEvent",
     "NarrationChunk",
     "NarrationComplete",
+    "NpcIntroducedEvent",
     "StateUpdate",
     "ToolDispatched",
     "WhisperEvent",

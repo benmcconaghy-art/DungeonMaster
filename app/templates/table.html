@@ -111,6 +111,13 @@
       </ul>
     </section>
 
+    <section class="panel npcs" id="npcs-panel" aria-label="NPCs encountered">
+      <h2>NPCs <span class="meta" id="npcs-count"></span></h2>
+      <ul class="npc-list" id="npc-list">
+        <li class="empty" id="npc-list-empty">none yet</li>
+      </ul>
+    </section>
+
     <section class="panel party" aria-label="Your characters">
       <h2>Party</h2>
       {% for character in characters %}
@@ -226,6 +233,9 @@
   const whisperCloseBtn = whisperOverlay.querySelector(".whisper-close");
   const helpTip = document.getElementById("help-tip");
   const helpBtn = helpTip.querySelector("button");
+  const npcList = document.getElementById("npc-list");
+  const npcListEmpty = document.getElementById("npc-list-empty");
+  const npcsCount = document.getElementById("npcs-count");
 
   // ---- Mutable state ----------------------------------------------------
   let socket = null;
@@ -242,6 +252,11 @@
   let charactersById = {};        // {id: {id, name}}
   let whispersLog = [];           // [{id, content, time}]
   let whisperSeq = 0;
+  // Phase 8 NPC roster: accumulated from npc_introduced events.
+  // portraitPending maps portrait_image_id → npc_id so image_ready
+  // can update the right NPC card without appending to narration.
+  let npcRoster = {};             // { npc_id: {npc_id, name, brief, portrait_image_id} }
+  let portraitPending = {};       // { portrait_image_id: npc_id }
   // Characters from the initial Jinja render. The snapshot doesn't
   // restate character names; we use this for player message labels.
   {% for c in characters %}
@@ -430,6 +445,69 @@
 
   function appendSystemMessage(who, content) {
     return appendMessage("system", who, content, formatNow());
+  }
+
+  // ---- NPC roster -----------------------------------------------------------
+  // Cards are added by npc_introduced and updated by image_ready when the
+  // portrait_image_id matches a pending NPC portrait. Portrait images are
+  // intercepted here and never appended to the narration log.
+
+  function addNpcCard(npc) {
+    // Remove the empty placeholder on first NPC.
+    if (npcListEmpty) npcListEmpty.remove();
+    const li = document.createElement("li");
+    li.className = "npc-card";
+    li.dataset.npcId = npc.npc_id;
+
+    const portraitDiv = document.createElement("div");
+    portraitDiv.className = "npc-portrait";
+    if (npc.portrait_image_id) {
+      // Pending — show initial until image_ready arrives.
+      const initial = document.createElement("span");
+      initial.className = "initial";
+      initial.textContent = (npc.name || "?")[0].toUpperCase();
+      portraitDiv.appendChild(initial);
+    } else {
+      const initial = document.createElement("span");
+      initial.className = "initial";
+      initial.textContent = (npc.name || "?")[0].toUpperCase();
+      portraitDiv.appendChild(initial);
+    }
+
+    const infoDiv = document.createElement("div");
+    const nameEl = document.createElement("h3");
+    nameEl.textContent = npc.name || "";
+    const briefEl = document.createElement("p");
+    briefEl.className = "npc-brief";
+    briefEl.textContent = npc.brief || "";
+    infoDiv.appendChild(nameEl);
+    infoDiv.appendChild(briefEl);
+
+    li.appendChild(portraitDiv);
+    li.appendChild(infoDiv);
+    npcList.appendChild(li);
+
+    const count = npcList.querySelectorAll(".npc-card").length;
+    if (npcsCount) npcsCount.textContent = String(count);
+
+    return li;
+  }
+
+  function updateNpcPortrait(portraitImageId, url) {
+    const npcId = portraitPending[portraitImageId];
+    if (!npcId) return false;
+    const card = npcList.querySelector(`[data-npc-id="${CSS.escape(npcId)}"]`);
+    if (!card) return false;
+    const portraitDiv = card.querySelector(".npc-portrait");
+    if (!portraitDiv) return false;
+    portraitDiv.replaceChildren();
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = `Portrait`;
+    img.loading = "lazy";
+    portraitDiv.appendChild(img);
+    delete portraitPending[portraitImageId];
+    return true;
   }
 
   // ---- Image cards ------------------------------------------------------
@@ -802,11 +880,33 @@
       appendImagePending(msg.image_id, msg.placeholder);
     },
     image_ready(msg) {
+      // Phase 8: portrait images for NPC cards go to the rail, not narration.
+      if (updateNpcPortrait(msg.image_id, msg.url)) return;
       appendImageReady(msg.image_id, msg.url);
     },
     image_failed(msg) {
       console.debug("image_failed", msg.image_id, msg.reason);
+      // If this was a pending NPC portrait, remove from pending map.
+      if (portraitPending[msg.image_id]) {
+        delete portraitPending[msg.image_id];
+        return;
+      }
       appendImageFailed(msg.image_id);
+    },
+    npc_introduced(msg) {
+      // Deduplicate — same npc_id may arrive on reconnect if the
+      // DM re-introduces a known NPC in the same browser tab.
+      if (npcRoster[msg.npc_id]) return;
+      npcRoster[msg.npc_id] = {
+        npc_id: msg.npc_id,
+        name: msg.name,
+        brief: msg.brief,
+        portrait_image_id: msg.portrait_image_id || null,
+      };
+      if (msg.portrait_image_id) {
+        portraitPending[msg.portrait_image_id] = msg.npc_id;
+      }
+      addNpcCard(npcRoster[msg.npc_id]);
     },
   };
 

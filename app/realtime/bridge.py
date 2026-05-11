@@ -26,6 +26,7 @@ from app.orchestrator.dm import (
     DmEvent,
     NarrationChunk,
     NarrationComplete,
+    NpcIntroducedEvent,
     StateUpdate,
     ToolDispatched,
     WhisperEvent,
@@ -77,14 +78,21 @@ def orchestrator_event_to_ws(event: DmEvent) -> ws.ServerMessage | None:
             audience=list(event.audience),
             content=event.content,
         )
+    if isinstance(event, NpcIntroducedEvent):
+        return ws.NpcIntroduced(
+            npc_id=event.npc_id,
+            name=event.name,
+            brief=event.brief,
+            portrait_image_id=event.portrait_image_id,
+        )
     if isinstance(event, DmError):
         return ws.DmError(reason=event.reason, message=event.message)
     # ToolDispatched is the remaining variant; it doesn't surface to
     # clients (the convenience variants — DiceRollEvent, StateUpdate,
-    # WhisperEvent — carry the player-visible payload). The match
-    # ladder above is exhaustive over DmEvent today; mypy flagging this
-    # as unreachable would mean the union grew without a corresponding
-    # branch.
+    # WhisperEvent, NpcIntroducedEvent — carry the player-visible
+    # payload). The match ladder above is exhaustive over DmEvent
+    # today; mypy flagging this as unreachable would mean the union
+    # grew without a corresponding branch.
     assert isinstance(event, ToolDispatched)
     return None
 
