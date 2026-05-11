@@ -492,10 +492,14 @@ async def take_turn(
             # accuracy depends on the full reasoning trace. Switched to
             # "low" on the first empty-completion retry so reduced-effort
             # reasoning is sufficient for a recovery narration (the model
-            # already has tool results in context).  max_tokens doubles on
-            # retry to give the model more room if the budget was the cause.
+            # already has tool results in context).
+            # max_tokens=2048 on both tiers. With Nemotron reasoning_mode=full,
+            # max_tokens caps the answer phase only (thinking tokens are
+            # separately accounted at the server). 2048 gives real room for
+            # complex scenes; length discipline lives in the PACING prompt
+            # block, not here. See Critical Invariant #19.
             _reasoning_mode: ReasoningMode = "low" if empty_completion_count > 0 else "full"
-            _max_tokens = 2048 if empty_completion_count > 0 else 768
+            _max_tokens = 2048
             stream = await client.stream_dm(
                 messages,
                 tools=tools,

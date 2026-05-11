@@ -198,6 +198,20 @@ modules. Single-server deployment on AlmaLinux 10.1, trusted internal LAN.
     for transient conditions (poisoned, paralyzed, dying, etc.) — this
     completes the Phase 3 deferred work noted in `apply_damage.py:121`.
 
+19. **`max_tokens` on reasoning-model APIs caps the answer phase only,
+    not the thinking phase.** For DM streaming with
+    `reasoning_mode="full"`, Nemotron generates a thinking trace and
+    then an answer. The `max_tokens` parameter (sent via the OpenAI
+    chat-completions API to vLLM) bounds the answer tokens; the
+    thinking budget is separately accounted at the server and does not
+    consume the `max_tokens` quota. Observed production completions
+    with `max_tokens=768` reached 1215–1402 total tokens because
+    thinking tokens (≈450–640) were added on top of the answer cap.
+    Phase 8 sets `max_tokens=2048` on both ordinary and recovery
+    iterations of the DM turn loop. Length discipline lives in the
+    PACING prompt block; the budget is a safety cap against runaway,
+    not a length-discipline mechanism.
+
 ## Tech stack
 
 - Python 3.12
@@ -335,14 +349,15 @@ async model within one worker. See spec §13 for rationale.
 
 - **The DM has two-tier recovery from empty completions.** When an
   iteration produces neither content nor tool calls, the orchestrator
-  retries once with `reasoning_mode="low"` and `max_tokens=2048` (the
-  model already has tool results in context; lower-effort reasoning is
-  sufficient for recovery narration). If the retry also empties, it
-  falls back to `dm_error(reason="empty_completion")`. No recovery
-  note is injected — same DM system prompt, just different inference
-  settings. The counter (`empty_completion_count`) is a local variable
-  per `take_turn` call, so it resets between turns automatically and is
-  independent of the tool-call iteration counter. See Phase 6.11
+  retries once with `reasoning_mode="low"` (the model already has tool
+  results in context; lower-effort reasoning is sufficient for recovery
+  narration). Both tiers use `max_tokens=2048` — the distinguishing
+  variable is `reasoning_mode`, not the token budget. If the retry also
+  empties, it falls back to `dm_error(reason="empty_completion")`. No
+  recovery note is injected — same DM system prompt, just different
+  inference settings. The counter (`empty_completion_count`) is a local
+  variable per `take_turn` call, so it resets between turns automatically
+  and is independent of the tool-call iteration counter. See Phase 6.11
   close-out; real-traffic evidence confirmed this fires on ordinary
   single-tool-dispatch turns, not only complex multi-actor scenes.
 
@@ -372,6 +387,18 @@ async model within one worker. See spec §13 for rationale.
   monkeypatch the *limit thresholds* to keep cases fast. See
   `tests/test_ratelimit.py::test_production_storage_backend_handles_full_lifecycle`
   for the canonical pattern.
+- **`stream_dm`-boundary mocks validate orchestrator plumbing only.**
+  `_FakeDmClient` in `tests/orchestrator/test_dm.py` captures kwargs
+  and confirms the orchestrator passes the right values to
+  `stream_dm()`. It cannot detect how the OpenAI SDK serialises those
+  values into the HTTP body, or how vLLM interprets them
+  (e.g. `max_tokens` capping answer-only vs. total output on a
+  reasoning model). For behaviour that depends on what the LLM server
+  does with a parameter, test at the httpx transport boundary: create
+  an `httpx.AsyncBaseTransport` subclass, wire it into `AsyncOpenAI`
+  via `http_client=`, and assert on the captured JSON body. See
+  `tests/llm/test_client.py::test_stream_dm_sends_max_tokens_in_http_body`
+  for the canonical pattern. Phase 8 fixup surfaced this gap.
 
 ## File organisation
 

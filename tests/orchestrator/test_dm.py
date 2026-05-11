@@ -1013,12 +1013,13 @@ async def test_empty_completion_retries_once_then_succeeds(  # type: ignore[no-u
 
 
 @pytest.mark.asyncio
-async def test_retry_uses_low_reasoning_mode_and_doubled_tokens(  # type: ignore[no-untyped-def]
+async def test_retry_uses_low_reasoning_mode(  # type: ignore[no-untyped-def]
     db_session, patch_client
 ) -> None:
     """On the first empty completion, the orchestrator retries with
-    ``reasoning_mode="low"`` and ``max_tokens=2048``. The first call
-    uses ``reasoning_mode="full"`` and ``max_tokens=768``.
+    ``reasoning_mode="low"``. Both tiers use ``max_tokens=2048`` —
+    the two-tier recovery contract is reasoning-mode-driven, not
+    token-budget-driven. See Critical Invariant #19.
     """
 
     _, _, session, _ = await _setup_session(db_session)
@@ -1044,13 +1045,17 @@ async def test_retry_uses_low_reasoning_mode_and_doubled_tokens(  # type: ignore
     assert (
         first_kwargs.get("reasoning_mode") == "full"
     ), f"first call should use full reasoning; got {first_kwargs}"
-    assert first_kwargs.get("max_tokens") == 768
+    assert first_kwargs.get("max_tokens") == 2048
 
     retry_kwargs = fake.received_kwargs_log[1]
     assert (
         retry_kwargs.get("reasoning_mode") == "low"
     ), f"retry should use low reasoning; got {retry_kwargs}"
     assert retry_kwargs.get("max_tokens") == 2048
+
+    # Both tiers share the same token budget; the distinguishing variable
+    # is reasoning_mode, not max_tokens.
+    assert first_kwargs.get("max_tokens") == retry_kwargs.get("max_tokens")
 
 
 @pytest.mark.asyncio

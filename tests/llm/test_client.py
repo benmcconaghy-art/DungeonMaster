@@ -7,11 +7,14 @@ under ``tests/integration/`` handles that.
 
 from __future__ import annotations
 
+import json as _json
 from collections.abc import AsyncIterator
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
+import httpx
 import pytest
+from openai import AsyncOpenAI
 
 from app.llm.client import (
     DmClient,
@@ -213,4 +216,108 @@ async def test_stream_dm_low_passes_chat_template_kwargs() -> None:
     args, kwargs = fake_create.call_args
     assert kwargs["extra_body"] == {
         "chat_template_kwargs": {"enable_thinking": True, "low_effort": True}
+    }
+
+
+# ---------------------------------------------------------------------------
+# HTTP transport boundary — Phase 8 fixup
+#
+# The _FakeDmClient in test_dm.py mocks at the stream_dm() boundary: it
+# validates that the orchestrator passes the right kwargs, but it never
+# exercises what stream_dm() actually puts in the HTTP body. These tests
+# intercept at the httpx transport layer (below the OpenAI SDK, above the
+# network) to verify the wire payload. They catch mis-serialisations that
+# the stream_dm-level mock cannot. See AGENTS.md Code Conventions → Tests.
+# ---------------------------------------------------------------------------
+
+_SSE_RESPONSE = (
+    'data: {"id":"1","object":"chat.completion.chunk","created":1,"model":"m",'
+    '"choices":[{"index":0,"delta":{"role":"assistant","content":"hi"},'
+    '"finish_reason":null}]}\n\n'
+    'data: {"id":"1","object":"chat.completion.chunk","created":1,"model":"m",'
+    '"choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\n'
+    "data: [DONE]\n\n"
+)
+
+
+class _CapturingTransport(httpx.AsyncBaseTransport):
+    """httpx transport that captures the last request body and returns a
+    canned SSE response. Wired into AsyncOpenAI via ``http_client=``."""
+
+    def __init__(self) -> None:
+        self.captured_body: dict[str, Any] = {}
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        self.captured_body = _json.loads(request.content)
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            content=_SSE_RESPONSE.encode(),
+        )
+
+
+def _client_with_transport(transport: _CapturingTransport) -> DmClient:
+    http_client = httpx.AsyncClient(transport=transport)
+    oai = AsyncOpenAI(base_url="http://fake/v1", api_key="x", http_client=http_client)
+    dm = DmClient()
+    dm._client = oai  # type: ignore[assignment]
+    return dm
+
+
+@pytest.mark.asyncio
+async def test_stream_dm_sends_max_tokens_in_http_body() -> None:
+    """stream_dm() must serialize max_tokens into the JSON body sent to
+    vLLM. Intercepted at the httpx transport layer so any SDK-level
+    renaming or omission of the field is caught here."""
+
+    transport = _CapturingTransport()
+    client = _client_with_transport(transport)
+
+    stream = await client.stream_dm(
+        [{"role": "user", "content": "test"}],
+        max_tokens=2048,
+    )
+    async for _ in stream:
+        pass
+
+    assert transport.captured_body.get("max_tokens") == 2048
+
+
+@pytest.mark.asyncio
+async def test_stream_dm_full_reasoning_sends_no_extra_body_in_http() -> None:
+    """For reasoning_mode=full (the default), no extra_body key must appear
+    in the HTTP payload — Nemotron's default is full reasoning and an
+    explicit empty dict would add noise to the boot logs."""
+
+    transport = _CapturingTransport()
+    client = _client_with_transport(transport)
+
+    stream = await client.stream_dm([{"role": "user", "content": "test"}])
+    async for _ in stream:
+        pass
+
+    assert "extra_body" not in transport.captured_body
+
+
+@pytest.mark.asyncio
+async def test_stream_dm_low_reasoning_sends_chat_template_kwargs_in_http() -> None:
+    """For reasoning_mode=low, chat_template_kwargs must appear in the
+    HTTP body via extra_body — that's how vLLM forwards them to the
+    chat template."""
+
+    transport = _CapturingTransport()
+    client = _client_with_transport(transport)
+
+    stream = await client.stream_dm(
+        [{"role": "user", "content": "test"}],
+        reasoning_mode="low",
+    )
+    async for _ in stream:
+        pass
+
+    # The OpenAI SDK merges extra_body keys into the top-level request
+    # body — there is no nested "extra_body" key on the wire.
+    assert transport.captured_body.get("chat_template_kwargs") == {
+        "enable_thinking": True,
+        "low_effort": True,
     }
