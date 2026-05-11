@@ -483,7 +483,7 @@ async def take_turn(
             # already has tool results in context).  max_tokens doubles on
             # retry to give the model more room if the budget was the cause.
             _reasoning_mode: ReasoningMode = "low" if empty_completion_count > 0 else "full"
-            _max_tokens = 2048 if empty_completion_count > 0 else 1024
+            _max_tokens = 2048 if empty_completion_count > 0 else 768
             stream = await client.stream_dm(
                 messages,
                 tools=tools,

@@ -1018,7 +1018,7 @@ async def test_retry_uses_low_reasoning_mode_and_doubled_tokens(  # type: ignore
 ) -> None:
     """On the first empty completion, the orchestrator retries with
     ``reasoning_mode="low"`` and ``max_tokens=2048``. The first call
-    uses ``reasoning_mode="full"`` and ``max_tokens=1024``.
+    uses ``reasoning_mode="full"`` and ``max_tokens=768``.
     """
 
     _, _, session, _ = await _setup_session(db_session)
@@ -1044,7 +1044,7 @@ async def test_retry_uses_low_reasoning_mode_and_doubled_tokens(  # type: ignore
     assert (
         first_kwargs.get("reasoning_mode") == "full"
     ), f"first call should use full reasoning; got {first_kwargs}"
-    assert first_kwargs.get("max_tokens") == 1024
+    assert first_kwargs.get("max_tokens") == 768
 
     retry_kwargs = fake.received_kwargs_log[1]
     assert (

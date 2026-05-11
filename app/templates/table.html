@@ -4,6 +4,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="/static/css/table.css" />
+<script src="/static/js/markdown-it.min.js"></script>
 {% endblock %}
 
 {% block body_class %}table-screen{% endblock %}
@@ -192,6 +193,13 @@
   // the body for the rust-vignette + amber-vs-rust submit colouring;
   // the initiative panel is hidden out of combat and rebuilt from the
   // current_actor + presence whenever combat starts.
+
+  // Phase 8: client-side markdown renderer for DM narration.
+  // Accumulate plain text during narration_chunk; render to HTML at
+  // narration_complete. html:false keeps the renderer safe — markdown-it
+  // escapes any raw HTML tags in the LLM output rather than passing them
+  // through. DM-only: player and system messages stay as plain text.
+  const md = markdownit({ html: false, breaks: true, linkify: false });
 
   const sessionId = {{ session_id|tojson }};
   const selfUserId = {{ user.id|tojson }};
@@ -409,7 +417,11 @@
     }
     article.appendChild(header);
     const p = document.createElement("p");
-    p.textContent = content || "";
+    if (kind === "dm" && content) {
+      p.innerHTML = md.render(content);
+    } else {
+      p.textContent = content || "";
+    }
     article.appendChild(p);
     narration.appendChild(article);
     narration.scrollTop = narration.scrollHeight;
@@ -688,10 +700,12 @@
     narration_complete(msg) {
       // Finalise the bubble belonging to the trailing iteration's
       // stream_id. Earlier-iteration bubbles are already settled.
+      // Phase 8: render the final text as markdown — plain-text
+      // accumulation during chunk is replaced with rendered HTML here.
       const sid = msg.stream_id || "";
       const bubble = narrationBubbles[sid];
       if (bubble) {
-        if (msg.content) bubble.textContent = msg.content;
+        if (msg.content) bubble.innerHTML = md.render(msg.content);
         const article = bubble.parentElement;
         if (article) delete article.dataset.streaming;
         delete narrationBubbles[sid];

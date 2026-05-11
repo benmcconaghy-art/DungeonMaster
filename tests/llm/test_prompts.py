@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.llm.prompts import _render_characters, build_dm_prompt
+from app.llm.prompts import _ROLE_TEXT, _render_characters, build_dm_prompt
 from tests.orchestrator.factories import (
     make_campaign,
     make_character,
@@ -550,3 +550,39 @@ def test_render_characters_multiple_pcs_each_rendered() -> None:
     assert "pronouns: she/her" in out
     assert "Appearance: Short and quick" in out
     assert "Bob" in out
+
+
+# ---------------------------------------------------------------------------
+# Phase 8 Commit 1 — E.1/E.3/E.4 prompt additions
+# ---------------------------------------------------------------------------
+
+
+def test_role_text_contains_images_block() -> None:
+    """E.1: IMAGES block tells the DM when to call generate_scene_image and
+    that spawn_npc handles portrait generation — guards against regression
+    where the DM generates portraits via scene image calls instead."""
+
+    assert "IMAGES" in _ROLE_TEXT
+    assert "generate_scene_image" in _ROLE_TEXT
+    assert "spawn_npc" in _ROLE_TEXT
+    assert "kind='scene'" in _ROLE_TEXT or "kind='npc'" in _ROLE_TEXT or "auto_portrait" in _ROLE_TEXT
+
+
+def test_role_text_pacing_has_word_count_guidance() -> None:
+    """E.3: strengthened PACING block must include the 2-4 paragraph /
+    200-350 word guidance so the DM doesn't over-narrate."""
+
+    assert "200" in _ROLE_TEXT and "350" in _ROLE_TEXT
+    assert "2-4 short paragraphs" in _ROLE_TEXT or "2–4 short paragraphs" in _ROLE_TEXT
+
+
+def test_role_text_contains_whispers_block() -> None:
+    """E.4: WHISPERS block must explain when to use private whispers vs
+    public narration — guards against the playthrough finding that whispers
+    never surfaced organically."""
+
+    assert "WHISPERS" in _ROLE_TEXT
+    assert "whisper" in _ROLE_TEXT.lower()
+    # The key distinction: private info goes to the affected player only.
+    assert "private" in _ROLE_TEXT.lower()
+    assert "public narration" in _ROLE_TEXT
