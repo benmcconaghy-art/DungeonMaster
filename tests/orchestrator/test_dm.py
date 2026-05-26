@@ -354,11 +354,12 @@ async def test_json_block_fallback_parser(db_session, patch_client) -> None:  # 
 
 @pytest.mark.asyncio
 async def test_iteration_cap_breaks_runaway(db_session, patch_client) -> None:  # type: ignore[no-untyped-def]
-    """Ten tool calls in a row -> orchestrator gives up at the cap with
-    dm_error. The cap is :data:`_MAX_TOOL_ITERATIONS` (currently 10;
-    Phase 4 prep #1 re-evaluated and held it). The test feeds 10
-    streams of tool calls and just asserts the cap-error fires, so the
-    exact number can drift without breaking this test."""
+    """Tool calls in a row -> orchestrator gives up at the cap with
+    dm_error. The cap is :data:`_MAX_TOOL_ITERATIONS` (currently 20;
+    raised in Phase 8.2 to give paced multi-round combat headroom).
+    The test feeds 21 streams of tool calls and just asserts the
+    cap-error fires, so the exact cap value can drift without
+    breaking this test — only the stream count must exceed the cap."""
 
     _, _, session, _ = await _setup_session(db_session)
 
@@ -378,9 +379,9 @@ async def test_iteration_cap_breaks_runaway(db_session, patch_client) -> None:  
             ),
         ]
 
-    # 10 streams of tool calls. The orchestrator should hit the iteration
-    # cap (5) before running out of streams.
-    streams: list[list[Any] | object] = [_roll_stream(i) for i in range(10)]
+    # 21 streams of tool calls — one more than the cap so the cap fires
+    # before the stream list is exhausted. Cap is currently 20.
+    streams: list[list[Any] | object] = [_roll_stream(i) for i in range(21)]
     patch_client(streams)
 
     events: list[Any] = []

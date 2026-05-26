@@ -1,0 +1,8 @@
+[Unit]
+Description=Dungeon Master application target
+Documentation=https://github.com/Ben/dm/blob/main/AGENTS.md
+Requires=dm-web.service dm-worker.service
+After=dm-web.service dm-worker.service
+
+[Install]
+WantedBy=multi-user.target

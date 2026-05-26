@@ -384,7 +384,10 @@ TOOLS: dict[str, ToolSpec] = {
     "start_encounter": ToolSpec(
         name="start_encounter",
         description=(
-            "Begin a combat encounter. The engine will roll initiative; the LLM should not."
+            "Open a combat encounter. Call this FIRST — before any attack rolls,"
+            " apply_damage, or other combat tools. The engine rolls initiative."
+            " Calling this mid-combat (after dice or damage have already fired)"
+            " is an ordering error."
         ),
         args_model=StartEncounter,
         implemented=True,

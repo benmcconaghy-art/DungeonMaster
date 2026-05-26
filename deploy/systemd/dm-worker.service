@@ -1,0 +1,34 @@
+[Unit]
+Description=Dungeon Master image worker (dev)
+Documentation=https://github.com/Ben/dm/blob/main/AGENTS.md
+After=network-online.target dm-web.service
+Wants=network-online.target
+PartOf=dm.target
+
+[Service]
+Type=exec
+User=claudedev
+Group=claudecode
+WorkingDirectory=/home/claudecode/dm
+EnvironmentFile=/home/claudecode/dm/.env
+
+ExecStart=/home/claudedev/.local/bin/uv run --no-sync python -m app.images.worker
+
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+Restart=on-failure
+RestartSec=10s
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dm-worker
+
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/home/claudecode/.cache/uv
+PrivateTmp=true
+
+[Install]
+WantedBy=dm.target

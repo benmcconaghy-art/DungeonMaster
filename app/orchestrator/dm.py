@@ -192,7 +192,14 @@ DmEvent = (
 #     fires only on genuine runaways, not on the legitimate upper
 #     end of normal-round variance. The pacing prompt is the real
 #     prep-#1 deliverable; the cap stays as the canary it was.
-_MAX_TOOL_ITERATIONS = 10
+#   - Phase 8.2 playthrough: a 3-cultist fight triggered 10 sequential
+#     tool calls (3 rolls + 4 apply_damage + start_encounter +
+#     end_encounter) with no narration between them, wedging the turn.
+#     Root cause was batching (combat-as-computation rather than
+#     beat-by-beat theatre); the prompt was tightened. Cap raised to 20
+#     as a wider safety net — with correct pacing (1-4 tools per beat)
+#     multi-round fights with many combatants need headroom over 10.
+_MAX_TOOL_ITERATIONS = 20
 
 # Defensive JSON-block fallback parser: matches a fenced ``json`` block.
 # We match the entire body greedily up to the closing fence, then let

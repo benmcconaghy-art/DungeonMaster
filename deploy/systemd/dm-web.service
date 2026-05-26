@@ -1,0 +1,45 @@
+[Unit]
+Description=Dungeon Master web server (dev)
+Documentation=https://github.com/Ben/dm/blob/main/AGENTS.md
+After=network-online.target
+Wants=network-online.target
+PartOf=dm.target
+
+[Service]
+Type=exec
+User=claudedev
+Group=claudecode
+WorkingDirectory=/home/claudecode/dm
+EnvironmentFile=/home/claudecode/dm/.env
+
+# uv run launches uvicorn from the project's venv. --no-sync skips the
+# implicit `uv sync` on every start; we manage sync explicitly via deploy.
+ExecStart=/home/claudedev/.local/bin/uv run --no-sync uvicorn app.main:app \
+    --host 0.0.0.0 \
+    --port 8001 \
+    --workers 1 \
+    --log-config /home/claudecode/dm/deploy/logging.json
+
+# Graceful shutdown — let in-flight requests complete and WS clients
+# get clean close frames before SIGKILL.
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+Restart=on-failure
+RestartSec=10s
+
+# Logging to journald; the app's own JSON logger writes to /var/log/
+# dungeon-master/app.log via its file handler (see logging.json).
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dm-web
+
+# Hardening — minimal for dev, tighter in production.
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/home/claudecode/.cache/uv
+PrivateTmp=true
+
+[Install]
+WantedBy=dm.target
