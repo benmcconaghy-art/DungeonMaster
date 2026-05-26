@@ -1,6 +1,6 @@
 # Dungeon Master — Technical Specification
 
-**Version:** 0.7 (draft)
+**Version:** 0.8
 **Target host:** AlmaLinux 10.1
 **LLM backend:** Nemotron 3 Super via vLLM at `http://svrai01.mcconaghygroup.internal:8000`
 **Image backend:** FLUX.1 [dev] (txt2img) + FLUX.1 Kontext [dev] (edit) at `http://svrai01.mcconaghygroup.internal:11437`

@@ -212,6 +212,48 @@ modules. Single-server deployment on AlmaLinux 10.1, trusted internal LAN.
     PACING prompt block; the budget is a safety cap against runaway,
     not a length-discipline mechanism.
 
+20. **Module symbolic-id discipline: modules reference entities by
+    symbol, never by UUID.** Every entity in a module JSON file
+    (`LocationContent`, `NpcContent`, `PlotBeat`, `Secret`, `Ending`,
+    etc.) carries a `symbol` field with a typed prefix (`loc_`, `npc_`,
+    `enc_`, `beat_`, `sec_`, `end_`). The loader (`POST
+    /api/campaigns/from-module`) mints a fresh UUIDv7 per symbol at
+    load time and records the mapping in
+    `campaigns.module_state.symbolic_id_map`. All module JSON uses
+    symbol strings; all runtime tools that need DB ids resolve through
+    that map. Never embed UUIDs into module JSON — modules must be
+    reloadable into fresh campaigns without id migration. If you add a
+    new entity type with cross-references (e.g. an item that belongs to
+    an NPC), introduce a new symbol prefix and thread it through the
+    loader's two-pass insert and the map. Phase 8 commit 4 establishes
+    this pattern; preserve it for all future module-aware features.
+
+21. **Module load is idempotent by design.** The bootstrap script
+    (`app/scripts/load_module.py`) exits 0 with a SKIP message if a
+    Module row with the same name already exists (case-insensitive) — it
+    is safe to call on every server startup. The image-manifest dedup in
+    `POST /api/campaigns/from-module` computes a `prompt_hash` (SHA-256)
+    per NPC portrait prompt and skips enqueue if an identical prompt is
+    already queued for the same campaign — reloading the same module
+    into a fresh campaign after a restart does not double-enqueue
+    portraits. Any future module-load side-effect (world-fact seeding,
+    location art, etc.) must be equally idempotent: check-then-insert,
+    not blind insert.
+
+22. **Module beats and secrets are LLM-judged, not mechanically
+    triggered.** `PlotBeat.trigger_hint` and `Secret.reveal_when` are
+    natural-language guidance for the DM's narrative reasoning ("When
+    the party first speaks with the Castellan"). The orchestrator never
+    evaluates them programmatically — they are injected verbatim into the
+    DM system prompt, and the DM calls `mark_beat` / `reveal_secret`
+    when it judges the narrative moment has arrived. Never add a
+    rules-engine hook that fires these tools automatically; doing so
+    bypasses the DM's judgement and can misfire in ambiguous scenes. If
+    a beat is mechanically certain (e.g. "party enters room X"), express
+    it as a transition_location side-effect in the handler, not as an
+    auto-fire on trigger_hint evaluation. Phase 8 commit 3 establishes
+    this pattern.
+
 ## Tech stack
 
 - Python 3.12
@@ -417,6 +459,7 @@ app/
 │   ├── prompts.py      # prompt builders, layered system prompt
 │   ├── tools.py        # tool schemas (Pydantic) + dispatcher
 │   ├── memory.py       # session/campaign summarisation, world-fact extractor, NumPy retrieval
+│   ├── modules.py      # ModuleContent Pydantic schema + sub-models (Phase 8)
 │   └── rules_text.py   # condensed BFRPG rules text injected into system prompt
 ├── game/               # rules engine: dice, combat, chargen, classes, monsters, items
 ├── images/
@@ -432,6 +475,8 @@ app/
 ├── orchestrator/
 │   ├── dm.py           # the DM turn loop
 │   └── handlers/       # one file per tool: apply_damage.py, award_xp.py, etc.
+├── scripts/
+│   └── load_module.py  # bootstrap script: register module JSON as a Module row (Phase 8)
 ├── views/              # server-side template-context builders
 │                       # (one composer per non-trivial view)
 ├── templates/          # Jinja2 (base + per-view: index/login/register/
@@ -459,6 +504,7 @@ uv run pytest --cov=app                         # with coverage
 uv run ruff check .                             # lint
 uv run ruff format .                            # format
 uv run mypy app                                 # type check
+uv run python -m app.scripts.load_module morgansfort  # register bundled module (idempotent)
 ```
 
 ## Where things live in the spec
@@ -478,35 +524,43 @@ uv run mypy app                                 # type check
 
 ## Current build phase
 
-**Phase 7 complete; Phase 6.5 (chargen UI), Phase 6.6
-(dashboard Start Session click target), the Phase 5 image-
-serving route, and the Phase 6.8 playthrough fixes (per-iteration
-narration stream_id, dice multiplier parser, transition_location
-name resolver, ID-discipline prompt rule, opening DM turn on
-session create) landed 2026-05-01 to unblock real play; Phase 6.9
-(tool-error history hygiene — classify-then-dispatch in
-`_dispatch_one`, malformed calls dropped from prompt history,
-sanitised recovery system note) landed 2026-05-03 from the same
-day's 90-minute playthrough findings; Phase 6.10 (player
-speaker attribution — `[Name, Class]:` prefix in
-`_recent_turns_to_messages`, ROLE-block interpretation rule,
-attributed `player_action` into the post-turn fact extractor)
-landed 2026-05-04 from the multi-PC who's-speaking gap; Phase 6.11
-(empty-completion two-tier recovery — retry at low reasoning /
-2048 tokens on first empty, dm_error fallback on second; empty
-bubble suppression — JS bubble creation gated on non-whitespace
-content so Nemotron's whitespace-before-tool-call tokeniser
-artefact produces no visible DOM node) landed 2026-05-05;
-Phase 6.12 (tool-inventory gap for 0-HP revival — `apply_revival`
-unblocks the session-wedge when a downed PC is revived; also ships
-`apply_status_effect` / `clear_status_effect` completing the Phase 3
-deferred status-flags work noted in `apply_damage.py:121`; adds
-`status_effects` JSON column to `characters`; system-prompt
-REVIVAL AND STATUS EFFECTS block; Critical Invariant #18)
-landed 2026-05-05; Phase 6.13 (character presentation — `pronouns` and
-`description` columns on `characters`; chargen appearance step; inline edit
-on character sheet; DM prompt and FLUX portrait feed updated) landed
-2026-05-11; Phase 8 (Adventure modules) ready to start.**
+**Phase 8 complete.** Phase 7 complete; Phase 6.5–6.13 landed
+2026-05-01 to 2026-05-11 (chargen UI, dashboard fixes, playthrough
+tool-error hygiene, speaker attribution, empty-completion recovery,
+apply_revival, status effects, character presentation). Phase 8
+(Adventure modules) landed 2026-05-26:
+
+- **Commit 1** — `Module` DB model, `source_session_id` FK, Phase 8
+  Alembic migration.
+- **Commit 2** — NPC roster rail panel (`npc_introduced` WS message,
+  Alpine roster list, Phase 8.1 prompt revisions E.1/E.3/E.4,
+  markdown renderer, `max_tokens=2048` DM budget, http-boundary
+  test for max_tokens).
+- **Commit 3** — `ModuleContent` Pydantic v2 schema (`app/llm/modules.py`);
+  `mark_beat` and `reveal_secret` tool handlers; `_render_module_section`
+  in `prompts.py` (pending beats + DM-only secrets in system prompt);
+  handler + prompt tests.
+- **Commit 4** — `POST /api/campaigns/from-module` module loader:
+  two-pass location insert (parents first, then children by
+  `parent_symbol`), NPC location from symbolic map, world-facts
+  embedded via `get_embedder()`, `module_state` initialised with
+  all beats pending, image-manifest dedup by `prompt_hash`; six
+  integration tests with shared `client_db` fixture.
+- **Commit 5** — `POST /api/sessions/{id}/extract-module` extractor:
+  owner-only, ended session required, `reasoning_mode="full"`,
+  retry loop up to 3 times on `ValidationError`, inserts `Module`
+  with `public=False` and `source_session_id`; six integration tests.
+- **Commit 6** — `data/bfrpg/modules/morgansfort.json` (1017 lines;
+  19 locations, 26 NPCs, 5 encounters, 5 beats, 5 secrets, 3
+  endings, 8 world facts; validated against `ModuleContent`);
+  `app/scripts/load_module.py` bootstrap script (idempotent,
+  admin-owned, `uv run python -m app.scripts.load_module morgansfort`).
+- **Commits 7–8** — Playthrough validation (user-side; Morgansfort
+  loaded and played to beat/secret/art/NPC-rail; round-trip
+  extract-and-reload validated).
+- **Commit 9** — Documentation close-out: AGENTS.md Critical
+  Invariants #20–22, file-organisation update, README module docs,
+  spec rev to v0.8.
 
 Update this line as phases complete. The phased plan is in spec §14.
 
