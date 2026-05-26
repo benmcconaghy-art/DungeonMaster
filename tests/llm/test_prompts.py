@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from app.db.models import Module
 from app.llm.prompts import _ROLE_TEXT, _render_characters, build_dm_prompt
 from tests.orchestrator.factories import (
     make_campaign,
@@ -17,6 +18,43 @@ from tests.orchestrator.factories import (
     make_session,
     make_user,
 )
+
+_MINIMAL_MODULE_CONTENT = {
+    "format_version": "1.0",
+    "synopsis": "Goblins trouble the keep.",
+    "tone": "gritty",
+    "starting_hook": "A stranger arrives with news.",
+    "starting_location_symbol": "loc_keep",
+    "locations": [{"symbol": "loc_keep", "name": "Morgansfort Keep", "description": "Stone walls."}],
+    "npcs": [
+        {
+            "symbol": "npc_castellan",
+            "name": "Castellan Thorvald",
+            "description": "Greying veteran.",
+            "motivation": "Protect the keep.",
+            "starting_location_symbol": "loc_keep",
+        }
+    ],
+    "encounters": [],
+    "plot_beats": [
+        {
+            "symbol": "beat_arrival",
+            "title": "Arrival Briefing",
+            "trigger_hint": "When the party meets the Castellan.",
+            "outcome": "Party hired.",
+            "dm_notes": "Thorvald is hiding something.",
+        }
+    ],
+    "secrets": [
+        {
+            "symbol": "sec_dark_past",
+            "content": "Thorvald once served the enemy.",
+            "reveal_when": "Party finds the old letter.",
+        }
+    ],
+    "endings": [],
+    "world_facts": [],
+}
 
 
 @pytest.mark.asyncio
@@ -586,3 +624,144 @@ def test_role_text_contains_whispers_block() -> None:
     # The key distinction: private info goes to the affected player only.
     assert "private" in _ROLE_TEXT.lower()
     assert "public narration" in _ROLE_TEXT
+
+
+# ---------------------------------------------------------------------------
+# Module section rendering (Phase 8 Commit 3)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_module_section_renders_pending_beats(db_session) -> None:  # type: ignore[no-untyped-def]
+    """[MODULE] block shows pending beats with their trigger hints and symbolic IDs."""
+
+    user = await make_user(db_session)
+    mod = Module(author_id=user.id, name="Test Module", content=_MINIMAL_MODULE_CONTENT)
+    db_session.add(mod)
+    await db_session.flush()
+
+    module_state = {
+        "module_id": mod.id,
+        "symbolic_id_map": {
+            "loc_keep": "uuid-loc",
+            "npc_castellan": "uuid-npc",
+            "beat_arrival": "uuid-beat",
+            "sec_dark_past": "uuid-sec",
+        },
+        "beats_pending": ["beat_arrival"],
+        "beats_hit": [],
+        "secrets_revealed": [],
+        "encounters_run": [],
+        "endings_reached": [],
+    }
+    campaign = await make_campaign(
+        db_session, owner_id=user.id, module_id=mod.id, module_state=module_state
+    )
+    session = await make_session(db_session, campaign_id=campaign.id)
+    await db_session.commit()
+
+    messages = await build_dm_prompt(db_session, session_id=session.id)
+    body = messages[0]["content"]
+
+    assert "[MODULE]" in body
+    assert "beat_arrival" in body
+    assert "Arrival Briefing" in body
+    assert "When the party meets the Castellan" in body
+    # dm_notes must be present in the DM-only block
+    assert "Thorvald is hiding something" in body
+
+
+@pytest.mark.asyncio
+async def test_module_section_dm_only_secret_not_leaked(db_session) -> None:  # type: ignore[no-untyped-def]
+    """Unrevealed secrets appear only in the DM-ONLY block, not in any player section."""
+
+    user = await make_user(db_session)
+    mod = Module(author_id=user.id, name="Test Module", content=_MINIMAL_MODULE_CONTENT)
+    db_session.add(mod)
+    await db_session.flush()
+
+    module_state = {
+        "module_id": mod.id,
+        "symbolic_id_map": {
+            "loc_keep": "uuid-loc",
+            "npc_castellan": "uuid-npc",
+            "beat_arrival": "uuid-beat",
+            "sec_dark_past": "uuid-sec",
+        },
+        "beats_pending": ["beat_arrival"],
+        "beats_hit": [],
+        "secrets_revealed": [],
+        "encounters_run": [],
+        "endings_reached": [],
+    }
+    campaign = await make_campaign(
+        db_session, owner_id=user.id, module_id=mod.id, module_state=module_state
+    )
+    session = await make_session(db_session, campaign_id=campaign.id)
+    await db_session.commit()
+
+    messages = await build_dm_prompt(db_session, session_id=session.id)
+    body = messages[0]["content"]
+
+    # Secret content is present for the DM (in the system block)
+    assert "Thorvald once served the enemy" in body
+    # Must be marked as DM-only
+    assert "DO NOT REVEAL" in body
+    # The section heading for revealed should be present but empty
+    assert "SECRETS — REVEALED IN PLAY" in body
+    assert "(none yet)" in body
+
+
+@pytest.mark.asyncio
+async def test_module_section_revealed_secret_moves_section(db_session) -> None:  # type: ignore[no-untyped-def]
+    """After a secret is revealed, it moves from DM-ONLY to REVEALED block."""
+
+    user = await make_user(db_session)
+    mod = Module(author_id=user.id, name="Test Module", content=_MINIMAL_MODULE_CONTENT)
+    db_session.add(mod)
+    await db_session.flush()
+
+    module_state = {
+        "module_id": mod.id,
+        "symbolic_id_map": {
+            "loc_keep": "uuid-loc",
+            "npc_castellan": "uuid-npc",
+            "beat_arrival": "uuid-beat",
+            "sec_dark_past": "uuid-sec",
+        },
+        "beats_pending": ["beat_arrival"],
+        "beats_hit": [],
+        "secrets_revealed": ["sec_dark_past"],
+        "encounters_run": [],
+        "endings_reached": [],
+    }
+    campaign = await make_campaign(
+        db_session, owner_id=user.id, module_id=mod.id, module_state=module_state
+    )
+    session = await make_session(db_session, campaign_id=campaign.id)
+    await db_session.commit()
+
+    messages = await build_dm_prompt(db_session, session_id=session.id)
+    body = messages[0]["content"]
+
+    # Revealed section should contain the secret
+    assert "SECRETS — REVEALED IN PLAY" in body
+    assert "Thorvald once served the enemy" in body
+    # DM-only pending block should be empty
+    assert "(none pending)" in body
+
+
+@pytest.mark.asyncio
+async def test_module_section_absent_for_non_module_campaign(db_session) -> None:  # type: ignore[no-untyped-def]
+    """Non-module campaigns render '(none — no module loaded)' in [MODULE]."""
+
+    user = await make_user(db_session)
+    campaign = await make_campaign(db_session, owner_id=user.id)
+    session = await make_session(db_session, campaign_id=campaign.id)
+    await db_session.commit()
+
+    messages = await build_dm_prompt(db_session, session_id=session.id)
+    body = messages[0]["content"]
+
+    assert "[MODULE]" in body
+    assert "none — no module loaded" in body

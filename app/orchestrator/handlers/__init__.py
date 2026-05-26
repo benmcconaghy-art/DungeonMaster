@@ -25,6 +25,8 @@ Per-tool modules:
   - ``spawn_npc`` — introduce a new NPC; optional canonical portrait.
   - ``generate_scene_image`` — queue a scene; optional Kontext /edit
     reference for character consistency across scenes.
+  - ``mark_beat`` — record that a module plot beat has fired (Phase 8).
+  - ``reveal_secret`` — record that a module secret has come out (Phase 8).
 
 The dispatcher calls each handler inside its own tight transaction
 block (AGENTS.md invariant #2 — the streaming call must not happen
@@ -55,7 +57,9 @@ from app.orchestrator.handlers import (  # noqa: E402
     end_encounter,
     generate_scene_image,
     heal,
+    mark_beat,
     request_dice_roll,
+    reveal_secret,
     spawn_npc,
     start_encounter,
     transition_location,
@@ -70,7 +74,9 @@ __all__ = [
     "end_encounter",
     "generate_scene_image",
     "heal",
+    "mark_beat",
     "request_dice_roll",
+    "reveal_secret",
     "spawn_npc",
     "start_encounter",
     "transition_location",

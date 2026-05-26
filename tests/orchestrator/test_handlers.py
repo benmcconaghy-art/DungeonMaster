@@ -17,10 +17,12 @@ import pytest
 from sqlalchemy import select
 
 from app.db.models import (
+    Campaign,
     Character,
     DiceRoll,
     Encounter,
     GeneratedImage,
+    Module,
     Npc,
     SessionMessage,
 )
@@ -36,7 +38,9 @@ from app.llm.tools import (
     EndEncounter,
     GenerateSceneImage,
     Heal,
+    MarkBeat,
     RequestDiceRoll,
+    RevealSecret,
     SpawnNpc,
     StartEncounter,
     TransitionLocation,
@@ -1422,3 +1426,260 @@ class TestClearStatusEffect:
             result = await handler.fn(db_session, args)
         assert result.side_effects.get("kind") == "error"
         assert result.side_effects.get("reason") == "unknown_target"
+
+
+# ---------------------------------------------------------------------------
+# Helpers for module-backed campaign tests
+# ---------------------------------------------------------------------------
+
+_MINIMAL_MODULE_CONTENT = {
+    "format_version": "1.0",
+    "synopsis": "Test synopsis",
+    "tone": "gritty",
+    "starting_hook": "A stranger arrives.",
+    "starting_location_symbol": "loc_keep",
+    "locations": [{"symbol": "loc_keep", "name": "The Keep", "description": "Stone walls."}],
+    "npcs": [],
+    "encounters": [],
+    "plot_beats": [
+        {
+            "symbol": "beat_arrival",
+            "title": "Arrival Briefing",
+            "trigger_hint": "When the party first meets the Castellan.",
+            "outcome": "The party is hired.",
+        },
+        {
+            "symbol": "beat_confrontation",
+            "title": "Final Confrontation",
+            "trigger_hint": "When the party faces the enemy.",
+            "outcome": "The enemy is defeated.",
+        },
+    ],
+    "secrets": [
+        {
+            "symbol": "sec_dark_past",
+            "content": "The Castellan has a dark past.",
+            "reveal_when": "When the party finds the old journal.",
+        }
+    ],
+    "endings": [],
+    "world_facts": [],
+}
+
+
+async def _make_module(db, *, author_id: str) -> Module:
+    mod = Module(
+        author_id=author_id,
+        name="Test Module",
+        content=_MINIMAL_MODULE_CONTENT,
+    )
+    db.add(mod)
+    await db.flush()
+    return mod
+
+
+def _module_state(module_id: str) -> dict:
+    return {
+        "module_id": module_id,
+        "symbolic_id_map": {
+            "loc_keep": "uuid-loc-keep",
+            "beat_arrival": "uuid-beat-arrival",
+            "beat_confrontation": "uuid-beat-confrontation",
+            "sec_dark_past": "uuid-sec-dark-past",
+        },
+        "beats_hit": [],
+        "beats_pending": ["beat_arrival", "beat_confrontation"],
+        "secrets_revealed": [],
+        "encounters_run": [],
+        "endings_reached": [],
+    }
+
+
+# ---------------------------------------------------------------------------
+# mark_beat
+# ---------------------------------------------------------------------------
+
+
+class TestMarkBeat:
+    @pytest.mark.asyncio
+    async def test_moves_beat_pending_to_hit(self, db_session) -> None:
+        user = await make_user(db_session)
+        mod = await _make_module(db_session, author_id=user.id)
+        campaign = await make_campaign(
+            db_session,
+            owner_id=user.id,
+            module_id=mod.id,
+            module_state=_module_state(mod.id),
+        )
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        handler = get_handler("mark_beat")
+        assert handler is not None
+        args = MarkBeat(beat_id="beat_arrival", summary="Party hired by Castellan.")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        await db_session.commit()
+
+        refreshed = await db_session.get(Campaign, campaign.id)
+        assert refreshed is not None
+        assert "beat_arrival" in refreshed.module_state["beats_hit"]
+        assert "beat_arrival" not in refreshed.module_state["beats_pending"]
+        assert result.side_effects["kind"] == "beat_marked"
+        assert result.side_effects["beat_id"] == "beat_arrival"
+
+    @pytest.mark.asyncio
+    async def test_already_hit_is_noop(self, db_session) -> None:
+        user = await make_user(db_session)
+        mod = await _make_module(db_session, author_id=user.id)
+        state = _module_state(mod.id)
+        state["beats_hit"] = ["beat_arrival"]
+        state["beats_pending"] = ["beat_confrontation"]
+        campaign = await make_campaign(
+            db_session,
+            owner_id=user.id,
+            module_id=mod.id,
+            module_state=state,
+        )
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        handler = get_handler("mark_beat")
+        assert handler is not None
+        args = MarkBeat(beat_id="beat_arrival")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+
+        assert result.side_effects["kind"] == "beat_already_hit"
+
+    @pytest.mark.asyncio
+    async def test_unknown_beat_returns_error(self, db_session) -> None:
+        user = await make_user(db_session)
+        mod = await _make_module(db_session, author_id=user.id)
+        campaign = await make_campaign(
+            db_session,
+            owner_id=user.id,
+            module_id=mod.id,
+            module_state=_module_state(mod.id),
+        )
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        handler = get_handler("mark_beat")
+        assert handler is not None
+        args = MarkBeat(beat_id="beat_nonexistent")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+
+        assert result.side_effects["kind"] == "error"
+        assert result.side_effects["reason"] == "unknown_beat"
+
+    @pytest.mark.asyncio
+    async def test_no_module_returns_error(self, db_session) -> None:
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        handler = get_handler("mark_beat")
+        assert handler is not None
+        args = MarkBeat(beat_id="beat_arrival")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+
+        assert result.side_effects["kind"] == "error"
+        assert result.side_effects["reason"] == "no_module"
+
+
+# ---------------------------------------------------------------------------
+# reveal_secret
+# ---------------------------------------------------------------------------
+
+
+class TestRevealSecret:
+    @pytest.mark.asyncio
+    async def test_moves_secret_to_revealed(self, db_session) -> None:
+        user = await make_user(db_session)
+        mod = await _make_module(db_session, author_id=user.id)
+        campaign = await make_campaign(
+            db_session,
+            owner_id=user.id,
+            module_id=mod.id,
+            module_state=_module_state(mod.id),
+        )
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        handler = get_handler("reveal_secret")
+        assert handler is not None
+        args = RevealSecret(secret_id="sec_dark_past")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+        await db_session.commit()
+
+        refreshed = await db_session.get(Campaign, campaign.id)
+        assert refreshed is not None
+        assert "sec_dark_past" in refreshed.module_state["secrets_revealed"]
+        assert result.side_effects["kind"] == "secret_revealed"
+        assert result.side_effects["secret_id"] == "sec_dark_past"
+
+    @pytest.mark.asyncio
+    async def test_already_revealed_is_noop(self, db_session) -> None:
+        user = await make_user(db_session)
+        mod = await _make_module(db_session, author_id=user.id)
+        state = _module_state(mod.id)
+        state["secrets_revealed"] = ["sec_dark_past"]
+        campaign = await make_campaign(
+            db_session,
+            owner_id=user.id,
+            module_id=mod.id,
+            module_state=state,
+        )
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        handler = get_handler("reveal_secret")
+        assert handler is not None
+        args = RevealSecret(secret_id="sec_dark_past")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+
+        assert result.side_effects["kind"] == "secret_already_revealed"
+
+    @pytest.mark.asyncio
+    async def test_unknown_secret_returns_error(self, db_session) -> None:
+        user = await make_user(db_session)
+        mod = await _make_module(db_session, author_id=user.id)
+        campaign = await make_campaign(
+            db_session,
+            owner_id=user.id,
+            module_id=mod.id,
+            module_state=_module_state(mod.id),
+        )
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        handler = get_handler("reveal_secret")
+        assert handler is not None
+        args = RevealSecret(secret_id="sec_nonexistent")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+
+        assert result.side_effects["kind"] == "error"
+        assert result.side_effects["reason"] == "unknown_secret"
+
+    @pytest.mark.asyncio
+    async def test_no_module_returns_error(self, db_session) -> None:
+        user = await make_user(db_session)
+        campaign = await make_campaign(db_session, owner_id=user.id)
+        session = await make_session(db_session, campaign_id=campaign.id)
+        await db_session.commit()
+
+        handler = get_handler("reveal_secret")
+        assert handler is not None
+        args = RevealSecret(secret_id="sec_dark_past")
+        with with_dispatch_context(_ctx(session.id)):
+            result = await handler.fn(db_session, args)
+
+        assert result.side_effects["kind"] == "error"
+        assert result.side_effects["reason"] == "no_module"

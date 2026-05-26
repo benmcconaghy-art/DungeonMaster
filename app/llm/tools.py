@@ -402,13 +402,13 @@ TOOLS: dict[str, ToolSpec] = {
         name="mark_beat",
         description="Record that an adventure-module plot beat has been hit.",
         args_model=MarkBeat,
-        implemented=False,
+        implemented=True,
     ),
     "reveal_secret": ToolSpec(
         name="reveal_secret",
         description="Record that a module secret has come out in play.",
         args_model=RevealSecret,
-        implemented=False,
+        implemented=True,
     ),
     "apply_revival": ToolSpec(
         name="apply_revival",

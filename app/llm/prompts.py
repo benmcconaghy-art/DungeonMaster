@@ -24,12 +24,14 @@ from app.db.models import (
     Character,
     Encounter,
     Location,
+    Module,
     SessionMessage,
 )
 from app.db.models import (
     Session as DmSession,
 )
 from app.llm.memory import WorldFactHit, get_world_fact_retriever, recent_turns
+from app.llm.modules import ModuleContent
 from app.llm.rules_text import render_rules_text
 
 # Spec §4 default house rules. We render the *defaults* explicitly when
@@ -244,6 +246,8 @@ async def build_dm_prompt(
             db, campaign.id, last_player_query, k=5
         )
 
+    module_section = await _render_module_section(db, campaign)
+
     system_text = _render_system(
         campaign=campaign,
         location=location,
@@ -251,6 +255,7 @@ async def build_dm_prompt(
         encounters=active_encounters,
         session=session,
         world_fact_hits=world_fact_hits,
+        module_section=module_section,
     )
 
     messages: list[dict[str, Any]] = [{"role": "system", "content": system_text}]
@@ -268,6 +273,140 @@ def _last_player_content(turns: list[SessionMessage]) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Module section renderer
+# ---------------------------------------------------------------------------
+
+
+async def _render_module_section(db: AsyncSession, campaign: Campaign) -> str | None:
+    """Build the [MODULE] system-prompt block for a module-backed campaign.
+
+    Returns None (renders as "(none — no module loaded)") for campaigns that
+    have no module_id set.
+
+    Spoiler discipline: dm_notes and unrevealed secrets are included here
+    (DM-only) but must never appear in player API serialisers.
+    """
+    if not campaign.module_id:
+        return None
+
+    module_row = await db.get(Module, campaign.module_id)
+    if module_row is None:
+        return f"(module {campaign.module_id!r} not found in database)"
+
+    try:
+        content = ModuleContent.model_validate(module_row.content)
+    except Exception:
+        return f"(module content failed validation — check module {campaign.module_id!r})"
+
+    module_state: dict = campaign.module_state or {}
+    beats_pending: list[str] = list(module_state.get("beats_pending", []))
+    beats_hit: list[str] = list(module_state.get("beats_hit", []))
+    secrets_revealed: list[str] = list(module_state.get("secrets_revealed", []))
+
+    beat_by_symbol = {b.symbol: b for b in content.plot_beats}
+    secret_by_symbol = {s.symbol: s for s in content.secrets}
+    location_by_symbol = {loc.symbol: loc for loc in content.locations}
+    npc_by_symbol = {npc.symbol: npc for npc in content.npcs}
+
+    lines: list[str] = []
+
+    # Header: synopsis + tone + image style.
+    lines.append(f"Synopsis: {content.synopsis}")
+    lines.append(f"Tone: {content.tone}")
+    if content.image_style:
+        lines.append(f"Image style: {content.image_style}")
+
+    # Key NPCs.
+    lines.append("\n[KEY NPCs IN THIS MODULE]")
+    if content.npcs:
+        for npc in content.npcs:
+            loc_name = location_by_symbol[npc.starting_location_symbol].name if npc.starting_location_symbol in location_by_symbol else npc.starting_location_symbol
+            lines.append(f"  - {npc.name} ({npc.symbol}) — {npc.description}")
+            lines.append(f"    Motivation: {npc.motivation}")
+            lines.append(f"    Starting location: {loc_name}")
+            if npc.sample_dialogue:
+                lines.append(f"    Sample dialogue: {npc.sample_dialogue}")
+    else:
+        lines.append("  (none)")
+
+    # Key locations.
+    lines.append("\n[KEY LOCATIONS]")
+    if content.locations:
+        for loc in content.locations:
+            lines.append(f"  - {loc.name} ({loc.symbol}) — {loc.description}")
+    else:
+        lines.append("  (none)")
+
+    # Plot beats — pending (DM sees trigger_hint and symbol to call mark_beat with).
+    lines.append("\n[PLOT BEATS — PENDING]")
+    pending_beats = [beat_by_symbol[sym] for sym in beats_pending if sym in beat_by_symbol]
+    if pending_beats:
+        for beat in pending_beats:
+            lines.append(f"  - [{beat.symbol}] {beat.title}")
+            lines.append(f"    Trigger: {beat.trigger_hint}")
+            if beat.dm_notes:
+                lines.append(f"    DM notes: {beat.dm_notes}")
+    else:
+        lines.append("  (none pending)")
+
+    # Plot beats — already hit.
+    lines.append("\n[PLOT BEATS — HIT]")
+    hit_beats = [beat_by_symbol[sym] for sym in beats_hit if sym in beat_by_symbol]
+    if hit_beats:
+        for beat in hit_beats:
+            lines.append(f"  - [{beat.symbol}] {beat.title}")
+    else:
+        lines.append("  (none yet)")
+
+    # Secrets — pending (DM-only, never shown to players).
+    pending_secrets = [
+        secret_by_symbol[sym]
+        for sym in secret_by_symbol
+        if sym not in secrets_revealed
+    ]
+    lines.append("\n[SECRETS — DM-ONLY DO NOT REVEAL TO PLAYERS]")
+    if pending_secrets:
+        for secret in pending_secrets:
+            lines.append(f"  - [{secret.symbol}] {secret.content}")
+            lines.append(f"    Reveal when: {secret.reveal_when}")
+    else:
+        lines.append("  (none pending)")
+
+    # Secrets — already revealed.
+    revealed_secrets = [
+        secret_by_symbol[sym]
+        for sym in secrets_revealed
+        if sym in secret_by_symbol
+    ]
+    lines.append("\n[SECRETS — REVEALED IN PLAY]")
+    if revealed_secrets:
+        for secret in revealed_secrets:
+            lines.append(f"  - [{secret.symbol}] {secret.content}")
+    else:
+        lines.append("  (none yet)")
+
+    # Guidance for the DM on when to call module tools.
+    lines.append("\n[MODULE TOOL GUIDANCE]")
+    lines.append(
+        "  - Call mark_beat(beat_id=<symbol>, summary=<one sentence>) when the narrative"
+        " moment described by a pending beat's trigger has occurred. Use the symbolic ID"
+        " shown in [PLOT BEATS — PENDING] above. Calling it twice is safe — the engine"
+        " no-ops if the beat is already hit."
+    )
+    lines.append(
+        "  - Call reveal_secret(secret_id=<symbol>) when a secret from [SECRETS — DM-ONLY]"
+        " has come out in play. After calling reveal_secret, you may narrate the revelation"
+        " publicly — it will move to [SECRETS — REVEALED]."
+    )
+    lines.append(
+        "  - Beat tracking is LLM-judged. The trigger_hint is guidance, not a mechanical"
+        " condition. Use your narrative judgment about when the moment has truly landed."
+    )
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Section renderers
 # ---------------------------------------------------------------------------
 
@@ -280,6 +419,7 @@ def _render_system(
     encounters: list[Encounter],
     session: DmSession,
     world_fact_hits: list[WorldFactHit] | None,
+    module_section: str | None = None,
 ) -> str:
     """Compose every layered section into the single system message body."""
 
@@ -305,8 +445,7 @@ def _render_system(
     blocks.append(_block("SESSION SO FAR", session.summary or "(none)"))
     blocks.append(_block("RELEVANT WORLD FACTS", _render_world_fact_hits(world_fact_hits)))
     blocks.append(_block("ACTIVE ENCOUNTER", _render_encounters(encounters)))
-    # Phase 8 wires modules in.
-    blocks.append(_block("MODULE", "(none — Phase 8 will fill)"))
+    blocks.append(_block("MODULE", module_section or "(none — no module loaded)"))
 
     return "\n\n".join(blocks)
 
