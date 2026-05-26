@@ -187,6 +187,14 @@
       <h2>Quick actions</h2>
       <form class="new-campaign-form" method="post" action="/api/campaigns" data-on-success="redirect-to-dashboard">
         <input type="text" name="name" required placeholder="New campaign name" aria-label="New campaign name" />
+        {% if modules %}
+        <select name="module_id" aria-label="Adventure module">
+          <option value="">— sandbox (no module) —</option>
+          {% for m in modules %}
+          <option value="{{ m.id }}">{{ m.name }} · {{ m.level_label }}{% if m.sessions_label %} · {{ m.sessions_label }}{% endif %}</option>
+          {% endfor %}
+        </select>
+        {% endif %}
         <button type="submit"><span class="verb">+ Create campaign</span></button>
       </form>
 
@@ -242,6 +250,14 @@
     <h2>Begin</h2>
     <form class="new-campaign-form" method="post" action="/api/campaigns" data-on-success="redirect-to-dashboard">
       <input type="text" name="name" required placeholder="Name your campaign" aria-label="New campaign name" />
+      {% if modules %}
+      <select name="module_id" aria-label="Adventure module">
+        <option value="">— sandbox (no module) —</option>
+        {% for m in modules %}
+        <option value="{{ m.id }}">{{ m.name }} · {{ m.level_label }}{% if m.sessions_label %} · {{ m.sessions_label }}{% endif %}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
       <button type="submit"><span class="verb">+ Create campaign</span></button>
     </form>
     <div style="padding: var(--s-3) 0 0;">
@@ -269,10 +285,25 @@
       event.preventDefault();
       const action = form.dataset.onSuccess;
       const data = Object.fromEntries(new FormData(form));
+
+      // Module-aware routing: if the form carries a module_id, call
+      // POST /api/campaigns/from-module instead of POST /api/campaigns.
+      // The from-module endpoint creates the campaign, seeds locations,
+      // NPCs, world facts, and module_state in one transaction.
+      let url = form.action;
+      if (form.classList.contains("new-campaign-form")) {
+        const moduleId = data.module_id;
+        delete data.module_id;
+        if (moduleId) {
+          url = "/api/campaigns/from-module";
+          data.module_id = moduleId;
+        }
+      }
+
       let response;
       try {
-        response = await fetch(form.action, {
-          method: form.method.toUpperCase() || "POST",
+        response = await fetch(url, {
+          method: "POST",
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify(data),
           credentials: "same-origin",

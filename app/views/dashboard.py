@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import desc, select
+from sqlalchemy import desc, select, true
 
 from app.api.campaigns import (
     CampaignListEntry,
@@ -67,6 +67,7 @@ async def build_context(db: DbSession, *, user: models.User) -> dict[str, Any]:
     recent_sessions = await _recent_sessions(db, user=user)
     total_my_chars = sum(e.my_character_count for e in listing)
     last_played_relative = _relative_time(listing[0].last_played_at if listing else None)
+    public_modules = await _list_public_modules(db)
 
     return {
         "user": user,
@@ -76,6 +77,7 @@ async def build_context(db: DbSession, *, user: models.User) -> dict[str, Any]:
         "recent_sessions": recent_sessions,
         "total_my_characters": total_my_chars,
         "last_played_relative": last_played_relative,
+        "modules": public_modules,
     }
 
 
@@ -324,6 +326,51 @@ def _seal_glyph(campaign_name: str) -> str:
     if parts:
         return parts[0][:2].upper()
     return "DM"
+
+
+async def _list_public_modules(db: DbSession) -> list[dict[str, Any]]:
+    """Return public modules ordered by level range then name.
+
+    Each entry has id, name, level_label (e.g. "Levels 1–3"), and
+    estimated_sessions so the template can render a useful picker.
+    """
+
+    rows = list(
+        (
+            await db.execute(
+                select(models.Module)
+                .where(models.Module.public == true())
+                .order_by(models.Module.min_level, models.Module.name)
+            )
+        ).scalars()
+    )
+
+    result: list[dict[str, Any]] = []
+    for m in rows:
+        if m.min_level is not None and m.max_level is not None:
+            if m.min_level == m.max_level:
+                level_label = f"Level {m.min_level}"
+            else:
+                level_label = f"Levels {m.min_level}–{m.max_level}"
+        elif m.min_level is not None:
+            level_label = f"Level {m.min_level}+"
+        else:
+            level_label = "Any level"
+        sessions_label = (
+            f"{m.estimated_sessions} session{'s' if m.estimated_sessions != 1 else ''}"
+            if m.estimated_sessions
+            else None
+        )
+        result.append(
+            {
+                "id": m.id,
+                "name": m.name,
+                "level_label": level_label,
+                "sessions_label": sessions_label,
+                "description": m.description,
+            }
+        )
+    return result
 
 
 __all__ = ["build_context"]

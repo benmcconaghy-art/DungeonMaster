@@ -646,6 +646,24 @@
   outline: none;
 }
 .new-campaign-form input:focus { border-color: var(--ember); }
+.new-campaign-form select {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--rule-soft);
+  color: var(--parchment);
+  padding: 8px 10px;
+  font-family: var(--font-prose);
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23c9933e' stroke-width='1.2' fill='none'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 10px;
+  padding-right: 28px;
+}
+.new-campaign-form select:focus { border-color: var(--ember); }
+.new-campaign-form select option { background: var(--ink-bg); color: var(--parchment); }
 .new-campaign-form button {
   background: transparent;
   border: 1px solid var(--ember);
