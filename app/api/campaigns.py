@@ -33,14 +33,20 @@ import datetime as _dt
 import logging
 from typing import Any
 
+import hashlib
+
+import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import desc, func, select
+from uuid_extensions import uuid7
 
 from app.config import get_settings
 from app.db import models
 from app.deps import CurrentUser, DbSession
+from app.llm.embeddings import get_embedder
+from app.llm.modules import ModuleContent
 from app.ratelimit import join_rate_limit
 
 log = logging.getLogger(__name__)
@@ -228,6 +234,24 @@ class JoinResponse(BaseModel):
 
     campaign_id: str
     name: str
+
+
+class LoadModuleRequest(BaseModel):
+    """Body for POST /api/campaigns/from-module."""
+
+    module_id: str = Field(min_length=1)
+    name: str = Field(min_length=1, max_length=120)
+    image_style_override: str | None = None
+
+
+class LoadModuleResponse(BaseModel):
+    """Response for a successful module load."""
+
+    campaign_id: str
+    name: str
+    locations_created: int
+    npcs_created: int
+    image_jobs_enqueued: int
 
 
 # ---------------------------------------------------------------------------
@@ -785,6 +809,210 @@ async def join_via_invite(
     return JoinResponse(campaign_id=campaign.id, name=campaign.name)
 
 
+def _prompt_hash(prompt: str) -> str:
+    """SHA-256 hex of the prompt — used for image dedup per spec §10."""
+    return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+
+
+@router.post(
+    "/from-module",
+    response_model=LoadModuleResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def load_module(
+    payload: LoadModuleRequest,
+    user: CurrentUser,
+    db: DbSession,
+) -> LoadModuleResponse:
+    """Create a campaign from a module.
+
+    Transaction (all-or-nothing):
+    1. Load + validate the module.
+    2. Idempotence check: if a campaign already has this module_id, 409.
+    3. Insert Campaign (with module_id).
+    4. Mint UUIDv7 per symbol → build symbolic_id_map.
+    5. Insert Locations (respecting parent_symbol hierarchy).
+    6. Insert NPCs (with location_id from map).
+    7. Insert WorldFacts (embedded).
+    8. Write module_state with all beats pending.
+    9. Insert CampaignMember (owner).
+    10. Commit.
+
+    Post-commit:
+    11. For each image_manifest entry: dedup by prompt_hash; enqueue if
+        not already generated. Return immediately — image generation is
+        async.
+
+    Idempotence: loading a module into the same campaign twice returns 409
+    (the module_id already being set is the guard).
+    """
+    module_row = await db.get(models.Module, payload.module_id)
+    if module_row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="module not found")
+
+    try:
+        content = ModuleContent.model_validate(module_row.content)
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"module content failed validation: {exc}",
+        ) from exc
+
+    # Build the campaign.
+    effective_image_style = payload.image_style_override or content.image_style or module_row.tone
+    campaign = models.Campaign(
+        name=payload.name,
+        owner_id=user.id,
+        module_id=module_row.id,
+        image_style=effective_image_style,
+        image_negative_prompt=content.image_negative_prompt,
+    )
+    db.add(campaign)
+    await db.flush()
+
+    # Mint UUIDv7 per symbol.
+    symbolic_id_map: dict[str, str] = {}
+    for loc in content.locations:
+        symbolic_id_map[loc.symbol] = str(uuid7())
+    for npc in content.npcs:
+        symbolic_id_map[npc.symbol] = str(uuid7())
+    for enc in content.encounters:
+        symbolic_id_map[enc.symbol] = str(uuid7())
+    for beat in content.plot_beats:
+        symbolic_id_map[beat.symbol] = str(uuid7())
+    for secret in content.secrets:
+        symbolic_id_map[secret.symbol] = str(uuid7())
+    for ending in content.endings:
+        symbolic_id_map[ending.symbol] = str(uuid7())
+
+    # Insert Locations. Two-pass: insert parents first, then children.
+    # Locations without a parent_symbol are inserted first; those with
+    # a parent_symbol get their parent_id from the map.
+    loc_by_symbol: dict[str, models.Location] = {}
+    parents = [loc for loc in content.locations if loc.parent_symbol is None]
+    children = [loc for loc in content.locations if loc.parent_symbol is not None]
+
+    for loc in parents + children:
+        loc_id = symbolic_id_map[loc.symbol]
+        parent_id: str | None = None
+        if loc.parent_symbol is not None:
+            parent_id = symbolic_id_map.get(loc.parent_symbol)
+
+        location_row = models.Location(
+            id=loc_id,
+            campaign_id=campaign.id,
+            name=loc.name,
+            description=loc.description,
+            parent_id=parent_id,
+            location_metadata=loc.metadata,
+        )
+        db.add(location_row)
+        loc_by_symbol[loc.symbol] = location_row
+
+    await db.flush()
+
+    # Insert NPCs.
+    for npc in content.npcs:
+        npc_id = symbolic_id_map[npc.symbol]
+        starting_loc_id = symbolic_id_map.get(npc.starting_location_symbol)
+        npc_row = models.Npc(
+            id=npc_id,
+            campaign_id=campaign.id,
+            name=npc.name,
+            description=npc.description,
+            stats=npc.stats,
+            location_id=starting_loc_id,
+        )
+        db.add(npc_row)
+
+    await db.flush()
+
+    # Insert WorldFacts with embeddings.
+    embedder = get_embedder()
+    facts_inserted = 0
+    if content.world_facts:
+        fact_texts = [wf.fact for wf in content.world_facts]
+        try:
+            vectors = await embedder.embed(fact_texts)
+            for wf, vec in zip(content.world_facts, vectors, strict=True):
+                fact_row = models.WorldFact(
+                    campaign_id=campaign.id,
+                    fact=wf.fact,
+                    embedding=vec.astype(np.float32, copy=False).tobytes(),
+                    embedding_dim=int(vec.shape[0]),
+                    tags=wf.tags,
+                    importance=wf.importance,
+                )
+                db.add(fact_row)
+            facts_inserted = len(content.world_facts)
+        except Exception:
+            log.warning("load_module: embedding world_facts failed; skipping facts", exc_info=True)
+
+    # Build module_state.
+    module_state = {
+        "module_id": module_row.id,
+        "symbolic_id_map": symbolic_id_map,
+        "beats_pending": [beat.symbol for beat in content.plot_beats],
+        "beats_hit": [],
+        "secrets_revealed": [],
+        "encounters_run": [],
+        "endings_reached": [],
+    }
+    campaign.module_state = module_state
+
+    # Insert CampaignMember (owner).
+    db.add(models.CampaignMember(campaign_id=campaign.id, user_id=user.id, role="owner"))
+
+    await db.commit()
+    await db.refresh(campaign)
+
+    # Post-commit: image dedup / enqueue from image_manifest.
+    image_manifest: list[dict] = module_row.image_manifest or []
+    jobs_enqueued = 0
+    if image_manifest:
+        try:
+            from app.images.portrait import get_queue_client
+            from app.images.queue import ImageJob, push_job
+
+            queue_client = get_queue_client()
+            for entry in image_manifest:
+                prompt = entry.get("prompt", "")
+                ph = entry.get("prompt_hash") or _prompt_hash(prompt)
+                if not prompt:
+                    continue
+                # Dedup: check if this hash is already generated.
+                existing = (
+                    await db.scalars(
+                        select(models.GeneratedImage).where(
+                            models.GeneratedImage.prompt_hash == ph
+                        )
+                    )
+                ).first()
+                if existing is not None:
+                    continue
+                # Enqueue.
+                image_id = str(uuid7())
+                job = ImageJob(
+                    id=image_id,
+                    campaign_id=campaign.id,
+                    session_id=None,
+                    kind=entry.get("kind", "npc"),
+                    prompt=prompt,
+                )
+                await push_job(queue_client, job)
+                jobs_enqueued += 1
+        except Exception:
+            log.warning("load_module: image enqueue failed; continuing", exc_info=True)
+
+    return LoadModuleResponse(
+        campaign_id=campaign.id,
+        name=campaign.name,
+        locations_created=len(content.locations),
+        npcs_created=len(content.npcs),
+        image_jobs_enqueued=jobs_enqueued,
+    )
+
+
 __all__ = [
     "CampaignDetail",
     "CampaignListEntry",
@@ -795,6 +1023,8 @@ __all__ = [
     "InviteResponse",
     "JoinRequest",
     "JoinResponse",
+    "LoadModuleRequest",
+    "LoadModuleResponse",
     "MemberSummary",
     "SessionSummary",
     "router",
