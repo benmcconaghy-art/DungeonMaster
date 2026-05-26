@@ -1,0 +1,707 @@
+{
+  "format_version": "1.0",
+  "synopsis": "Three linked adventures for levels 1–3, set in the borderlands beyond Morgansfort. A hobgoblin war-band occupies a ruined border fortress and raids outlying villages — but the hobgoblins are hired muscle, paid in old coin by a wizard who is plundering a long-sealed tomb beneath the fortress. Something in that tomb has awakened. The party must clear the fortress, descend into the ancient burial chambers, and finally confront the wizard in his tower before the ritual item he seeks can be removed — or decide what to do with a thing that was buried for very good reasons.",
+  "tone": "gritty — BFRPG-canonical. Torches burn low. Mistakes kill. Not every problem has a clean solution.",
+  "image_style": "dark fantasy illustration, ink and wash, torchlit stone, weathered stonework",
+  "image_negative_prompt": "modern objects, photographic, watermark, text artifacts, anime, bright colors, extra fingers",
+  "level_range": [1, 3],
+  "estimated_sessions": 4,
+  "starting_hook": "A village elder from Thornwick — three hours east of Morgansfort — rides in with a broken arm and a burned coat. Hobgoblins hit the village granary two nights running. The local garrison is two men short and the captain is sick. The old border fortress on the ridge has smoke rising from it for the first time in forty years. The elder is offering sixty gold pieces from the village common fund, half now and half when the fortress is empty. The Morgansfort castellan quietly doubles the reward if the party keeps the road open — he needs that supply route.",
+  "starting_location_symbol": "loc_fortress_gatehouse",
+
+  "locations": [
+    {
+      "symbol": "loc_fortress_gatehouse",
+      "name": "Ruined Fortress Gatehouse",
+      "description": "The gatehouse of Fort Ashenmere squats at the top of the ridge road, its two flanking towers still standing though the right one leans visibly inward. The portcullis has been cleared of rubble and lowered — the hobgoblins repaired the winch with rope and rough timber. A pair of hobgoblin sentries in mismatched armor patrol the wall-walk. The gate arch is wide enough for a cart; the murder-hole overhead still has its iron grate, and the hobgoblins have learned to drop rocks through it. The old garrison crest — a crossed spear and olive branch, the symbol of the border rangers — is carved into the keystone, mostly obscured by a smear of red-clay war paint the hobgoblins put there to mark the place as theirs.",
+      "parent_symbol": null,
+      "image_role": "scene:fortress_gatehouse_exterior",
+      "metadata": {
+        "area": "Part 1 — The Ruined Fortress",
+        "features": ["repaired portcullis", "murder-hole", "leaning right tower", "garrison crest under war paint"],
+        "guard_count": 2,
+        "hobgoblin_sentries": true
+      }
+    },
+    {
+      "symbol": "loc_fortress_courtyard",
+      "name": "Fortress Courtyard",
+      "description": "The courtyard is a flat rectangle of cracked paving stones with a dry cistern in the center, its cover gone. The hobgoblins use it as a marshaling area — weapon racks of salvaged spears stand along the south wall, and a fire-pit of rough stones dominates the northern half, usually smoldering with the remains of a roasted something. Sleeping rolls and looted sacks are piled under the eaves of the great hall on the east side. A post driven into the cistern rim bears the hobgoblin war-band's standard: a black hand on a red field, deliberately chosen by Warlord Keth to echo the coin-sigil of their paymaster, whom he privately finds amusing. Three to five hobgoblin warriors are present here at any time the fortress is active. The door to the great hall is banded oak, heavy but unlocked. The stair to the commander's tower is on the north wall.",
+      "parent_symbol": "loc_fortress_gatehouse",
+      "image_role": "scene:fortress_courtyard",
+      "metadata": {
+        "area": "Part 1 — The Ruined Fortress",
+        "features": ["dry cistern", "fire-pit", "weapon racks", "hobgoblin standard — black hand on red", "great hall door", "north stair to tower"],
+        "random_hobgoblins": "1d4+1 hobgoblin warriors present when fortress is active"
+      }
+    },
+    {
+      "symbol": "loc_fortress_great_hall",
+      "name": "Great Hall",
+      "description": "The old garrison's eating and assembly hall, a long stone room with a vaulted ceiling and a hearth at each end. The hobgoblins have made it their own: tables are pushed together in the center and covered in the remnants of recent meals — bones, clay cups, a toppled cask of sour beer. Weapons hang on pegs where once the garrison's parade armor hung. Old regimental colors hang in shreds from the rafters; the hobgoblins have not bothered to pull them down. Sergeant Dravan, the human prisoner, is chained to a ring in the floor near the north hearth, wrists behind him, with enough slack to sit but not stand comfortably. He has been here for five days, eating what the hobgoblins leave him, and he is alert and cooperative if treated with basic respect. The door to the dungeon stair is behind the south hearth, currently blocked by a stacked pile of furniture that is both a barricade and a sign the hobgoblins know something has come up from below.",
+      "parent_symbol": "loc_fortress_gatehouse",
+      "image_role": "scene:fortress_great_hall",
+      "metadata": {
+        "area": "Part 1 — The Ruined Fortress",
+        "npc_present": "npc_dravan",
+        "features": ["two hearths", "prisoner ring near north hearth", "regimental color shreds", "barricaded dungeon door", "overturned tables and cask"],
+        "dungeon_blocked": true,
+        "prisoner": "Sergeant Dravan, chained, knows fortress layout"
+      }
+    },
+    {
+      "symbol": "loc_fortress_dungeon",
+      "name": "Fortress Dungeon",
+      "description": "A half-dozen cells cut into the bedrock below the great hall, connected by a narrow passage with a low ceiling. The cells were designed for garrison prisoners — deserters, brawlers — not long-term occupation. Three cell doors stand open; two are shut with iron bars. The barricade above was placed here because something broke out of the last sealed cell four nights ago, and the corpse it left behind is still on the passage floor, drained and grey, a hobgoblin scout who had been stationed down here as punishment. The passage ends at a section of wall that has been smashed inward from the other side, the stone fragments scattered into the corridor — it was broken open from beneath. Beyond the opening, rough-cut steps descend into cold darkness. The smell coming up is old stone, dry herbs, and something underneath that has no good name.",
+      "parent_symbol": "loc_fortress_great_hall",
+      "image_role": "scene:fortress_dungeon_passage",
+      "metadata": {
+        "area": "Part 1 — The Ruined Fortress",
+        "features": ["six cells", "hobgoblin corpse — drained, grey", "smashed wall to tomb access", "cold air from below"],
+        "broken_through": "wall between dungeon and tomb antechamber was breached from the tomb side",
+        "hazard": "the drained corpse will reanimate as a wight in 1d4 days if the party lingers"
+      }
+    },
+    {
+      "symbol": "loc_fortress_commander_tower",
+      "name": "Commander's Tower",
+      "description": "The north tower of the old fortress, three stories of solid stone, its top floor intact though the roof sheds rain through three gaps. Warlord Keth has claimed it. The ground floor holds a fire and a cot; the second floor is his war-planning room, with a rough table bearing a hand-drawn map of the surrounding roads and villages, updated regularly with attack routes marked in charcoal. The third floor is empty except for a locked iron chest that Keth keeps his personal treasury and correspondence in. The chest holds 180 gp, assorted silver trade-coins (60 sp), a sealed letter in a fine hand instructing Keth to 'keep the road from the south closed — reroute all traffic away from the ridge' for another thirty days, and four gold coins bearing a stylized astrolabe on one face and the initials M.V. on the other. This is the wizard Maldric Voss's personal seal.",
+      "parent_symbol": "loc_fortress_gatehouse",
+      "image_role": "scene:commander_tower_interior",
+      "metadata": {
+        "area": "Part 1 — The Ruined Fortress",
+        "npc_present": "npc_keth",
+        "features": ["three floors", "war map with attack routes", "locked iron chest on third floor"],
+        "treasure": {
+          "gp": 180,
+          "sp": 60,
+          "key_item": "sealed letter from Maldric Voss and four coins bearing astrolabe/M.V. seal"
+        },
+        "secret_link": "sec_wizard_hired_hobgoblins"
+      }
+    },
+    {
+      "symbol": "loc_tomb_antechamber",
+      "name": "Antechamber of the Silent Court",
+      "description": "At the base of the rough steps below the fortress dungeon, a worked stone corridor opens into a rectangular chamber of finished masonry — old kingdom construction, two centuries older than the fortress above. The floor is polished black granite, cold and still reflective despite the years. Along both walls, carved reliefs show scenes of a royal court: figures in archaic robes presenting offerings, kneeling before a central throne. The throne figure in the carvings always has its face deliberately unfinished — a stylistic convention of the old kingdom that indicated the dead king's face was too sacred to render. Three armored skeletons stand in niches in the north wall, motionless, weapons at their sides. They do not react to light or sound alone — but step toward the far door and they animate. The door ahead is heavy basalt, carved with a single phrase in the old kingdom script: 'Let those who come in grief be welcome. Let those who come seeking be patient. Let those who come in haste be warned.'",
+      "parent_symbol": "loc_fortress_dungeon",
+      "image_role": "scene:tomb_antechamber",
+      "metadata": {
+        "area": "Part 2 — The Ancient Tomb",
+        "features": ["polished black granite floor", "court scene reliefs", "faceless throne carvings", "three skeleton niches", "basalt door with inscription"],
+        "inscription_translation": "available to any character who can read, with a successful Intelligence check for the archaic dialect",
+        "trigger": "skeletons animate when any living creature moves within 10 ft of the basalt door"
+      }
+    },
+    {
+      "symbol": "loc_tomb_corridors",
+      "name": "Burial Corridors",
+      "description": "A T-shaped set of passages leading off from the antechamber, lined with sealed burial alcoves — shallow niches in the stone, each stopped with a fitted slab carved with a name and a rank. These are the king's household guard and senior officials, interred to serve him in death as in life. Most niches are undisturbed, their slabs flush and intact. Eight are not: their slabs have been pushed out from the inside, lying cracked on the corridor floor, the niches empty. Whatever disturbed the king's rest reached them first. At the junction of the T, a stone plinth holds a clay lamp of old kingdom make — it is lit, burning without fuel, a cold blue-white light that does not flicker. This was the work of the ghost of Priest Odalien, who is trying to guide investigators toward the true burial chamber.",
+      "parent_symbol": "loc_tomb_antechamber",
+      "image_role": "scene:tomb_burial_corridors",
+      "metadata": {
+        "area": "Part 2 — The Ancient Tomb",
+        "npc_present": "npc_odalien",
+        "features": ["lined burial alcoves", "eight broken-open niches", "ghost-lit clay lamp at junction"],
+        "undead_absent": "eight wights have left these niches and moved into the fortress dungeon and surrounding tunnels",
+        "ghost_guide": "Odalien lit the lamp and will appear at this location if approached peacefully"
+      }
+    },
+    {
+      "symbol": "loc_tomb_offering_room",
+      "name": "Chamber of Offerings",
+      "description": "A square room off the west corridor, its walls covered floor to ceiling in carved stone shelves. The shelves once held grave goods: clay vessels, bronze tools, carved figures, bolts of now-rotted cloth. Most of these lie shattered or scattered across the floor — recent disturbance, clearly. Footprints in the fine grey dust show a single pair of boots moving systematically from shelf to shelf, searching. The disturbance is a week old at most. One shelf on the north wall has a false back — push it aside and a narrow cavity holds a sealed bronze tube containing a scroll written in the old kingdom priestly script: the Rite of Passage, the liturgy used to send kings to the afterlife. Priest Odalien's ghost wants this scroll recovered. It is also the key to performing the ritual that can quiet the king's tomb guardian.",
+      "parent_symbol": "loc_tomb_antechamber",
+      "image_role": "scene:tomb_offering_room",
+      "metadata": {
+        "area": "Part 2 — The Ancient Tomb",
+        "features": ["floor-to-ceiling carved shelves", "scattered grave goods", "single set of boot prints", "false-back shelf with bronze tube"],
+        "key_item": "Rite of Passage scroll — needed to bargain with or quiet the tomb guardian",
+        "boot_prints": "match Maldric Voss's boot size — size 9, narrow; the party can compare if they reach the tower",
+        "secret_link": "sec_scroll_key_to_guardian"
+      }
+    },
+    {
+      "symbol": "loc_tomb_false_chamber",
+      "name": "False Burial Chamber",
+      "description": "The east corridor ends at a grand doorway, heavily ornamented, its architrave carved with the symbols of kingship — scepter, crown, scales. Beyond is a large domed chamber with a central stone bier, clearly intended to look like the king's burial place. The bier is empty. Its lid lies beside it, pushed aside — Maldric Voss's work. The chamber's walls are painted with scenes of the afterlife in vivid mineral pigments that have barely faded: hunting, feasting, the king in a golden boat on a dark river. This was the public tomb, shown to mourners. The real burial chamber is hidden. A clue is in the paintings: in every scene, the king's boat is traveling north, and in the north wall of this chamber there is a faint seam where a stone door has been very carefully fitted. The door is locked from the inside — it requires either the password Priest Odalien knows, or the Rite of Passage scroll read aloud in the old kingdom tongue.",
+      "parent_symbol": "loc_tomb_antechamber",
+      "image_role": "scene:tomb_false_chamber",
+      "metadata": {
+        "area": "Part 2 — The Ancient Tomb",
+        "features": ["grand doorway", "empty stone bier with pushed-aside lid", "wall paintings of afterlife scenes", "hidden north door"],
+        "voss_was_here": "the bier lid was moved by Maldric Voss when he believed this was the real burial chamber — he found it empty and realized his error",
+        "hidden_door": "DC 13 Intelligence to notice the seam; opened by Rite of Passage read aloud or by Odalien's password"
+      }
+    },
+    {
+      "symbol": "loc_tomb_true_chamber",
+      "name": "The True Burial Chamber",
+      "description": "A lower chamber, reached by a short flight of polished steps through the hidden north door. Smaller than the false chamber, it has the intimacy of a place that was never meant for visitors. The walls here are bare stone. No paintings, no carvings — the old kingdom believed the king's truest face needed no decoration. A single stone sarcophagus occupies the center, its lid in place and sealed with lead. Beside the sarcophagus, on a carved stone pedestal, rests a reliquary: a box of blackened iron the size of a large book, sealed with three clasps, each bearing a different ward-symbol. This is the Casket of Verath Nol — the ritual object the old king suppressed. It does not radiate magic in the ordinary sense; it radiates wrongness, a pressure on the back of the eyes that intensifies the longer one stays near it. The tomb guardian, King Aldar as a wight, is in the sarcophagus. If the casket is touched, the lid of the sarcophagus shifts.",
+      "parent_symbol": "loc_tomb_false_chamber",
+      "image_role": "scene:tomb_true_chamber",
+      "metadata": {
+        "area": "Part 2 — The Ancient Tomb",
+        "npc_present": "npc_king_aldar",
+        "features": ["bare stone walls", "sealed sarcophagus", "Casket of Verath Nol on pedestal"],
+        "key_item": "Casket of Verath Nol — the ritual object Maldric Voss seeks",
+        "guardian_trigger": "casket touched OR lid of sarcophagus disturbed"
+      }
+    },
+    {
+      "symbol": "loc_tower_base",
+      "name": "Wizard's Tower — Ground Floor",
+      "description": "The tower of Maldric Voss stands three miles north of the ridge fortress, on a rocky promontory overlooking a deep ravine. It is four stories of old stone, clearly not built by Voss but occupied and extensively modified by him. The ground floor is a single large room serving as a workshop: a long bench holds alchemical equipment, distilling vessels, and stacked notebooks. Three crates against the wall are half-unpacked, their contents a mixture of scholarly supplies and travel gear — Voss has been staying here working, not treating it as a permanent home. A stuffed owl on a perch near the stair turns to watch intruders; it is not magical, but its head has been weighted to swivel with air currents in a way that is thoroughly unsettling. The door to the outside is iron-banded and locked (Voss carries the key). A trapdoor in the floor leads to a root cellar with two weeks of provisions and a hidden compartment holding three potions of healing and 200 gp in a locked strongbox.",
+      "parent_symbol": null,
+      "image_role": "scene:wizard_tower_ground_floor",
+      "metadata": {
+        "area": "Part 3 — The Wizard's Tower",
+        "features": ["alchemical bench", "half-unpacked crates", "swiveling stuffed owl", "iron-banded door", "root cellar with hidden strongbox"],
+        "hidden_treasure": "3 potions of healing, 200 gp — DC 14 Intelligence to find the compartment",
+        "voss_presence": "Voss is here if he has not yet retrieved the casket; absent if he is at the tomb"
+      }
+    },
+    {
+      "symbol": "loc_tower_library",
+      "name": "Wizard's Tower — Library",
+      "description": "The second floor is Voss's library and study, crowded with shelves of books, scroll cases, and flat slabs of wax tablet stacked in a rack. The collection is eclectic but with a clear center of gravity: old kingdom history, funerary rites, ward-magic, and the theoretical literature on contained supernatural objects. A reading desk faces the window, stacked with open books and annotated marginalia in a neat, small hand. The marginalia are damning: Voss has traced the history of the Casket of Verath Nol from the old kingdom texts through four centuries of suppressed scholarship. He knows what it contains. He knows why the old king buried it. He plans to extract the ritual within the casket and use it to extend a specific form of magical authority — not undeath, exactly, but the power to bind the will of the recently dead to a living master's service. His notes describe this as 'reclamation.' The word choice is doing a great deal of work.",
+      "parent_symbol": "loc_tower_base",
+      "image_role": "scene:wizard_tower_library",
+      "metadata": {
+        "area": "Part 3 — The Wizard's Tower",
+        "features": ["shelved books and scrolls", "wax tablet rack", "annotated reading desk", "old kingdom scholarship collection"],
+        "key_evidence": "Voss's marginalia establish that he knows what the casket contains and intends to use it",
+        "reading_time": "one turn to read enough to understand the plan; the full picture takes an hour",
+        "secret_link": "sec_voss_knows_the_cost"
+      }
+    },
+    {
+      "symbol": "loc_tower_laboratory",
+      "name": "Wizard's Tower — Laboratory",
+      "description": "The third floor is a working laboratory, its floor marked with chalk circles of various diameters that overlap in complex ways. Voss is preparing the ritual space for the casket's opening — when he retrieves it, he intends to open it here under controlled conditions and extract the ward-script within. The circles are extensive and clearly the work of weeks. A bookstand holds a large hand-copied text, open to a diagram of the ritual. A brass mirror on the east wall reflects the room in a way that is slightly wrong — the angles do not match. This is a scrying mirror, currently inactive, but Voss can use it to observe the laboratory remotely. If he is not in the tower, he is watching this room through the mirror and will know when the party arrives. On a side table, three components for the ritual are arranged: a sealed flask of dark fluid, a copper stylus, and a cloth-wrapped packet of powdered silver (worth 20 gp as raw material).",
+      "parent_symbol": "loc_tower_base",
+      "image_role": "scene:wizard_tower_laboratory",
+      "metadata": {
+        "area": "Part 3 — The Wizard's Tower",
+        "features": ["chalk ritual circles", "open ritual text on bookstand", "scrying mirror", "ritual components"],
+        "scrying_mirror": "Voss can observe this room from anywhere within 10 miles — he will know when the party enters the tower",
+        "key_item": "ritual components and the hand-copied ritual text"
+      }
+    },
+    {
+      "symbol": "loc_tower_top",
+      "name": "Wizard's Tower — Top Floor",
+      "description": "The top floor is where Maldric Voss sleeps and where he keeps his most important possessions. A narrow bed, a locked chest, and a worktable with an unfinished letter on it. The letter is addressed to a name the party will not recognize — a colleague at a distant academy — and describes the Casket of Verath Nol as 'the most significant find of the century' with 'applications that could transform the field of necrological containment.' It does not describe the applications in plain terms; Voss is cautious about putting his real intentions in writing. The locked chest holds his spell book, 150 gp, a ring he uses to seal correspondence (with the astrolabe and M.V. symbol), and a folded document that is a commission of sorts — a written agreement between Voss and Warlord Keth, stipulating that the hobgoblins will hold and patrol the fortress for sixty days in exchange for fifty gp per ten days. Signed M.V., sealed. This is evidence that ties him directly to the raids.",
+      "parent_symbol": "loc_tower_base",
+      "image_role": "scene:wizard_tower_top",
+      "metadata": {
+        "area": "Part 3 — The Wizard's Tower",
+        "npc_present": "npc_voss",
+        "features": ["narrow bed", "locked chest", "unfinished letter", "worktable"],
+        "locked_chest": {
+          "contents": "spell book, 150 gp, signet ring (astrolabe/M.V.), written contract with Keth"
+        },
+        "key_evidence": "the written contract establishes Voss's direct responsibility for the hobgoblin occupation"
+      }
+    }
+  ],
+
+  "npcs": [
+    {
+      "symbol": "npc_keth",
+      "name": "Warlord Keth",
+      "description": "A large hobgoblin, heavier than most, with reddish-brown hide and iron-grey streaks in his mane. He has been a war-band leader for twelve years and carries himself with the particular confidence of someone who has won more fights than he has lost. His armor is actual armor — a breastplate and pauldrons from a soldier he killed, properly fitted by a goblin smith. He has a sword worth carrying. He does not like Maldric Voss, does not trust him, and has been paid enough that neither feeling matters. He is not stupid: he knows something has gone wrong below the fortress because he has lost two scouts to whatever came up from the dungeon, and he has barricaded the stair. He is prepared to sell information about Voss for safe passage out of the fortress, but will not offer this unless losing badly.",
+      "motivation": "Fulfill the contract, collect the remaining payment, keep his war-band alive. In that order. He is professionally avaricious and does not fight losing battles.",
+      "starting_location_symbol": "loc_fortress_commander_tower",
+      "stats": {
+        "hd": "3",
+        "hp": 16,
+        "ac": 16,
+        "attacks": [{"name": "sword", "damage": "1d8+1", "to_hit_bonus": 2}],
+        "save_as": "F3",
+        "morale": 9,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": "'You fight well for a group that walked into a fortress. I have a counter-offer: I tell you who hired me and why. You let my war-band leave. The thing below the floor you can have for free — I never wanted it.' [If refused] 'Then we do this the hard way. Holk!'",
+      "image_role": "npc:warlord_keth",
+      "secrets": ["sec_wizard_hired_hobgoblins"]
+    },
+    {
+      "symbol": "npc_dravan",
+      "name": "Sergeant Dravan",
+      "description": "A compact man of forty with a soldier's economy of movement and a bruise across the left side of his face that has yellowed to the middle stage of healing. He served the border rangers for fifteen years, was captured during a patrol five days ago, and has been watching everything since. He knows the fortress's original layout from old service — he was stationed here a decade ago before it was decommissioned. He can tell the party about the dungeon access, the tower layout, and the rough size of the war-band. He has also heard the things that came up from below on the night of the breakthrough and is calm about it in the way of someone who has decided to be useful rather than frightened.",
+      "motivation": "Survive, get free, and report what he knows to the appropriate authority. After that, probably drink for a week. He will fight alongside the party if freed and armed, though he is not at full strength.",
+      "starting_location_symbol": "loc_fortress_great_hall",
+      "stats": {
+        "hd": "2",
+        "hp": 9,
+        "ac": 12,
+        "attacks": [{"name": "weapon", "damage": "1d8", "to_hit_bonus": 1}],
+        "save_as": "F2",
+        "morale": 9,
+        "alignment": "lawful"
+      },
+      "sample_dialogue": "'The dungeon access is behind the south hearth — they barricaded it after something got through the wall. I heard it. Two hobgoblins went down to investigate and only one came back, and he would not speak clearly about what he saw. The dead one is still down there.' [Pause] 'Whatever you're planning, I'm coming. I know this fortress.'",
+      "image_role": "npc:sergeant_dravan",
+      "secrets": null
+    },
+    {
+      "symbol": "npc_ruko",
+      "name": "Ruko, the Goblin Spy",
+      "description": "A small goblin, skulking around the fortress fringes, officially serving Warlord Keth as a runner and general errand-creature. In fact, Ruko has been reporting to Maldric Voss separately from Keth's formal arrangement, passing along information about the war-band's activities and any travelers who ask about the fortress. He does this not out of loyalty to Voss but because Voss pays him directly and Keth does not know. If discovered and confronted, Ruko's primary interest is not dying. He will tell the party about the tower's location, Voss's habits and schedule, and the scrying mirror on the third floor. He will also warn them that Voss is more dangerous than he appears — the wizard does not travel without preparation.",
+      "motivation": "Personal survival and maximum payment. He is playing three sides and is one revelation away from the table collapsing. He knows it and is perpetually alert.",
+      "starting_location_symbol": "loc_fortress_courtyard",
+      "stats": {
+        "hd": "1-1",
+        "hp": 3,
+        "ac": 14,
+        "attacks": [{"name": "scimitar", "damage": "1d6", "to_hit_bonus": 0}],
+        "save_as": "NM",
+        "morale": 5,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": "'Ruko does not know what you are talking about. Ruko is just a runner. [Pause, watching the party's faces.] ...Ruko might know a few things. About the man who built the tower. About a mirror that sees far. What would this information be worth to persons such as yourselves?'",
+      "image_role": "npc:ruko_spy",
+      "secrets": ["sec_wizard_hired_hobgoblins", "sec_scrying_mirror"]
+    },
+    {
+      "symbol": "npc_king_aldar",
+      "name": "King Aldar, Tomb Guardian",
+      "description": "What remains of King Aldar Renthis, last of the Renthis line, is a wight — dessicated, grey, dressed in the remnants of burial robes that have fared better than the flesh within them. He stands in his sarcophagus when roused, but he does not immediately attack. He is a guardian in the specific sense: he has awareness enough to distinguish between those who come in violation and those who come with legitimate purpose. He cannot speak, but he can gesture, and he can respond to the Rite of Passage recitation — if someone reads the liturgy in the old kingdom tongue, his posture changes from warding to listening. He wants two things: the casket kept sealed and secured, and his tomb's peace restored. He can be bargained with if the party demonstrates knowledge of the Rite. He will not pursue beyond the tomb.",
+      "motivation": "Guard the Casket of Verath Nol. Destroy those who would remove or open it. Tolerate those who come to restore order — he cannot distinguish them at first, but the Rite of Passage read aloud is the signal.",
+      "starting_location_symbol": "loc_tomb_true_chamber",
+      "stats": {
+        "hd": "3",
+        "hp": 14,
+        "ac": 14,
+        "attacks": [{"name": "claw", "damage": "1d4", "to_hit_bonus": 2}],
+        "save_as": "F3",
+        "morale": 12,
+        "alignment": "chaotic",
+        "special": ["drains 1 level per hit", "hit only by silver or magical weapons", "will stand down if Rite of Passage is read aloud in old kingdom tongue"]
+      },
+      "sample_dialogue": null,
+      "image_role": "npc:king_aldar_wight",
+      "secrets": ["sec_scroll_key_to_guardian"]
+    },
+    {
+      "symbol": "npc_odalien",
+      "name": "Priest Odalien, Bound Ghost",
+      "description": "A translucent figure in old kingdom priestly robes, visible only in the burial corridors and offering room, and only to those who carry a light source. He does not speak Common but can communicate through gesture, expression, and by manipulating small objects. He is not hostile — he is anxious. He has been bound to this tomb since his own death, charged by a compact with the king to ensure the burial rites were maintained. The awakening of the undead has deeply distressed him; he has been trying to guide anyone willing to engage with him toward the Rite of Passage scroll and then toward the true burial chamber. He cannot enter the true chamber himself, which has been his particular torment since the casket was placed there. He will respond with visible relief if someone picks up the scroll and reads from it.",
+      "motivation": "Restore the proper order of the tomb. See the Rite of Passage used correctly. Achieve some measure of rest, which he cannot have while the tomb is desecrated.",
+      "starting_location_symbol": "loc_tomb_corridors",
+      "stats": {
+        "hd": "0",
+        "hp": 0,
+        "ac": 0,
+        "attacks": [],
+        "save_as": "NM",
+        "morale": 12,
+        "alignment": "lawful",
+        "special": ["ghost — immune to physical weapons", "cannot be turned by clerics (he is not hostile)", "communicates by gesture and object manipulation only"]
+      },
+      "sample_dialogue": "[Points emphatically toward the offering room. When the party finds the scroll, clasps hands in evident relief. When pointed toward the false chamber's north wall, nods twice.]",
+      "image_role": "npc:ghost_odalien",
+      "secrets": ["sec_scroll_key_to_guardian"]
+    },
+    {
+      "symbol": "npc_voss",
+      "name": "Maldric Voss, Wizard",
+      "description": "A thin man of fifty-five with a close-trimmed white beard and very steady hands. He dresses practically for field work — good boots, a canvas coat with many pockets, a light crossbow he is accurate with. He does not look like a villain. He looks like a scholar who has spent a great deal of time in uncomfortable places doing important work. His magic runs toward control and information: sleep, charm person, ESP, and a memorized mirror image he has used in every confrontation of the last decade to survive the first round. He is brilliant and entirely persuaded that he is right — that the power in the casket, properly controlled, could be used to bind the violent dead to useful service, ending the threat that uncontrolled undead pose to the living. His argument has a surface logic. The flaw is that he has spent years constructing a reason to do something he wants to do and has mistaken the construction for the reasoning. He is not mindlessly evil. He may be unteachable on this specific subject.",
+      "motivation": "Retrieve the Casket of Verath Nol and use the ritual within to establish a new school of 'reclamation magic' — binding the recently dead to useful tasks. He believes this is a net moral good. He hired the hobgoblins to secure the area during his research. He did not anticipate the tomb's guardians awakening, which has cost him time and is complicating his extraction plan.",
+      "starting_location_symbol": "loc_tower_top",
+      "stats": {
+        "hd": "6*",
+        "hp": 21,
+        "ac": 12,
+        "attacks": [
+          {"name": "light crossbow", "damage": "1d4", "to_hit_bonus": 1},
+          {"name": "dagger", "damage": "1d4", "to_hit_bonus": 0}
+        ],
+        "save_as": "M6",
+        "morale": 8,
+        "alignment": "neutral",
+        "spells_prepared": ["sleep", "charm person", "mirror image", "ESP", "hold person", "lightning bolt"]
+      },
+      "sample_dialogue": "'You have been very thorough. I am, genuinely, impressed. Sit down — there is no point in opening with a spell if we can speak instead. The casket is dangerous, yes. I know what it contains. The question is whether you trust the alternative: leaving it where it is, to be found by the next person who is less careful than I am.' [Pause] 'Or we could fight. I would prefer not to.'",
+      "image_role": "npc:maldric_voss",
+      "secrets": ["sec_wizard_hired_hobgoblins", "sec_voss_knows_the_cost"]
+    },
+    {
+      "symbol": "npc_hobgoblin_warrior_1",
+      "name": "Hobgoblin Warrior (Holk)",
+      "description": "Keth's second, a broad-shouldered hobgoblin who has followed Keth for eight years and functions as his enforcer and sergeant. He is loyal in the uncomplicated way of a soldier who respects competence. He fights alongside Keth and retreats only when Keth retreats.",
+      "motivation": "Serve Keth. Keep the war-band together.",
+      "starting_location_symbol": "loc_fortress_courtyard",
+      "stats": {
+        "hd": "1+1",
+        "hp": 7,
+        "ac": 15,
+        "attacks": [{"name": "weapon", "damage": "1d8", "to_hit_bonus": 1}],
+        "save_as": "F1",
+        "morale": 9,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_hobgoblin_warrior_2",
+      "name": "Hobgoblin Warrior (Braeth)",
+      "description": "A younger member of the war-band, still looking to prove herself. She fights aggressively and tends to overcommit — which makes her dangerous early in a fight and vulnerable later.",
+      "motivation": "Reputation within the war-band. A clean kill against a worthy opponent.",
+      "starting_location_symbol": "loc_fortress_courtyard",
+      "stats": {
+        "hd": "1+1",
+        "hp": 6,
+        "ac": 15,
+        "attacks": [{"name": "weapon", "damage": "1d8", "to_hit_bonus": 1}],
+        "save_as": "F1",
+        "morale": 8,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_tomb_wight_1",
+      "name": "Tomb Wight (Broken Seal, First)",
+      "description": "One of the eight wights that escaped the burial corridor niches when the tomb was breached. This one has been ranging through the fortress dungeon, waiting in darkness. Its burial robes are old kingdom quality, still recognizable in the tatters.",
+      "motivation": "Destroy the living. Extend the unrest that its rousing has created.",
+      "starting_location_symbol": "loc_fortress_dungeon",
+      "stats": {
+        "hd": "3",
+        "hp": 13,
+        "ac": 14,
+        "attacks": [{"name": "claw", "damage": "1d4", "to_hit_bonus": 2}],
+        "save_as": "F3",
+        "morale": 12,
+        "alignment": "chaotic",
+        "special": ["drains 1 level per hit", "hit only by silver or magical weapons"]
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_tomb_wight_2",
+      "name": "Tomb Wight (Broken Seal, Second)",
+      "description": "A second escaped wight, found in the burial corridors proper, drifting between the empty niches. It is drawn toward light and will close aggressively once it detects intruders.",
+      "motivation": "Destroy the living.",
+      "starting_location_symbol": "loc_tomb_corridors",
+      "stats": {
+        "hd": "3",
+        "hp": 14,
+        "ac": 14,
+        "attacks": [{"name": "claw", "damage": "1d4", "to_hit_bonus": 2}],
+        "save_as": "F3",
+        "morale": 12,
+        "alignment": "chaotic",
+        "special": ["drains 1 level per hit", "hit only by silver or magical weapons"]
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_skeleton_1",
+      "name": "Antechamber Skeleton Guard (West Niche)",
+      "description": "One of the three animated skeleton guardians standing in niches at the north wall of the antechamber. Dormant until intruders move toward the basalt door.",
+      "motivation": "Guard the passage to the inner tomb.",
+      "starting_location_symbol": "loc_tomb_antechamber",
+      "stats": {
+        "hd": "1",
+        "hp": 5,
+        "ac": 12,
+        "attacks": [{"name": "weapon", "damage": "1d6", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 12,
+        "alignment": "chaotic",
+        "special": ["immune to sleep, charm, hold", "edged weapons deal half damage"]
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_skeleton_2",
+      "name": "Antechamber Skeleton Guard (Center Niche)",
+      "description": "The center of the three dormant skeletons, this one bears the remnants of an officer's helmet — its original rank marked by a crest now tarnished to illegibility.",
+      "motivation": "Guard the passage to the inner tomb.",
+      "starting_location_symbol": "loc_tomb_antechamber",
+      "stats": {
+        "hd": "1",
+        "hp": 4,
+        "ac": 12,
+        "attacks": [{"name": "weapon", "damage": "1d6", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 12,
+        "alignment": "chaotic",
+        "special": ["immune to sleep, charm, hold", "edged weapons deal half damage"]
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_skeleton_3",
+      "name": "Antechamber Skeleton Guard (East Niche)",
+      "description": "The easternmost of the three guardians. Carries a spear that is still structurally sound, the iron head having survived the centuries better than the ash shaft, which has been repaired with tomb-stone at some point — who performed this repair is unclear.",
+      "motivation": "Guard the passage to the inner tomb.",
+      "starting_location_symbol": "loc_tomb_antechamber",
+      "stats": {
+        "hd": "1",
+        "hp": 4,
+        "ac": 12,
+        "attacks": [{"name": "weapon", "damage": "1d6", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 12,
+        "alignment": "chaotic",
+        "special": ["immune to sleep, charm, hold", "edged weapons deal half damage"]
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    }
+  ],
+
+  "encounters": [
+    {
+      "symbol": "enc_hobgoblin_gatehouse",
+      "name": "Fortress Gatehouse — Sentry Pair",
+      "trigger_hint": "Party approaches the fortress on the ridge road and comes within sight of the wall-walk. Two hobgoblin sentries are visible; if the party does not find a way to bypass or distract them, combat begins when the party attempts the gate.",
+      "monsters": [
+        {
+          "name": "Hobgoblin",
+          "count": 2,
+          "tactics": "Sentries hold the wall-walk and use the height advantage — they drop rocks through the murder-hole on anyone in the gate arch (treat as 1d6 damage, save vs death ray halves). One blows a horn to alert the courtyard after the first round of combat; the other holds the wall-walk. Neither will abandon their post, but they will call for reinforcement before engaging a large party."
+        }
+      ],
+      "treasure_hint": "The sentries each carry 1d6 sp and a patrol marker — a lead disc stamped with Keth's war-band symbol — that can be used to bluff through the gate on subsequent visits if shown to courtyard guards."
+    },
+    {
+      "symbol": "enc_hobgoblin_courtyard",
+      "name": "Fortress Courtyard — War-Band",
+      "trigger_hint": "Party enters the courtyard after bypassing or defeating the sentries. A group of hobgoblin warriors is present — either alerted by a horn or encountered at rest. If the alarm was sounded, they are in formation; if not, they are scattered around the fire-pit and caught flat-footed (surprise roll applies).",
+      "monsters": [
+        {
+          "name": "Hobgoblin",
+          "count": 4,
+          "tactics": "If alerted, the warriors form a loose line across the courtyard and advance together — they drill, and it shows. Two engage the front rank of the party while two try to circle. If the fight goes badly, one runner attempts to reach the commander's tower to alert Keth. Ruko, if present, immediately dives behind the cistern and stays there."
+        }
+      ],
+      "treasure_hint": "The courtyard loot sacks contain the remnants of village plunder: mixed copper and silver (2d10 cp, 1d6 sp), a bolt of serviceable wool, and a carved wooden box from a merchant's wagon that is locked but empty inside — the merchant hid the real contents elsewhere before the raid."
+    },
+    {
+      "symbol": "enc_keth_confrontation",
+      "name": "Commander's Tower — Warlord Keth",
+      "trigger_hint": "Party reaches the commander's tower with Keth present — either as a final confrontation or after clearing the courtyard. Keth has heard the fighting and has moved to the second floor planning room, using the table as a barrier. Holk and Braeth are with him if they have not already been encountered.",
+      "monsters": [
+        {
+          "name": "Warlord Keth",
+          "count": 1,
+          "tactics": "Keth opens with an offer of negotiation — genuinely, not as a delay. If the party refuses or attacks, he fights from behind the table (cover, +2 AC against ranged) with Holk and Braeth alongside. He targets the heaviest-armored fighter to neutralize the defensive anchor, not the lightly-armored back rank. At half HP, he makes a second offer: information on Voss for safe passage. If this is also refused, he fights to the death with professional composure."
+        },
+        {
+          "name": "Hobgoblin",
+          "count": 2,
+          "tactics": "Holk engages alongside Keth. Braeth attempts to flank through the stair. Both hold morale until Keth falls."
+        }
+      ],
+      "treasure_hint": "The locked chest on the third floor holds 180 gp, 60 sp, the sealed letter from Voss, and four gold astrolabe-marked coins — these last are physical proof of Voss's involvement, matching the signet on the tower's correspondence wax."
+    },
+    {
+      "symbol": "enc_dungeon_wight",
+      "name": "Fortress Dungeon — Wight in the Dark",
+      "trigger_hint": "Party descends to the fortress dungeon. One wight is present, lurking near the broken wall. It is attracted to torchlight but does not charge immediately — it watches from the edge of the light for one round before attacking, which is its only concession to patience.",
+      "monsters": [
+        {
+          "name": "Wight",
+          "count": 1,
+          "tactics": "Attacks the torch-bearer or light source first, attempting to strand the party in darkness. If the torch goes out, it becomes effectively invisible except for the faint cold it exudes. It will not pursue beyond the dungeon stairs back up to the great hall — something keeps it below."
+        }
+      ],
+      "treasure_hint": "The drained hobgoblin corpse on the floor has 3 sp and a brass ring worth 1 gp. Nothing from the wight itself."
+    },
+    {
+      "symbol": "enc_antechamber_skeletons",
+      "name": "Tomb Antechamber — Three Skeleton Guards",
+      "trigger_hint": "Triggered when any living creature moves within 10 feet of the basalt door at the far end of the antechamber. The skeletons in the three niches step out simultaneously and advance in a line, weapons raised. They do not pursue beyond the antechamber if the party retreats to the dungeon passage.",
+      "monsters": [
+        {
+          "name": "Skeleton",
+          "count": 3,
+          "tactics": "Move in a line, three abreast — the room is wide enough. They attack the nearest target each round. Edged weapons deal half damage against them; a cleric can attempt to turn all three simultaneously, which is the cleanest solution. They do not pursue beyond the antechamber threshold."
+        }
+      ],
+      "treasure_hint": "The skeletons carry no treasure. Their weapons — ancient bronze short swords — are functional but brittle. Each is worth 5 sp as a curiosity."
+    },
+    {
+      "symbol": "enc_voss_confrontation",
+      "name": "Wizard's Tower — Maldric Voss",
+      "trigger_hint": "Party reaches the tower and Voss is present — either in the top floor or the laboratory. If he observed them via the scrying mirror, he has had time to prepare: mirror image is active, one spell is held for the first aggressive action. If he has not yet retrieved the casket, he is negotiating from a position of preferring not to fight. If he has the casket in hand, he is more defensive.",
+      "monsters": [
+        {
+          "name": "Maldric Voss",
+          "count": 1,
+          "tactics": "Voss opens with negotiation in all scenarios — he is not suicidal, and he has heard the party's capabilities from Ruko's reports. If combat is forced, mirror image activates first (already running if he saw them via scrying). He casts sleep if three or more party members are in range, hold person against a primary threat, then lightning bolt as a last resort if he is cornered. At 8 HP or below, he seeks to flee — down the stair, through the root cellar, and out a hidden tunnel behind the provisions rack. He will not leave the casket if he has it; he will leave it if he does not."
+        }
+      ],
+      "treasure_hint": "The root cellar strongbox holds 200 gp and three potions of healing. The locked chest on the top floor holds 150 gp, his spell book, the signet ring, and the written contract with Keth — collectively worth more as evidence than as coin."
+    }
+  ],
+
+  "plot_beats": [
+    {
+      "symbol": "beat_fortress_cleared",
+      "title": "The Fortress Falls Silent",
+      "trigger_hint": "Party defeats or drives off Warlord Keth and the hobgoblin war-band, freeing Sergeant Dravan.",
+      "outcome": "The fortress is no longer a threat to the villages. Dravan can give a full report on the dungeon situation and the things that came up from below. The barricaded dungeon door can be safely approached. The letter and astrolabe coins in Keth's chest, or Keth's own testimony if he negotiated, point toward the tower and Maldric Voss. The war-band's departure opens the road south.",
+      "leads_to": "beat_tomb_entered",
+      "dm_notes": "If Keth negotiated and left, he is a loose end — he may appear in a later session as a mercenary in someone else's employ. Do not resolve him permanently unless the players specifically pursue it. The barricade situation in the great hall is a visible clue that even the hobgoblins were afraid of whatever is below. Let Dravan's description of the sounds that night be specific: 'something slow, moving in the passage, and cold air coming up under the door, and then silence for a long time, and then the sound of something returning to where it came from.' This is a wight doing a patrol circuit. It does not make the place feel haunted; it makes it feel inhabited by something patient."
+    },
+    {
+      "symbol": "beat_tomb_entered",
+      "title": "Descent Into the Old King's Rest",
+      "trigger_hint": "Party clears the barricade and descends through the fortress dungeon into the tomb antechamber.",
+      "outcome": "The party encounters the ghost of Priest Odalien and understands that the tomb has history and inhabitants of its own — this is not simply a dungeon below the fortress. Odalien's guidance leads them toward the offering room and the Rite of Passage scroll. The scale of the tomb's history becomes clear.",
+      "leads_to": "beat_guardian_confronted",
+      "dm_notes": "Odalien is the heart of this beat. His communication limitations are a feature: the party has to pay attention and interpret, which makes the interaction feel earned. He will gesture toward the scroll, toward the false chamber, toward the north wall. He will show agitation if the party moves toward the true chamber without the scroll. A cleric who tries to turn him should receive a clear signal that this ghost is not hostile — not immune to turning, but resistant, and clearly distressed by the attempt rather than threatened. Resist the temptation to give Odalien a voice. The silence is the point."
+    },
+    {
+      "symbol": "beat_guardian_confronted",
+      "title": "Before the Sealed King",
+      "trigger_hint": "Party enters the true burial chamber with the Rite of Passage scroll, having passed through the false chamber and opened the hidden north door.",
+      "outcome": "King Aldar as a wight is present or rouses when the casket is approached. If the party has the scroll and reads from it, his posture changes and he allows them to approach the casket. If they do not have the scroll, he attacks. The casket is present either way. The party must decide what to do with it.",
+      "leads_to": "beat_casket_decision",
+      "dm_notes": "The moment of reading the Rite aloud is the pivot of the entire adventure — the old king has been waiting for this for two centuries and it shows. His stillness when the words are read is a kind of relief, visible in the way his posture changes. He does not surrender the casket; he allows them to see it. What they do with it is entirely their choice, and he cannot stop them from taking it — he can only fight if they try to open it. The casket itself radiates wrongness, not magic: characters near it for more than a few minutes should describe a low-grade headache, a feeling of being watched from inside the box. This is not a mechanical effect; it is atmosphere. Keep it consistent."
+    },
+    {
+      "symbol": "beat_casket_decision",
+      "title": "What to Do With the Casket of Verath Nol",
+      "trigger_hint": "Party has possession of or access to the Casket of Verath Nol and must choose what to do with it — destroy it, secure it in the tomb, bring it to Voss, or carry it elsewhere.",
+      "outcome": "The party's decision here determines which ending occurs. Destroying it ends the threat permanently but requires specific means. Securing it in the tomb is a temporary solution. Bringing it to Voss enables his plan. Carrying it elsewhere is dangerous — the casket's influence grows over distance from the tomb.",
+      "leads_to": null,
+      "dm_notes": "Do not push the party toward any specific choice. Voss's arguments for controlled use of the casket are internally coherent, even if wrong. The king's evident suffering is an argument for sealing it back. The option of destroying it should feel achievable but costly — see the ending notes. The 'carry it elsewhere' option should only be available if the party is specifically planning to bring it to a trusted religious authority; traveling with the casket for more than a day should produce escalating ill effects (bad dreams, one party member per day rolls a morale check vs. a 9 to not become irritable and paranoid). This is atmosphere, not a save-or-die mechanic, but the GM should be consistent."
+    },
+    {
+      "symbol": "beat_voss_reckoning",
+      "title": "The Wizard at Bay",
+      "trigger_hint": "Party confronts Maldric Voss in his tower, with or without the casket in their possession.",
+      "outcome": "Voss is captured, killed, or escapes, depending on the party's choices and success. His written contract with Keth and his library notes are available as evidence regardless of his fate. The ending that follows depends on what the party does with both Voss and the casket.",
+      "leads_to": null,
+      "dm_notes": "Voss is the most interesting character in this adventure and benefits from being allowed to make his argument in full before combat. He is not wrong that the casket is dangerous in the wrong hands; he is wrong that he has correctly identified whose hands are the right ones. If the party engages his argument honestly, let the conversation run — this is exactly the kind of moral complexity that makes BFRPG adventures stick in memory. His failure mode is that he has spent too long constructing a justification for something he wants, and he can no longer see it clearly. A player who identifies this flaw to his face, specifically, will get a long silence and then a rare moment of genuine uncertainty from him. He may not change his mind. But he will pause."
+    }
+  ],
+
+  "secrets": [
+    {
+      "symbol": "sec_wizard_hired_hobgoblins",
+      "content": "Maldric Voss hired Warlord Keth and the hobgoblin war-band to occupy Fort Ashenmere and control access to the ridge road, giving himself uninterrupted time to excavate and study the tomb beneath the fortress. The written contract in Keth's locked chest and in Voss's top floor chest both confirm this. Ruko the goblin spy can corroborate, and Keth himself will confirm it if he negotiates safe passage. The astrolabe-and-M.V. gold coins found in Keth's chest match the signet ring in Voss's tower.",
+      "reveal_when": "Party finds the sealed letter or gold coins in Keth's tower chest, or Keth negotiates and volunteers the information, or Ruko the goblin spy is found and interrogated.",
+      "leads_to_beat": "beat_voss_reckoning"
+    },
+    {
+      "symbol": "sec_casket_contents",
+      "content": "The Casket of Verath Nol contains a wax tablet inscribed with a ritual that was composed two centuries before the old king suppressed it: the Rite of Binding, which allows a living practitioner to enslave the will of the recently dead — within three days of death — and direct them as fully obedient servants. The old king had the tablet sealed in the casket and the casket warded and buried rather than destroyed, because the ritual was also the only known cure for a specific form of undead corruption and he could not bring himself to destroy something that might one day be needed. He made the wrong call. The power to use it responsibly does not exist among the living now.",
+      "reveal_when": "Party reads Voss's library notes in the tower library, or a magic-user in the party examines the casket closely and succeeds on an Intelligence check, or Voss is captured and questioned about his research.",
+      "leads_to_beat": "beat_casket_decision"
+    },
+    {
+      "symbol": "sec_scroll_key_to_guardian",
+      "content": "The Rite of Passage scroll found in the offering room's hidden bronze tube contains the funerary liturgy for old kingdom royalty. Read aloud in the old kingdom tongue (any character can sound out the phonetics with a successful Intelligence check; clerics and magic-users automatically succeed), it signals to King Aldar's wight that those reciting it have legitimate priestly or scholarly purpose and are not tomb robbers. His posture changes from defensive to watchful, and he will allow the party to approach the Casket of Verath Nol without attacking — though he will still defend it if they attempt to remove it without his consent. A second successful reading after the party explains their intention (Odalien can gesture-translate) can secure his tacit permission to take or destroy the casket.",
+      "reveal_when": "Party finds the bronze tube in the false-back shelf in the offering room. Odalien's gestures will direct them there if they are paying attention to him.",
+      "leads_to_beat": "beat_guardian_confronted"
+    },
+    {
+      "symbol": "sec_scrying_mirror",
+      "content": "The brass mirror in Voss's laboratory is a scrying instrument, currently inactive. It can be used to observe any location within ten miles where Voss has previously placed a small piece of chalk (he has marked the fortress gatehouse, the dungeon entrance, and the laboratory itself). If the party discovers this — Ruko will mention it if prompted, and the library notes describe it in passing — they can use it to observe whether Voss is in the tower before approaching. A magic-user in the party who spends one turn studying it can activate it for one ten-minute observation. It can also be destroyed by breaking the mirror, which is obvious.",
+      "reveal_when": "Party reaches the tower laboratory and examines the mirror, or Ruko is found and asked about the tower's defenses, or the library notes are read carefully.",
+      "leads_to_beat": "beat_voss_reckoning"
+    },
+    {
+      "symbol": "sec_voss_knows_the_cost",
+      "content": "Maldric Voss's library notes reveal that he knows, in detail, what went wrong every previous time the Rite of Binding was used. He has documented three historical instances: two ended in the practitioner losing control of their bound dead and being killed by them; one ended in a controlled operation that the practitioner survived but which left them with a profound inability to experience normal emotional connection for the remaining twenty years of their life, a condition they described in their own notes as 'the most complete loneliness I have ever known.' Voss has read these accounts. He believes he is smarter and more careful than his predecessors. He may even be right. The margin on 'being right' here is very thin.",
+      "reveal_when": "Party reads the annotated library notes carefully, specifically the marginalia on the historical section. Takes one full turn of reading.",
+      "leads_to_beat": "beat_casket_decision"
+    }
+  ],
+
+  "endings": [
+    {
+      "symbol": "end_casket_destroyed",
+      "trigger": "The party destroys the Casket of Verath Nol. This requires removing it from the tomb (provoking King Aldar unless the Rite secured his permission) and then using fire, magical damage, or a cleric's consecration ritual — ordinary weapon strikes will not breach the casket's iron. A cleric of 3rd level or higher can perform a thirty-minute consecration that destroys the casket's contents without opening it. A magic-user can use two applications of burning hands or one application of fireball to destroy the iron box by sustained heat.",
+      "outcome": "The casket detonates when its wards finally fail — a cold shockwave rather than a physical blast, dropping all creatures within thirty feet to zero movement for one round as something that was contained briefly touches the world and then is gone. The tomb goes still. King Aldar's form, if present, collapses as the casket's animating influence — which had been sustaining him long past his natural dissolution — finally ends. The eight wights from the broken niches collapse simultaneously wherever they are. Odalien appears once more in the true chamber, performs a small ceremonial gesture, and is gone. The tomb is empty and at peace. Voss, if alive and in custody, takes the news with visible grief and then, after a long silence, something that looks almost like relief. He will face whatever legal consequences the party arranges for him. The villages are safe."
+    },
+    {
+      "symbol": "end_casket_secured",
+      "trigger": "The party defeats or drives off Voss and chooses to return the Casket of Verath Nol to the true burial chamber rather than destroying it, sealing the hidden door and re-interring King Aldar.",
+      "outcome": "The casket is back where it was, which is not a permanent solution but is better than the alternative. King Aldar's wight settles back into the sarcophagus — whether this is rest or simply dormancy is a question that has no answer. The skeletons return to their niches. Odalien remains in the burial corridors, a ghost with an unfinished task, now with a little more time before the next crisis. The fortress above can be reclaimed — Dravan formally reports its status to the border rangers. The villages are safe for now. Three years from now, someone else will find the tomb. The DM should mark this as an unresolved thread."
+    },
+    {
+      "symbol": "end_voss_escapes",
+      "trigger": "Voss escapes the tower with the Casket of Verath Nol — either by defeating the party, slipping through the root cellar tunnel while the party is occupied, or because the party did not reach the tower before he retrieved the casket and fled.",
+      "outcome": "The fortress is clear. The villages are safe — the hobgoblins scatter without a paymaster. But the casket is gone, in the hands of a man who intends to use it and who now knows that at least one party of capable adventurers is aware of what he is doing. Within three months, rumors reach the region of unusual events near a city to the north — a suspicious number of recently dead people reported not staying dead, performing tasks for a thin man in a canvas coat who pays in silver and asks questions about where people keep things of value. This is setup. Voss will be harder to find next time and harder to stop, and he will be ready for them."
+    },
+    {
+      "symbol": "end_voss_captured",
+      "trigger": "Voss is captured alive and turned over to legal authority — the Morgansfort castellan, a regional magistrate, or a clerical order with jurisdiction over matters of supernatural misuse.",
+      "outcome": "Voss's written records, including the contract with Keth and his library notes, are sufficient to establish his culpability for the raids and his intended misuse of the casket. He is a respected wizard from a recognized institution; his trial will be a drawn-out affair with institutional allies arguing mitigating circumstances. He will spend at least two years in custody. His spell book is either confiscated as evidence or available to the party depending on how the magistrate rules. The casket's disposition remains a separate decision — the legal authority will want expert advice on it, which means it will sit in a vault somewhere while scholars argue. This is a better outcome than most, but not a clean one."
+    }
+  ],
+
+  "world_facts": [
+    {
+      "fact": "Fort Ashenmere was a border ranger garrison decommissioned forty years ago when the old kingdom's frontier shifted. Its dungeon connects to a royal tomb that predates the fort by two centuries.",
+      "tags": ["fort_ashenmere", "history", "fortress", "frontier", "tomb"],
+      "importance": 7
+    },
+    {
+      "fact": "The Casket of Verath Nol contains the Rite of Binding, a ritual that enslaves the will of the recently dead. The old king suppressed it but could not bring himself to destroy it because it was also the only known cure for a specific form of undead corruption.",
+      "tags": ["casket_verath_nol", "ritual", "undead", "rite_of_binding", "danger"],
+      "importance": 10
+    },
+    {
+      "fact": "Wight-level undead and above are hit only by silver or magical weapons. Ordinary steel passes through them without effect. A victim drained to zero levels by a wight rises in 1d4 days as a wight under the original's command.",
+      "tags": ["wight", "undead", "combat", "mechanics", "silver", "level_drain"],
+      "importance": 9
+    },
+    {
+      "fact": "Maldric Voss, a wizard of the sixth rank, hired the hobgoblin war-band of Warlord Keth to secure Fort Ashenmere while he plundered the tomb beneath it. He is seeking the Casket of Verath Nol to extract the Rite of Binding for his own use.",
+      "tags": ["maldric_voss", "wizard", "hobgoblins", "keth", "casket", "villain"],
+      "importance": 9
+    },
+    {
+      "fact": "The ghost of Priest Odalien is bound to the old king's tomb by a compact made at his own death. He cannot speak but communicates by gesture and object manipulation. He is not hostile and cannot be turned by clerics.",
+      "tags": ["odalien", "ghost", "tomb", "friendly", "bound"],
+      "importance": 7
+    },
+    {
+      "fact": "King Aldar Renthis, last of the Renthis line, was buried with the Casket of Verath Nol two centuries ago. He has been sustained as a wight guardian by the casket's lingering influence. The Rite of Passage read aloud in old kingdom tongue signals legitimate purpose to him.",
+      "tags": ["king_aldar", "wight", "tomb", "guardian", "rite_of_passage", "old_kingdom"],
+      "importance": 8
+    },
+    {
+      "fact": "Ruko the goblin spy has been reporting to both Warlord Keth and Maldric Voss independently. He knows the tower's location, Voss's habits, and the existence of the scrying mirror on the third floor of the tower.",
+      "tags": ["ruko", "goblin", "spy", "tower", "scrying_mirror", "information"],
+      "importance": 6
+    },
+    {
+      "fact": "Maldric Voss's tower laboratory contains a scrying mirror that allows him to observe any location within ten miles where he has placed a chalk mark. He has marked the fortress gatehouse, the dungeon entrance, and his own laboratory.",
+      "tags": ["voss", "tower", "scrying_mirror", "magic", "warning"],
+      "importance": 7
+    },
+    {
+      "fact": "Hobgoblins fight in disciplined formation and maintain morale longer than goblins. A hobgoblin war-band with an effective leader can hold a fortified position against forces twice its size.",
+      "tags": ["hobgoblin", "combat", "tactics", "formation", "morale"],
+      "importance": 5
+    },
+    {
+      "fact": "The Rite of Passage scroll found in the offering room of the ancient tomb is the key to peaceful interaction with King Aldar and to opening the hidden door to the true burial chamber. Without it, the guardian attacks without warning and the hidden door cannot be opened from the corridor side.",
+      "tags": ["rite_of_passage", "scroll", "key_item", "tomb", "king_aldar", "guardian"],
+      "importance": 8
+    }
+  ]
+}

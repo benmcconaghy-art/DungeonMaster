@@ -1,0 +1,437 @@
+{
+  "format_version": "1.0",
+  "synopsis": "Rock Hollow, a farming hamlet at the edge of worked hills, has been troubled for three weeks by kobold raids out of the Old Spar Mine nearby. Chickens vanish, a farmhand goes missing, and a cold fear settles over the village. The elder hires the party to clear the mine — but the kobolds did not move in by choice. Something drove them from their old warrens deeper underground, and that something is still down there, patient and hungry. The party must decide whether to slaughter desperate creatures or broker an uneasy peace, all while learning what lurks below.",
+  "tone": "gritty low-fantasy — BFRPG-canonical. Characters can die. The kobolds are not cartoons; they are frightened creatures backed into someone else's hole. The deeper threat is real and cannot be reasoned with. Torchlight, wet stone, and the smell of fear.",
+  "image_style": "dark fantasy illustration, ink and wash, candlelit stone and mud",
+  "image_negative_prompt": "modern objects, photographic, watermark, text artifacts, bright colors, anime, 5e art style",
+  "level_range": [1, 1],
+  "estimated_sessions": 1,
+  "starting_hook": "Word reaches the party at the nearest market town: the village elder of Rock Hollow is offering thirty gold pieces — a full season's surplus — to whoever will clear the kobolds from the old mine. Three weeks of raids, one missing man, and now the village is talking about abandoning the hamlet before winter.",
+  "starting_location_symbol": "loc_rock_hollow_village",
+
+  "locations": [
+    {
+      "symbol": "loc_rock_hollow_village",
+      "name": "Rock Hollow Village",
+      "description": "A hamlet of eleven buildings huddled around a well and a mud-rutted square, wedged between low worked hills and a creek that runs brown after rain. The fields are small and rocky — hence the name — and the people are lean and practical. A wooden shrine to a harvest god stands at the square's edge, its offerings bowl empty. Smoke comes from perhaps half the chimneys; the rest of the families have sent their children to cousins in the next valley. The villagers who remain watch strangers with the careful eyes of people who have already decided they cannot afford to be wrong about them. The old mine mouth is visible as a dark notch in the hill-face a quarter mile north, where a stand of birch goes thin and ragged.",
+      "parent_symbol": null,
+      "image_role": "scene:rock_hollow_village_square",
+      "metadata": {
+        "area": "Rock Hollow",
+        "features": ["stone well", "wooden harvest shrine", "eleven buildings", "empty offering bowl"],
+        "population": "roughly forty, half evacuated",
+        "mine_visible": true
+      }
+    },
+    {
+      "symbol": "loc_elder_house",
+      "name": "Elder Marta's House",
+      "description": "The largest building in the village by one course of stone — a long farmhouse with a real chimney and shuttered windows that actually close properly. Marta Blackfield has lived here for forty years and managed this village for twenty of them. The main room doubles as a meeting hall: a trestle table long enough for twelve, benches on both sides, and a shelf of worn ledger books that record every crop, every dispute, and every transaction since she took over. A cradle in the corner holds no child — it belonged to a grandchild now staying elsewhere. Marta will receive the party here, offer thin beer, and get to business without ceremony.",
+      "parent_symbol": "loc_rock_hollow_village",
+      "image_role": "scene:elder_house_interior",
+      "metadata": {
+        "area": "Rock Hollow",
+        "npc_present": "npc_elder_marta",
+        "features": ["long trestle table", "ledger shelf", "proper chimney", "shuttered windows"]
+      }
+    },
+    {
+      "symbol": "loc_injured_miner_hut",
+      "name": "Dob's Hut",
+      "description": "A low, single-room structure at the village edge with a turf roof that needs replacing and a door that doesn't hang quite square. Dob Cranner — the one man who got out of the mine alive when the kobolds moved in — is inside, lying on a straw pallet with a poultice-wrapped leg. The hut smells of wood-smoke and sweat. A pair of rough crutches lean against the wall; he made them himself. Dob is not a complainer, but three weeks lying still have made him a careful observer. He has listened to sounds from the hill at night and thought hard about what they mean. He will tell the party everything he knows about the mine's layout — which is considerable — and one thing he has not told Marta: he saw crude markings on the mine wall in the deepest shaft that were not made by kobolds.",
+      "parent_symbol": "loc_rock_hollow_village",
+      "image_role": "scene:dob_hut_interior",
+      "metadata": {
+        "area": "Rock Hollow",
+        "npc_present": "npc_dob_cranner",
+        "features": ["straw pallet", "self-made crutches", "turf roof"],
+        "key_information": "mine layout and the deep markings"
+      }
+    },
+    {
+      "symbol": "loc_mine_entrance",
+      "name": "Old Spar Mine Entrance",
+      "description": "The mine mouth is shored with old oak beams, grey and checked with age but still sound. The entrance is wide enough for two men abreast and tall enough to stand upright. A rusted iron rail runs along the floor inside — the remnant of an ore-cart track — before disappearing into darkness. Outside, the birch trees have been stripped of bark at knee height in a ring about fifteen feet across: a kobold territory marker, redrawn fresh within the last few days. A crude wooden spike has been driven into the soil beside the entrance bearing a bird skull and a length of cord — a warning sign. The smell from inside is damp stone, old metal, and the unmistakable sourness of creatures living underground. Boot tracks in the mud outside are small — kobold-sized — and numerous. The ground is disturbed enough that it would be difficult to determine exact numbers.",
+      "parent_symbol": null,
+      "image_role": "scene:mine_entrance_exterior",
+      "metadata": {
+        "area": "Old Spar Mine",
+        "features": ["oak-shored entrance", "rusted iron rail", "bark-stripped territory ring", "bird skull warning"],
+        "warning_sign": true,
+        "visibility": "clearly visible from the village on a clear day"
+      }
+    },
+    {
+      "symbol": "loc_mine_front_tunnel",
+      "name": "Front Tunnel and Sentry Niche",
+      "description": "The first twenty feet of the mine tunnel are wide enough that the iron rail track still has room beside it. Rough-cut stone walls glisten with seep water. A natural niche on the left side, three feet deep, has been stuffed with dried moss and a scavenged wool scrap — a sleeping spot. Two kobolds take turns watching from this niche, able to see the entrance clearly. They are armed with crossbows made from bent wood and sinew; accurate to fifteen feet, not much beyond that. If they see torchlight approaching without stealth, one fires while the other bolts back to the warren to sound the alarm. A smear of charcoal on the tunnel wall just past the niche marks the edge of their territory: a crude kobold scratching that means 'ours.' Past this mark, the tunnel divides.",
+      "parent_symbol": "loc_mine_entrance",
+      "image_role": "scene:mine_front_tunnel",
+      "metadata": {
+        "area": "Old Spar Mine",
+        "features": ["iron rail track", "sentry niche", "charcoal territory mark", "tunnel fork"],
+        "sentry_count": 2,
+        "alarm_trigger": "torchlight or loud noise at entrance"
+      }
+    },
+    {
+      "symbol": "loc_mine_warren",
+      "name": "Kobold Warren Chambers",
+      "description": "The right fork of the tunnel opens into three interconnected chambers the kobolds have made their own. The ore-carts are still here, tipped over and used as walls and windbreaks. Sleeping nests of shredded cloth, dried grass, and stolen rags cover most of the floor. Crude rope lines stretch between cart-axles, hung with drying mushrooms and strips of dried rat meat. A fire-pot — a clay vessel with a wick burning rendered fat — casts orange light that barely reaches the walls. The place is cramped, smells powerfully of kobold, and is clearly occupied by more creatures than it was built to house. At any given time, 1d6+4 kobolds are present here: sleeping, bickering, or sharpening their small blades with practiced anxiety. Two clay pots near the back wall hold the tribe's food stores: two days' worth of mushrooms and dried meat, no more. They are running out of food.",
+      "parent_symbol": "loc_mine_entrance",
+      "image_role": "scene:kobold_warren_chambers",
+      "metadata": {
+        "area": "Old Spar Mine",
+        "features": ["tipped ore-carts", "sleeping nests", "drying lines", "fire-pot", "food stores"],
+        "occupants": "1d6+4 kobolds at any time",
+        "food_stores": "two days remaining",
+        "note": "The starvation detail is a clue — these kobolds are not raiding for greed, they are raiding to eat"
+      }
+    },
+    {
+      "symbol": "loc_mine_chief_chamber",
+      "name": "Chief Skarrik's Chamber",
+      "description": "The left fork leads to a wider natural chamber where the mine broke into a limestone pocket. The walls here are smoother, almost rounded, with old mineral stains in rust and cream. Chief Skarrik has claimed this chamber by right of size — he is larger than most kobolds, nearly four feet tall, with a broken horn filed to a point and armor made from overlapping pieces of scavenged iron. He sleeps on a stolen wool blanket over a pile of ore tailings. A locked iron box, found in the deep shaft, sits in the corner: Skarrik will not open it for the party and cannot explain what is inside beyond 'from down there, from the dark place, not ours.' He brought it up to keep it away from what he found below. His four personal guards occupy the outer edge of the chamber. Carved into the wall near his sleeping spot, in a script that is definitely not kobold, is a phrase that Dob Cranner noticed on his last shift before the exodus.",
+      "parent_symbol": "loc_mine_entrance",
+      "image_role": "scene:mine_chief_chamber",
+      "metadata": {
+        "area": "Old Spar Mine",
+        "npc_present": "npc_chief_skarrik",
+        "features": ["limestone natural pocket", "iron box from the deep", "mineral-stained walls", "carved script"],
+        "key_object": "locked iron box, old script carving",
+        "secrets": ["sec_what_drove_the_kobolds", "sec_mines_old_purpose"]
+      }
+    },
+    {
+      "symbol": "loc_mine_deep_shaft",
+      "name": "The Deep Shaft",
+      "description": "At the back of Skarrik's chamber, a natural fissure — barely wide enough to enter sideways — drops six feet into a deeper level that the original miners never properly worked. The kobolds sealed this gap with ore-cart boards and ore-sack cloth when they moved in. The barrier smells of fear and has been reinforced three times since the tribe arrived, each time after something moved below at night. The shaft below is cold in a way that has nothing to do with stone or airflow: the kind of cold that belongs to places where something old and wrong has been resting. The markings on the walls down here are the same script as the carved phrase in Skarrik's chamber — etched deep, regular, too precise to be decorative. They form a continuous band at waist height along every visible surface. The shaft continues downward into darkness that torchlight cannot reach. There is no sound from below. There is never any sound from below, which is worse than if there were.",
+      "parent_symbol": "loc_mine_entrance",
+      "image_role": "scene:mine_deep_shaft",
+      "metadata": {
+        "area": "Old Spar Mine",
+        "features": ["natural fissure entrance", "kobold-reinforced barrier", "old script markings", "unlit depth"],
+        "temperature": "unnaturally cold",
+        "secrets": ["sec_what_drove_the_kobolds", "sec_mines_old_purpose"],
+        "note": "The party should feel that going down here is a different adventure entirely — and at level 1, it is. Leave the bottom unreachable for now."
+      }
+    }
+  ],
+
+  "npcs": [
+    {
+      "symbol": "npc_elder_marta",
+      "name": "Elder Marta Blackfield",
+      "description": "A stout woman of sixty with iron-grey hair pulled back without ceremony and hands roughened from decades of farmwork before she became the village's voice. She dresses in practical wool and sits with the particular stillness of someone who has made hard decisions before and will make more. She is not unkind, but she is not soft: she has sent children away from their homes and is spending the village's last surplus on strangers, and she knows exactly what that means. She will tell the party the situation plainly, hand over the agreed payment on completion, and ask one question before they leave: 'What is down there that frightened them enough to raid us?'",
+      "motivation": "Protect the village and its people. Get the mine cleared — by negotiation if possible, by force if not. Understand what drove the kobolds in, because if it is still there when the kobolds are gone, the problem is not solved.",
+      "starting_location_symbol": "loc_elder_house",
+      "stats": {
+        "hd": "1",
+        "hp": 5,
+        "ac": 10,
+        "attacks": [{"name": "walking staff", "damage": "1d4", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 9,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "'Thirty gold on proof the mine is clear. I don't care how you do it — kill them, drive them off, or make a treaty if you can manage one. But I want my mine back and I want my people to stop being afraid to sleep.' [If asked about the mine's history] 'Iron spar, mostly. Worked it for twenty years before it went thin. My father used the old tunnels for cold storage until he said they went wrong somehow. He sealed the deep part off. I never asked why.'",
+      "image_role": "npc:elder_marta",
+      "secrets": ["sec_mines_old_purpose"]
+    },
+    {
+      "symbol": "npc_dob_cranner",
+      "name": "Dob Cranner, Injured Miner",
+      "description": "A compact man of thirty-five with a miner's broad shoulders and a kobold-spear wound in his left thigh that went deep enough to scrape bone. He is not bitter about the leg; he considers himself lucky to have gotten out. He speaks in a measured, informational way — he was a foreman, accustomed to briefing shifts on mine conditions. He knows the Old Spar Mine better than any other living person and can describe the layout in practical terms: distances, ceiling heights, where the rock is loose, where the old timber is reliable. He will also, if asked the right question, mention what he saw on his last shift before the kobolds arrived: markings in the deep shaft that were not kobold work and not miner work and not anything he'd ever seen before.",
+      "motivation": "Get well. See the mine sorted, not because he necessarily wants to go back, but because it was his work and he has pride in it. Help the party succeed because their success is the village's success.",
+      "starting_location_symbol": "loc_injured_miner_hut",
+      "stats": {
+        "hd": "1",
+        "hp": 4,
+        "ac": 10,
+        "attacks": [{"name": "crutch (improvised)", "damage": "1d4", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 7,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "'Left tunnel fork, maybe sixty feet in, breaks into a natural pocket — that's where Skarrik will be, if the big one is still in charge. Right fork is wider, that's where the bulk of them sleep. Watch the sentry niche on the left wall, ten feet inside the entrance — they had two watching from there when I left.' [On the deep markings, if asked] 'I nearly didn't say anything because I sound like a fool. But they were there — carved clean, regular as print, going all the way around the shaft. I had another three feet of descent before I heard — I don't know what I heard. I came up and I didn't go back down.'",
+      "image_role": "npc:dob_cranner",
+      "secrets": ["sec_mines_old_purpose", "sec_what_drove_the_kobolds"]
+    },
+    {
+      "symbol": "npc_chief_skarrik",
+      "name": "Chief Skarrik, Kobold Chieftain",
+      "description": "A kobold who is large by kobold standards — nearly four feet — with rust-coloured scales gone dull at the edges with age and stress. His left horn broke in a cave-in decades ago and he filed the stump to a point. His armor is an impressive collection of scavenged iron pieces held together with wire and cord; impractical but intimidating to the tribe. He carries a short sword taken from a dead miner that is too large for him and he knows it. He does not want to be in this mine. He does not want to be raiding this village. He came here because the alternative was staying in his old warren with whatever came up from below, and he watched three of his tribe die there before he moved everyone out. He will fight if cornered, but he will also talk, in halting Common, if the party gives him a reason to believe talking will not get him killed.",
+      "motivation": "Keep his tribe alive. Get them through the winter. Avoid going back to the old warren under any circumstances. He does not know how to explain what drove them out in terms that will not make the party think he is lying.",
+      "starting_location_symbol": "loc_mine_chief_chamber",
+      "stats": {
+        "hd": "2",
+        "hp": 8,
+        "ac": 14,
+        "attacks": [
+          {"name": "miner's short sword (oversized)", "damage": "1d6", "to_hit_bonus": 0}
+        ],
+        "save_as": "F2",
+        "morale": 8,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": "[In halting Common, if approached without immediate violence] 'We not — we not want your holes. We want away. From below. From the dark below.' [If pressed about what is below] 'It breathes. You cannot hear it breathe. But it breathes. It took Shrikt. It took Bren. We felt them go, not hear, feel. We come up. We hungry. We raid your chickens. We not — we not want war.' [On the iron box] 'Found it. In the writing-place. Brought it up. Keep it away from below. Do not open.'",
+      "image_role": "npc:chief_skarrik",
+      "secrets": ["sec_what_drove_the_kobolds"]
+    },
+    {
+      "symbol": "npc_kobold_sentry_1",
+      "name": "Kobold Sentry (Nit)",
+      "description": "One of the two mine-entrance sentries — jumpy, quick-eyed, aware that his crossbow has limited range and that his life depends on not letting danger get close. He will fire once and run.",
+      "motivation": "Sound the alarm. Do not die.",
+      "starting_location_symbol": "loc_mine_front_tunnel",
+      "stats": {
+        "hd": "1d4 hp",
+        "hp": 2,
+        "ac": 13,
+        "attacks": [
+          {"name": "wood crossbow", "damage": "1d4", "to_hit_bonus": -1},
+          {"name": "hand pick", "damage": "1d4", "to_hit_bonus": -1}
+        ],
+        "save_as": "NM",
+        "morale": 6,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_kobold_sentry_2",
+      "name": "Kobold Sentry (Kip)",
+      "description": "The second sentry, Nit's companion. Kip's job is to run for the warren and wake the tribe while Nit handles the first shot. He is faster than he looks.",
+      "motivation": "Alert the warren in time. Do not be the one who let the alarm fail.",
+      "starting_location_symbol": "loc_mine_front_tunnel",
+      "stats": {
+        "hd": "1d4 hp",
+        "hp": 3,
+        "ac": 13,
+        "attacks": [
+          {"name": "hand pick", "damage": "1d4", "to_hit_bonus": -1}
+        ],
+        "save_as": "NM",
+        "morale": 6,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_kobold_guard_1",
+      "name": "Kobold Guard (Tess)",
+      "description": "One of Skarrik's four personal guards, a female kobold with pale yellow scales who uses a scavenged pickaxe handle as a weapon. She is fanatically loyal to Skarrik — he pulled her out of the old warren personally on the night they fled.",
+      "motivation": "Protect Skarrik. Protect the tribe. Do not let anything from below come up.",
+      "starting_location_symbol": "loc_mine_chief_chamber",
+      "stats": {
+        "hd": "1d4 hp",
+        "hp": 4,
+        "ac": 13,
+        "attacks": [
+          {"name": "pickaxe handle", "damage": "1d4", "to_hit_bonus": -1}
+        ],
+        "save_as": "NM",
+        "morale": 7,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_kobold_guard_2",
+      "name": "Kobold Guard (Drek)",
+      "description": "A male kobold guard with dark greenish scales and a spear made from a split mine timber and a sharpened iron spike. He is the most aggressive of Skarrik's guards and will attack first if the parley breaks down.",
+      "motivation": "Prove worth to Skarrik. Attack before being attacked.",
+      "starting_location_symbol": "loc_mine_chief_chamber",
+      "stats": {
+        "hd": "1d4 hp",
+        "hp": 3,
+        "ac": 13,
+        "attacks": [
+          {"name": "iron-spike spear", "damage": "1d4", "to_hit_bonus": -1}
+        ],
+        "save_as": "NM",
+        "morale": 7,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    }
+  ],
+
+  "encounters": [
+    {
+      "symbol": "enc_mine_sentries",
+      "name": "Mine Entrance — Sentry Alert",
+      "trigger_hint": "Party enters the mine mouth and moves past the first ten feet of tunnel without successfully moving silently. The two sentries in the niche on the left spot torchlight or hear footsteps.",
+      "monsters": [
+        {
+          "name": "Kobold",
+          "count": 2,
+          "tactics": "Nit fires the crossbow at the closest party member on sight, then ducks behind the niche edge for cover. Kip sprints for the warren immediately — he does not stop to fight. If Nit drops Kip before he can run, or if the party bursts into the niche faster than expected, Nit will try to flee as well rather than stand and die. If the alarm is sounded, 1d6+2 kobolds from the warren arrive in two rounds, disorganized and frightened but numerous."
+        }
+      ],
+      "treasure_hint": "Nothing on the sentries except their crude weapons. The niche holds a half-gnawed piece of dried mushroom and a small clay figure — a kobold charm, carved to look like a sleeping thing with too many limbs."
+    },
+    {
+      "symbol": "enc_warren_defense",
+      "name": "Kobold Warren — Mass Defense",
+      "trigger_hint": "The alarm has been sounded and the party advances into the warren chamber, or the party enters the warren without sounding the alarm but is spotted by one of the 1d6+4 kobolds present.",
+      "monsters": [
+        {
+          "name": "Kobold",
+          "count": 8,
+          "tactics": "Kobolds do not fight in open formation — they use the overturned ore-carts as cover, throw rocks and dried mushroom-clumps to distract, and try to flank any party member who stands still. They are terrified but they are also protecting their sleeping children, who are in the back nests. If more than half fall, the survivors scatter to the walls and back passages — they do not flee the mine, they retreat to Skarrik. A party that stops fighting and holds still after three or four kobolds fall may see one raise a scrap of white cloth — a mine-workers' surrender rag — and begin gesturing toward Skarrik's chamber. The kobolds are willing to negotiate if given the chance."
+        }
+      ],
+      "treasure_hint": "The food stores are here: two days of dried mushrooms and rat meat worth nothing monetarily. Also: a small locked box under one of the ore-carts containing 18 sp and 4 gp — the tribe's entire coin reserve, acquired through multiple raids. A child's carved wooden toy of a horse, stolen from the village, sits near one of the nests."
+    },
+    {
+      "symbol": "enc_skarrik_confrontation",
+      "name": "Chief's Chamber — Parley or Battle",
+      "trigger_hint": "Party enters loc_mine_chief_chamber. Skarrik is present unless he was drawn into the warren fight by the alarm. If the warren fight went badly for the kobolds and survivors retreated here, Skarrik has his four guards and will face the party across the width of the chamber.",
+      "monsters": [
+        {
+          "name": "Kobold",
+          "count": 4,
+          "tactics": "Skarrik's guards. Two hold near the entrance to block it, two flank along the walls. If Skarrik himself initiates parley rather than combat, the guards move back but do not lower weapons. They will not fight if Skarrik explicitly tells them to stand down — his authority is absolute here."
+        },
+        {
+          "name": "Kobold",
+          "count": 1,
+          "tactics": "Skarrik himself. He is smarter and more resilient than his guards. In combat he targets whoever is using fire or magic first — anything that could collapse the tunnel terrifies the tribe after what they saw below. In parley he will answer questions honestly, sometimes more honestly than he intends, because he is frightened and frightened creatures tell the truth. If the party asks to see the iron box, he will hand it over rather than fight over it — the thing disturbs him and he has been looking for an excuse to be rid of it."
+        }
+      ],
+      "treasure_hint": "The iron box Skarrik recovered from the deep shaft: inside, a folded piece of old vellum covered in the same script as the shaft markings, too fragile to unfold without care, and a small obsidian disc the size of a coin, smooth on one side, carved with a spiral on the other. Neither item has obvious value. Both are deeply wrong-feeling to anyone who handles them carefully. A cleric or magic-user who examines the disc and succeeds on an Intelligence check knows: the spiral is a binding seal, the kind used to mark the lid of a container that something is inside."
+    },
+    {
+      "symbol": "enc_giant_rats",
+      "name": "Abandoned Shaft — Rat Nest",
+      "trigger_hint": "Party explores the area beyond the warren chambers, in the older worked sections of the mine that the kobolds have not occupied. These sections are dark, abandoned, and home to a rat colony that moved in when the miners left.",
+      "monsters": [
+        {
+          "name": "Giant Rat",
+          "count": 6,
+          "tactics": "The rats attack any warm-blooded creature that comes within 20 feet of their nest, which is a clump of shredded wood and cloth in a dead-end side passage. They fight in a swarming mass, targeting the lowest character by position (whoever is at the back of the marching order, caught by the flanking rats). They flee if fire is used aggressively or if more than three fall."
+        }
+      ],
+      "treasure_hint": "In the rat nest: a miner's belt pouch containing 3 sp and a small bronze medallion stamped with the initials T.C. (the missing farmhand's initials — this confirms he came into the mine and did not leave it alive). His body is not in the rat nest; the rats dragged it to the dead-end passage two weeks ago. The party will find the remains if they search: no cause of death that looks like rats — the wounds are from something else."
+    }
+  ],
+
+  "plot_beats": [
+    {
+      "symbol": "beat_hired",
+      "title": "The Elder's Commission",
+      "trigger_hint": "Party meets Elder Marta in loc_elder_house and agrees to deal with the kobold problem.",
+      "outcome": "Party understands the mission: clear the mine by whatever means are effective. They know the payment is thirty gold, that one man went missing, and that three weeks of raids have frightened the village. Marta does not know about the deep shaft markings and does not mention her father's comment about the mine going 'wrong.'",
+      "leads_to": "beat_dob_briefing",
+      "dm_notes": "Let the party ask questions. Marta will answer honestly about the raids, the missing farmhand (Tam Creel, a young man of twenty who thought he could handle a kobold himself), and the state of the village. She will not bring up the mine's history because she does not think of it as relevant — her father mentioned it in passing thirty years ago and she filed it away as old superstition. If the party specifically asks whether anyone else has been in the mine recently, she will mention Dob. If they ask about the mine's history, she pauses, looks slightly uncomfortable, and says her father sealed the deep section off when she was a girl for reasons he never quite explained — then dismisses it."
+    },
+    {
+      "symbol": "beat_dob_briefing",
+      "title": "What the Miner Knows",
+      "trigger_hint": "Party speaks with Dob Cranner in loc_injured_miner_hut before entering the mine.",
+      "outcome": "Party receives a practical briefing on the mine layout — the fork, the sentry niche, Skarrik's chamber, the warren position. They also learn about the deep shaft markings if they ask the right questions, and about the sound Dob heard. The missing farmhand's fate is not confirmed here but Dob knows he went in and did not come back.",
+      "leads_to": "beat_enter_mine",
+      "dm_notes": "Dob's information is accurate and useful. Reward players who take the time to talk to him before charging in. The deep shaft detail should feel like a passing admission — something Dob is almost embarrassed to mention but decides the party deserves to know. He does not call it a monster or a creature. He heard something move, felt something shift in the air pressure of the shaft, and came up. That is all. The value of this beat is purely practical: it lets the party plan rather than blunder. If the party skips Dob and goes straight in, they will have a harder time with the sentry niche and a bigger surprise at the deep shaft."
+    },
+    {
+      "symbol": "beat_enter_mine",
+      "title": "Into the Old Spar Mine",
+      "trigger_hint": "Party enters loc_mine_entrance and begins moving into the mine proper.",
+      "outcome": "The party is now committed to the mine. Whether they triggered the sentry alarm or slipped past, they are inside. The scope of the kobold occupation becomes clear — this is a tribe, not a raiding party. Families. Children. Drying food. The evidence of frightened creatures crammed into borrowed space.",
+      "leads_to": "beat_skarrik_contact",
+      "dm_notes": "Let the environment do work here. The territory markings, the smell, the stripped bark outside — these are signs of creatures who are establishing a home, not planning a conquest. If the players pick up on this, do not dismiss it. The warren encounter (enc_warren_defense) should feel different from fighting bandits: kobolds are not standing and dying for loot, they are desperate. Any player who pays attention to the sleeping nests will notice small kobolds — young ones — in the back of the warren. They are not in combat. They are hiding. Make this visible."
+    },
+    {
+      "symbol": "beat_skarrik_contact",
+      "title": "The Chief Speaks",
+      "trigger_hint": "Party reaches loc_mine_chief_chamber and either initiates combat or holds long enough for Skarrik to attempt communication — which he will do if the party does not attack immediately on entering his chamber.",
+      "outcome": "Skarrik tells the party what drove the tribe out of their old warren: something in the deep shaft. Two kobolds went missing without sound. He heard it breathe — or rather, he felt the air move as it breathed, because it makes no sound he can hear. He moved the tribe here because here was the only other mine he knew. He shows or hands over the iron box. He is willing to leave the mine peacefully if the party can give him something in return — a guarantee of passage, a direction, a place to go.",
+      "leads_to": "beat_discovery",
+      "dm_notes": "This is the adventure's choice point. The party can kill Skarrik and his guards (straightforward, bloody, possible at level 1 if they are careful, ugly if they are not). They can drive him out by force without killing him. Or they can listen to what he says about the deep shaft and realize the situation is more complex than a simple monster-in-a-hole. Skarrik is not a good creature — he ordered raids that harmed the village — but he is a comprehensible one. If the party strikes a deal, Skarrik wants three things: safe passage out, enough food to reach the next valley, and for the party to deal with whatever is in the shaft. He cannot ask them to deal with the shaft without admitting he cannot do it himself, which is genuinely difficult for a chieftain. He will ask sideways, by leaving the iron box behind and saying 'it belongs down there and I cannot put it back.'"
+    },
+    {
+      "symbol": "beat_discovery",
+      "title": "What Lies Below",
+      "trigger_hint": "Party reaches loc_mine_deep_shaft and examines the shaft, the markings, and the kobold-reinforced barrier. Triggered when they actually look over the edge or examine the barrier closely.",
+      "outcome": "The party understands the full situation: something old and wrong is resting in the deep shaft. The script markings are binding seals. The iron box Skarrik recovered is part of whatever sealed the shaft originally. The kobolds did not disturb anything — whatever is below was already stirring before the kobolds arrived; they simply had the misfortune of being the nearest living things when it did. The mine cannot be safely inhabited while the shaft is open.",
+      "leads_to": null,
+      "dm_notes": "Do not resolve what is in the shaft. At level 1, the party cannot deal with it directly — if they try to go down, describe the cold intensifying, the air moving as if something exhales, and the unmistakable sense that what is below is aware of them. A sensible party will not press further. This is intentional: the shaft is setup for a future session, a hook that gives the adventure weight beyond a simple kobold-clearing mission. The elder's question — 'What is down there?' — should now be answerable by the party, and the answer should disturb her. The immediate ending of the adventure is the kobold situation; the deeper threat is left unresolved."
+    }
+  ],
+
+  "secrets": [
+    {
+      "symbol": "sec_what_drove_the_kobolds",
+      "content": "The kobolds did not choose the Old Spar Mine as a raiding base. They were driven out of their original warren three miles deeper into the hills when something in the deepest level of their old home began to wake. Two kobolds went missing silently over the course of a week — no screams, no sign of struggle, simply gone. Skarrik heard the air move in the deep shaft and recognized it as something breathing that had no intention of stopping. He moved the entire tribe to the first available shelter: the Old Spar Mine. The kobold raids on Rock Hollow are desperation, not aggression — they are starving because they cannot forage safely, and the mine's food supplies are nearly exhausted.",
+      "reveal_when": "Party speaks with Chief Skarrik long enough for him to explain, or examines the kobold food stores and realizes the tribe has almost nothing left. Dob Cranner hints at this if asked whether the kobolds seemed aggressive or frightened when they first moved in.",
+      "leads_to_beat": "beat_skarrik_contact"
+    },
+    {
+      "symbol": "sec_mines_old_purpose",
+      "content": "The Old Spar Mine was a working iron and spar mine for twenty years, but the deep shaft is not mine-cut. It is a natural fissure that the miners broke into accidentally in the mine's third year of operation. The foreman at the time — Elder Marta's father — had his three deepest workers seal it with timber and ore-sacks and never speak of what they found when they broke through. He told Marta only that the deep section 'went wrong.' The script carved in the shaft is a binding script from a civilization that predated the current kingdom by several hundred years — the same civilization that left ruins in the hills east of Rock Hollow that locals call 'the old stones.' They sealed something in the fissure. They did a sufficient job for several centuries. The binding is now failing, which is why the thing below is stirring. The iron box Skarrik recovered contains part of the original binding apparatus — a key-component that was meant to stay in the shaft.",
+      "reveal_when": "Party finds the iron box and examines it, or finds the deep shaft markings and has a way to read old script (magic-user with Read Languages, or cleric who succeeds on an Intelligence check), or presses Elder Marta about her father's comment about the mine going 'wrong.'",
+      "leads_to_beat": "beat_discovery"
+    },
+    {
+      "symbol": "sec_missing_farmhand",
+      "content": "Tam Creel, the missing farmhand, went into the mine ten days ago armed with a hand-axe and a torch, intending to drive the kobolds out himself after they took his employer's chickens. He made it past the sentry niche — the kobolds were sleeping — and into the warren before they woke and chased him deeper into the mine. He ran into the abandoned section rather than back toward the entrance and was cornered in a dead-end passage. The giant rats killed him. His body is still in the passage, partially consumed. His belt pouch and bronze medallion are in the rat nest. The kobolds do not know he is there — they never found him.",
+      "reveal_when": "Party explores the abandoned shaft sections and finds the rat nest in enc_giant_rats. The medallion with the initials T.C. is the clearest identifier. The body's wounds do not match rat bites — a careful examination reveals some marks that are too shallow and too deliberate for animals, which may cause further confusion until the party realizes the rats fed on a corpse that had already been dead for several days.",
+      "leads_to_beat": null
+    }
+  ],
+
+  "endings": [
+    {
+      "symbol": "end_clean_truce",
+      "trigger": "Party negotiates a deal with Chief Skarrik: the kobolds agree to leave the mine and relocate to a direction the party specifies (east, away from the village), and the party delivers this outcome to Elder Marta. Skarrik must be alive and must have told the party about the deep shaft threat for this ending to be available.",
+      "outcome": "The kobolds pack their scant belongings and leave the mine in a column, thin and frightened. Skarrik is last out, and he pauses at the entrance to look at the party for a long moment before following his tribe into the hills. Elder Marta pays the thirty gold. She asks the party what is in the shaft and listens to the answer with a face that goes gradually still and grave. She says: 'My father knew.' That is all she says. The mine is cleared. The village is safe — for now. Within a few days, the stone-and-timber barrier over the deep shaft will need proper reinforcement, or the iron box will need to go back in, or both. The elder knows a stonemason in the valley who might know the old script. This is an open thread, deliberately left to be picked up later."
+    },
+    {
+      "symbol": "end_kobolds_defeated",
+      "trigger": "Party kills or drives out all kobolds through force, including Chief Skarrik, without learning about or caring about the deep shaft threat. Elder Marta's condition is simply that the mine is clear.",
+      "outcome": "The mine is cleared. The party is paid thirty gold. Elder Marta is relieved and grateful, and for a few days life returns to something like normal in Rock Hollow. But the party noticed — or should have noticed — the deep shaft's barrier and the cold that comes from it, and the iron box is either in Skarrik's abandoned chamber or still missing, and the thing below is still stirring. Within a month, without the kobold barrier over the shaft reinforcing it nightly out of fear, the barrier fails. Something comes up. Rock Hollow has another problem, and this one is not small. The ending is a win with a delayed cost — the party solved the immediate problem but ignored the root cause. Elder Marta will send word if they left a way to contact them."
+    }
+  ],
+
+  "world_facts": [
+    {
+      "fact": "Rock Hollow is a farming hamlet of roughly forty people working eleven smallholdings in rocky hill-country. Its only significant resource is the Old Spar Mine, which has not produced reliably in fifteen years.",
+      "tags": ["rock_hollow", "hamlet", "farming", "mine", "geography"],
+      "importance": 5
+    },
+    {
+      "fact": "Kobolds suffer -1 to attack rolls in full daylight and are most active in the hours around dawn and dusk. They are not inherently aggressive — they raid because they are starving, not because they are warlike.",
+      "tags": ["kobolds", "mechanics", "combat", "daylight", "motivation"],
+      "importance": 6
+    },
+    {
+      "fact": "The hills around Rock Hollow contain ruins of a pre-kingdom civilization, locally called 'the old stones.' This civilization used a distinctive spiral-based binding script found at several sites in the region. Their sealing methods were effective for centuries but are now degrading.",
+      "tags": ["rock_hollow", "history", "ruins", "old_civilization", "binding_script", "lore"],
+      "importance": 8
+    },
+    {
+      "fact": "The deep fissure beneath the Old Spar Mine was sealed by the pre-kingdom civilization to contain something that had been bound there. The binding is failing. The iron box Skarrik recovered from the shaft is part of the original seal and must be returned or the binding will collapse entirely within weeks.",
+      "tags": ["mine", "deep_shaft", "binding", "ancient_threat", "iron_box", "urgency"],
+      "importance": 9
+    },
+    {
+      "fact": "Elder Marta Blackfield has administered Rock Hollow for twenty years and is the de facto authority for three hamlets in the surrounding valley. Her word carries weight with the valley's stonemason, herbalist, and the nearest town's militia captain.",
+      "tags": ["elder_marta", "authority", "rock_hollow", "region", "connections"],
+      "importance": 6
+    },
+    {
+      "fact": "Chief Skarrik's kobold tribe originally inhabited warrens three miles deeper into the hills. Those warrens are now abandoned and the approach route is known only to surviving tribe members. Whatever is in the Old Spar Mine's deep shaft has a counterpart or connection to the kobolds' original home.",
+      "tags": ["skarrik", "kobolds", "warrens", "old_home", "deeper_threat", "follow_up"],
+      "importance": 7
+    }
+  ]
+}

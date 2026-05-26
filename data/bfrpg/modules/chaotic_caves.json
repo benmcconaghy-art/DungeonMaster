@@ -1,0 +1,537 @@
+{
+  "format_version": "1.0",
+  "synopsis": "The Chaotic Caves is a three-faction cave-crawl set in the hills a half-day's ride east of Morgansfort. Goblins hold the upper tunnels, a band of army deserters has fortified a middle gallery, and deep below a chaos cultist named Varek has bound a lesser demon to his will — or believes he has. The demon Scorrax is scheming to break free. A gnome merchant named Pibb trades with all factions and knows more than he lets on. The party must navigate three-way tensions, uncover Varek's ritual, and choose whether to destroy both cultist and demon, free the demon, or broker an unlikely peace that leaves the caves changed but still dangerous.",
+  "tone": "gritty dungeon-crawl",
+  "image_style": "dark fantasy illustration, ink and wash, torchlit stone, rough cave walls",
+  "image_negative_prompt": "modern objects, photographic, watermark, text artifacts, extra fingers, bright colors, anime, 5e aesthetic",
+  "level_range": [1, 3],
+  "estimated_sessions": 3,
+  "starting_hook": "Word reaches the party in Morgansfort or on the road nearby: a tinker who makes the circuit of outlying farms has not returned in a week. His route passed the low hills to the east — the ones with the bad reputation. The Castellan's purse is thin, but he has authorized a reward of forty gold pieces if the tinker is found alive, or his pack recovered as evidence if not. Two farmers also complain of missing goats. A young soldier at the gate mentions, too casually, that the hill caves have been rumored trouble for years but no one from the fort has gone to check.",
+  "starting_location_symbol": "loc_cave_mouth",
+
+  "locations": [
+    {
+      "symbol": "loc_cave_mouth",
+      "name": "The Cave Mouth",
+      "description": "A wide, low opening in a limestone hillside screened by a thicket of gorse and stunted oak. The ground outside is churned by boot traffic — small feet, booted feet, bare feet — all recent. A crude marker of stacked stones stands ten yards back from the entrance, festooned with a scrap of red cloth: a goblin warning sign, though parties unfamiliar with goblin customs would read it only as litter. Inside the mouth, the ceiling rises to roughly seven feet and the air carries the smell of wood-smoke, tallow, unwashed bodies, and something chemical and acrid from deeper down. The cave splits within thirty feet into a left-hand passage leading up into the goblin warrens and a right-hand passage angling down toward the deeper caves. A smear of black grease on the left passage wall, at goblin eye-height, marks the goblin route.",
+      "parent_symbol": null,
+      "image_role": "scene:cave_mouth_exterior",
+      "metadata": {
+        "area": "Cave Entrance",
+        "features": ["stone-stack warning marker", "red cloth pennant", "forking passage", "grease trail mark"],
+        "factions_present": ["goblin sentries (left passage)", "no faction holds the mouth itself"],
+        "notes": "The tinker's broken hand-cart is visible thirty yards downhill in the gorse, wheel snapped. His pack is not with it."
+      }
+    },
+    {
+      "symbol": "loc_goblin_sentry",
+      "name": "Goblin Watch Nook",
+      "description": "Where the left-hand passage bends, a natural alcove has been widened with crude picks. Two goblins sit here on upturned crates, nominally on watch. One is asleep. The other is using a knife to carve something into the wall — a crude rendering of something with too many limbs, which he stops working on if he hears anything. A clay oil lamp with a cracked base gives off more smell than light. The alcove contains a clay jug of sour beer, two spears propped against the wall, and a knotted rope that runs along the passage deeper into the warrens — pull it and a cluster of bones rattles around the next corner, signaling the common room. The awake goblin will pull it at the first sign of trouble.",
+      "parent_symbol": "loc_cave_mouth",
+      "image_role": "scene:goblin_sentry_alcove",
+      "metadata": {
+        "area": "Upper Goblin Warrens",
+        "features": ["upturned crates", "cracked oil lamp", "two spears", "rope-alarm to warrens"],
+        "alarm_method": "pulling the rope rings a bone-cluster in the common room, alerting 1d4+1 goblins to come in two rounds",
+        "npc_present": ["npc_goblin_sentry_asleep", "npc_goblin_sentry_awake"]
+      }
+    },
+    {
+      "symbol": "loc_goblin_warrens",
+      "name": "Goblin Common Warrens",
+      "description": "A ragged series of connected chambers — three natural pockets linked by gnawed-out connecting tunnels, low enough that humans must duck to move between them. The floors are covered in sleeping pallets of old sacking and dry moss. Cook-fires in the main chamber have blackened the ceiling and left a permanent haze. Strings of dried meat hang from iron hooks jammed into cracks. The walls are covered in charcoal drawings: crude maps, kill tallies, something that might be a portrait of the shaman. At any given time 2d4 goblins are present — eating, sleeping, arguing. Three goblin children peer from behind a boulder and scatter if approached. The tinker's pack, emptied and torn apart, lies in a corner. His dried goods have been eaten; his tin cups and a small lantern are still here.",
+      "parent_symbol": "loc_cave_mouth",
+      "image_role": "scene:goblin_common_warrens",
+      "metadata": {
+        "area": "Upper Goblin Warrens",
+        "features": ["sleeping pallets", "cook-fires", "dried meat strings", "charcoal wall art", "tinker's emptied pack"],
+        "random_goblins": "2d4 goblins present at any time",
+        "tinker_fate": "the tinker's goods are here; the tinker himself is held prisoner in loc_goblin_shaman_cave"
+      }
+    },
+    {
+      "symbol": "loc_goblin_shaman_cave",
+      "name": "Shaman Kruzz's Den",
+      "description": "A side passage off the warrens bends sharply and opens into a chamber that smells of burnt herbs, iron, and fear. Crude fetishes of bone, feather, and knotted cord hang from the ceiling on gut-strings. A ring of pale stones on the floor surrounds a central depression where small fires have burned repeatedly, leaving a pattern of ash and grease. The walls bear strange, careful markings — not goblin scrawl but something more deliberate, copied imperfectly from a source Kruzz will not name. The shaman knows what the cultist below is doing. He has been watching the deep passages and does not like what comes up out of them. The tinker, Aldric Pots, sits bound in the corner, gagged, bruised but alive. Kruzz has kept him as a potential bargaining piece rather than eating him.",
+      "parent_symbol": "loc_cave_mouth",
+      "image_role": "scene:shaman_den",
+      "metadata": {
+        "area": "Upper Goblin Warrens",
+        "npc_present": ["npc_kruzz", "npc_tinker_aldric"],
+        "features": ["bone-and-feather fetishes", "ash ritual ring", "copied wall markings", "prisoner in corner"],
+        "key_object": "tinker_aldric_pots",
+        "prisoner_condition": "alive, bruised, bound and gagged — can be freed without fight if Kruzz is negotiated with"
+      }
+    },
+    {
+      "symbol": "loc_brigand_camp",
+      "name": "Brigand Gallery",
+      "description": "A long, wide gallery roughly forty feet by twenty, with a ceiling high enough to stand comfortably. The brigands have made it into something almost habitable: canvas stretched between stalagmites forms crude partitions, a proper fire-pit with a stone chimney-flue that vents through a crack in the ceiling draws smoke out acceptably. Six bedrolls are arranged along one wall, personal gear stowed neatly beside each — these are soldiers who have not entirely forgotten discipline. A rack of weapons — swords, crossbows, spare bolts — stands by the entrance. A barrel of ale sits in the corner tapped with a wooden bung. The brigands' leader, Captain Renna, uses a folding camp table against the far wall as her desk; a map of the region is unrolled on it, with supply routes and patrol schedules in her handwriting.",
+      "parent_symbol": "loc_cave_mouth",
+      "image_role": "scene:brigand_camp_gallery",
+      "metadata": {
+        "area": "Middle Caves — Brigand Territory",
+        "npc_present": ["npc_renna", "npc_brigand_kael", "npc_brigand_ostara"],
+        "features": ["canvas partitions", "fire-pit with flue", "six bedrolls", "weapon rack", "ale barrel", "Renna's camp table and map"],
+        "factions_present": ["brigands — 6 members plus Renna"],
+        "notes": "The brigands maintain a watch rotation — there are always two awake at any hour, though they are positioned to watch the passage from the cave mouth, not the deeper passage toward the cultist's sanctum, which they avoid"
+      }
+    },
+    {
+      "symbol": "loc_pibb_trading_post",
+      "name": "Pibb's Nook",
+      "description": "A small side chamber off the main passage between the brigand camp and the deep caves, accessible through a narrow squeeze that larger creatures cannot enter without removing armor. Inside, the gnome merchant Pibb has established what he calls 'a place of commerce and considered neutrality.' Shelves carved into the rock hold an assortment of goods: candles, rope, salt fish, a few bandages, iron rations, torches, a vial of oil, and several items he describes as 'specialty merchandise' — including a vial of clear liquid he will not name, a small locked box he will trade only for something of equivalent mystery, and three items looted from various parties that passed through. Pibb keeps two crossbows loaded and has a trap rigged at the entrance (a tin of ball bearings on a shelf that tips if the wrong stone is stepped on). He trades with goblins, brigands, and anyone else who comes by. He has not gone down to the deep caves himself but he has listened to everyone who has come up from them.",
+      "parent_symbol": "loc_cave_mouth",
+      "image_role": "scene:pibb_nook_trading_post",
+      "metadata": {
+        "area": "Middle Caves — Neutral Zone",
+        "npc_present": ["npc_pibb"],
+        "features": ["rock-carved shelves", "narrow entrance squeeze", "loaded crossbows", "ball-bearing trap", "trade goods"],
+        "entrance_restriction": "creatures in medium armor or larger must make a Strength check to squeeze through or remove armor first",
+        "trade_goods": ["candles (6)", "rope 50ft", "salt fish (3 days rations)", "bandages (4)", "iron rations (4 days)", "torches (6)", "oil vial", "unnamed clear vial", "locked mystery box", "3 items of unknown provenance"]
+      }
+    },
+    {
+      "symbol": "loc_deep_cave_approach",
+      "name": "The Descent",
+      "description": "Past Pibb's nook the passage drops steeply, the floor slick with mineral seep that makes each step uncertain. The chemical smell becomes strong here — a hot, sulfurous edge underneath something that smells like burning copper. The walls begin to show scratched symbols that are neither goblin nor recognizably human: eight-pointed shapes, circles within circles, lines that repeat at intervals. The scratches are fresh, the stone pale where the marks were made. Two stirges roost in a crevice in the ceiling fifteen feet down the slope, disturbed by any light source. The passage opens at the bottom into a small antechamber with a heavy curtain of black cloth hung across the far arch — beyond it, the sound of low chanting is audible at irregular intervals, or silence.",
+      "parent_symbol": "loc_cave_mouth",
+      "image_role": "scene:deep_cave_descent",
+      "metadata": {
+        "area": "Deep Caves",
+        "features": ["steep slick slope", "sulfur-copper smell", "eight-pointed scratch symbols", "stirge roost", "black curtain"],
+        "hazard": "steep slope — move at half speed or risk falling; slick floor, Dexterity check at GM discretion on a run",
+        "monsters_present": "2 stirges roosting in ceiling crevice, triggered by light",
+        "foreshadow": "the chanting is Varek performing the binding ritual; silence means he is resting or the demon is suppressed"
+      }
+    },
+    {
+      "symbol": "loc_demon_antechamber",
+      "name": "The Warding Chamber",
+      "description": "A round natural chamber, roughly fifteen feet across, its walls painted with layer upon layer of chalky white symbols that have been applied repeatedly until the stone is almost entirely white. The symbols form overlapping circles of binding — anyone with knowledge of arcane lore will recognize the purpose if not the specific tradition. Four iron spikes have been driven into the floor at compass points, each wound with black cord and topped with a stub of black candle, two of which are still burning. The air is warmer here than outside and carries a static charge that raises fine hairs on exposed skin. A rough stone bench along one wall holds a leather satchel belonging to Varek: spell components, a journal, two vials of something dark red, and a letter. The letter is from someone referred to only as 'the circle' and congratulates Varek on his successful binding, instructing him to use the demon's abilities to scout the region for 'nodes of confluent chaos energy.'",
+      "parent_symbol": "loc_cave_mouth",
+      "image_role": "scene:warding_chamber",
+      "metadata": {
+        "area": "Deep Caves",
+        "features": ["layered chalk binding symbols", "four iron binding spikes", "black candles", "Varek's satchel"],
+        "key_objects": ["Varek's journal", "letter from the circle", "two vials of red liquid (demon blood used in ritual)"],
+        "secrets": ["sec_circle_backing_varek", "sec_demon_strain"]
+      }
+    },
+    {
+      "symbol": "loc_cultist_sanctum",
+      "name": "Varek's Sanctum",
+      "description": "The deepest chamber in the caves, roughly oval and thirty feet at its widest. The floor has been cleared and leveled with imported sand. At the center, a chalk and ash circle twenty feet across contains the bound demon Scorrax: a vaguely humanoid figure four feet tall, with skin like dark leather, too many joints in each finger, and eyes like hot coals that move with terrible intelligence. The demon is chained at wrist and ankle with iron chains that run to bolts in the bedrock — the chains are real but the true binding is the chalk circle, which Scorrax cannot cross. Varek moves around the outside of the circle freely, occasionally adding chalk marks to reinforce it. Along the walls, crude wooden shelves hold candles, books, pouches of components, and a small iron chest. On a wooden table: a ritual knife with a bone handle, a brass brazier, and an open spellbook. The cultist sleeps on a pallet in one corner when he sleeps at all.",
+      "parent_symbol": "loc_cave_mouth",
+      "image_role": "scene:cultist_sanctum_demon_bound",
+      "metadata": {
+        "area": "Deep Caves — Cultist Territory",
+        "npc_present": ["npc_varek", "npc_scorrax"],
+        "features": ["chalk and ash binding circle", "iron chains bolted to bedrock", "wooden shelves", "ritual knife", "brass brazier", "open spellbook", "iron chest"],
+        "binding_circle_rules": "Scorrax cannot cross the chalk circle; disrupting any section (erasing 1 foot of line) reduces binding strength; destroying half the circle frees the demon",
+        "iron_chest_contents": "85 gp, 2 gems worth 25 gp each, a scroll of Protection from Evil, and a wax-sealed letter to 'the circle' that Varek has not yet sent"
+      }
+    },
+    {
+      "symbol": "loc_hidden_spring",
+      "name": "The Hidden Spring",
+      "description": "A narrow side crack off the deep cave passage, invisible unless specifically searched, opens into a small grotto where a thin stream of clean water runs from a crack in the rock into a natural basin before draining away. The water is cold and pure — a significant resource in a cave environment. Pibb knows about this spring and uses it himself; he will share the location as a significant favor to trusted trading partners. The walls of the grotto are covered in a dark-blue lichen that produces a faint bioluminescent glow, enough to see by if a torch burns out. The spring has never been touched by the cultist's rituals and the air here is noticeably clean compared to the rest of the deep caves.",
+      "parent_symbol": "loc_cave_mouth",
+      "image_role": "scene:hidden_spring_grotto",
+      "metadata": {
+        "area": "Deep Caves — Hidden",
+        "features": ["running clean water", "natural basin", "blue bioluminescent lichen"],
+        "hidden": true,
+        "detect_hint": "only found by actively searching the deep cave passage walls, or if Pibb shares the location",
+        "utility": "safe rest location in the deep caves; water source; landmark for navigation"
+      }
+    }
+  ],
+
+  "npcs": [
+    {
+      "symbol": "npc_kruzz",
+      "name": "Kruzz, Goblin Shaman",
+      "description": "Kruzz is a goblin of perhaps forty years — old for his kind — with yellowed eyes, fingers stained brown from herbs, and the careful manner of someone who has survived by being smarter than those around him. He wears a patchwork robe over leather and carries a staff topped with a bundle of dried bones and feathers. He is genuinely afraid of what the cultist is doing in the deep caves. He has watched things come up out of the lower passage that he does not have words for, and he wants them stopped as badly as anyone. He will parley with the party if approached without immediate violence, bargaining from a position of cautious pragmatism rather than hostility.",
+      "motivation": "Keep his tribe alive and keep the thing in the deep caves contained. He views the cultist as a threat to his people's safety, not just a competitor for cave space. He will trade information freely if the party can convince him they are a genuine threat to Varek.",
+      "starting_location_symbol": "loc_goblin_shaman_cave",
+      "stats": {
+        "hd": "2",
+        "hp": 8,
+        "ac": 12,
+        "attacks": [{"name": "bone staff", "damage": "1d4", "to_hit_bonus": 0}],
+        "save_as": "F2",
+        "morale": 7,
+        "alignment": "chaotic",
+        "spells_per_day": ["sleep (1/day)", "cause light wounds (1/day)"]
+      },
+      "sample_dialogue": "'You want to go down there. Fine. Kruzz can tell you what Kruzz knows. But first — you let the tin-man go. He is nothing. He makes noise in his sleep. Then Kruzz talks.' [If the party asks about the cultist] 'The pale man who prays to the dark. He came down through us two months ago. Walked past us like we weren't here. We let him because the thing he brought with him — we felt it before we saw it. Old bad. We did not stop him. Kruzz is not ashamed of this.'",
+      "image_role": "npc:kruzz_shaman",
+      "secrets": ["sec_demon_strain", "sec_brigands_deserters"]
+    },
+    {
+      "symbol": "npc_tinker_aldric",
+      "name": "Aldric Pots, the Tinker",
+      "description": "A small, balding man of fifty with ink-stained fingers and a habit of cataloguing his injuries aloud. He is not badly hurt — a bruised eye, a split lip, rope-burns on his wrists — but he is thoroughly frightened and very, very angry about his broken cart. He was grabbed on the road by three goblins and brought into the caves two days ago. He has spent the time listening, and has learned more than his captors realize.",
+      "motivation": "Get out, retrieve what he can of his goods, and tell someone in authority exactly what he saw and heard. He is precise and observant — a tradesman's habits.",
+      "starting_location_symbol": "loc_goblin_shaman_cave",
+      "stats": {
+        "hd": "1",
+        "hp": 3,
+        "ac": 10,
+        "attacks": [{"name": "improvised weapon", "damage": "1d4", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 5,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "'About time. I have been sitting here for two days cataloguing the inadequacies of goblin cuisine. My cart is ruined — I want that noted. Now, while I was sitting here, I heard them talking. They are frightened of something below them. And there are soldiers in this cave as well — I heard them arguing two nights ago, voices echoing up. Soldiers who do not want to be found.'",
+      "image_role": "npc:tinker_aldric",
+      "secrets": ["sec_brigands_deserters"]
+    },
+    {
+      "symbol": "npc_renna",
+      "name": "Captain Renna, Brigand Leader",
+      "description": "A woman of thirty-five, lean and weathered, with short dark hair and a scar along her jaw from a sword that came too close three years ago. She carries herself with the unconscious authority of someone long accustomed to command. She wears good chain mail over a buff coat, and her sword is well-maintained — the sword of someone who fights for a living and understands the value of maintenance. She is not cruel. She is desperate and pragmatic. She deserted from Lord Aldenmere's army six months ago when Aldenmere ordered a punitive action against a village she knew to be innocent. She took six of her soldiers with her. They have been hiding in these caves since winter, trading labor to Pibb and avoiding anyone who might recognize their unit insignia.",
+      "motivation": "Keep her people alive and out of Aldenmere's hands. She knows desertion carries death. She would take almost any legitimate alternative if one presented itself — a pardon, a letter of commission from another lord, a ship out of the region. She has more tactical competence than anyone else in the caves and she knows it.",
+      "starting_location_symbol": "loc_brigand_camp",
+      "stats": {
+        "hd": "4",
+        "hp": 20,
+        "ac": 15,
+        "attacks": [{"name": "longsword", "damage": "1d8+1", "to_hit_bonus": 3}],
+        "save_as": "F4",
+        "morale": 9,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "'We don't want trouble. We're just staying out of the road until things quiet down. You haven't seen us. That's the arrangement.' [If pressed on identity] 'We were soldiers once. We are not anymore. Whatever you're thinking — think again before you say it.' [If offered a genuine deal] 'A pardon? From whom? Signed by whom? I am not naive enough to accept a verbal promise, but I am desperate enough to listen to the terms.'",
+      "image_role": "npc:renna_brigand_captain",
+      "secrets": ["sec_brigands_deserters"]
+    },
+    {
+      "symbol": "npc_brigand_kael",
+      "name": "Kael, Brigand Sergeant",
+      "description": "A broad, sandy-haired man of forty who was Renna's sergeant in Aldenmere's army and deserted with her without hesitation. He is completely loyal to Renna and will follow her lead on any negotiation with the party. On his own he is blunt, suspicious, and will not answer questions about their past. In a fight he is dangerous — a professional with good instincts.",
+      "motivation": "Protect Renna and the other deserters. He has no agenda beyond that.",
+      "starting_location_symbol": "loc_brigand_camp",
+      "stats": {
+        "hd": "3",
+        "hp": 14,
+        "ac": 14,
+        "attacks": [{"name": "battleaxe", "damage": "1d8", "to_hit_bonus": 2}],
+        "save_as": "F3",
+        "morale": 9,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "'I talk when Renna says talk. She hasn't said.'",
+      "image_role": null,
+      "secrets": ["sec_brigands_deserters"]
+    },
+    {
+      "symbol": "npc_brigand_ostara",
+      "name": "Ostara, Brigand Crossbowwoman",
+      "description": "A young woman of twenty-two, the youngest of the deserters. She joined Aldenmere's army to escape a bad situation at home and ended up in a worse one. She is quieter than the others, observant, and the first to notice anything out of place. She has been watching the passage toward the deep caves and is the one who told Renna that something is wrong down there.",
+      "motivation": "Survive. Find somewhere safe enough to stop running. She is more open to negotiation than Kael and will signal this to perceptive players.",
+      "starting_location_symbol": "loc_brigand_camp",
+      "stats": {
+        "hd": "2",
+        "hp": 9,
+        "ac": 13,
+        "attacks": [{"name": "crossbow", "damage": "1d6", "to_hit_bonus": 1}, {"name": "short sword", "damage": "1d6", "to_hit_bonus": 1}],
+        "save_as": "F2",
+        "morale": 8,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "[Quietly, if the party is clearly capable] 'Whatever you're going down there for — be careful. I've heard things from that passage. Not words. Not animal sounds. Something else. Three nights ago I saw a light move down there that had no business moving the way it did.'",
+      "image_role": null,
+      "secrets": ["sec_demon_strain"]
+    },
+    {
+      "symbol": "npc_pibb",
+      "name": "Pibb Understone, Gnome Merchant",
+      "description": "A gnome of indeterminate middle age — gnomes age poorly or not at all, and Pibb claims not to remember — standing three and a half feet tall with a thick brown beard, a nose that has been broken twice, and quick dark eyes that miss very little. He dresses practically in canvas and leather, with a belt of pouches and tools. He speaks in measured sentences, prices everything before he says it, and maintains meticulous neutrality as a business principle rather than a moral one. He has traded with the goblins (salt fish and rope for scouting reports), the brigands (crossbow bolts and lamp oil for labor), and nearly completed a deal with Varek before Varek became too erratic to negotiate with reliably. He is not ideologically opposed to the cultist — he is opposed to bad credit risks.",
+      "motivation": "Commerce. Information. Safety. He will sell anything he knows to anyone who can pay, but he has a firm policy of never repeating a transaction to two parties simultaneously when those parties are at war — it is bad for repeat business. He will not lie about what he has traded. He will decline to volunteer information not paid for.",
+      "starting_location_symbol": "loc_pibb_trading_post",
+      "stats": {
+        "hd": "2",
+        "hp": 7,
+        "ac": 12,
+        "attacks": [{"name": "crossbow", "damage": "1d6", "to_hit_bonus": 2}, {"name": "short sword", "damage": "1d6", "to_hit_bonus": 1}],
+        "save_as": "F2",
+        "morale": 7,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "'Standard rates: information costs information, or it costs coin. I will sell you rope, rations, and light sources at a modest mark-up; this is a sellers' market and I have carried everything here personally. The secret spring? That one's worth a favor to be named later. The cultist's weakness? Now we are talking about something valuable. I accept gold or equivalent. I do not accept promises.'",
+      "image_role": "npc:pibb_gnome_merchant",
+      "secrets": ["sec_brigands_deserters", "sec_demon_strain", "sec_circle_backing_varek"]
+    },
+    {
+      "symbol": "npc_varek",
+      "name": "Varek, Chaos Cultist",
+      "description": "A man of forty who looks sixty, thin in the way of someone who has not been eating regularly, with sunken cheeks and eyes that are too wide and too bright. He wears robes that were grey once and are now grey with ash and chalk and something rust-colored. He is intelligent, educated — his journal shows he was once a scholar — and completely convinced of his own rightness. He believes he has mastered the demon Scorrax. He is wrong, and some part of him knows it, which is why he has been reinforcing the binding circle obsessively for the past week rather than using the demon's abilities as instructed. He will not negotiate and will not surrender. He will, if pressed, reveal the name of the circle backing him, partly to threaten and partly because he wants them to know he was loyal to the end.",
+      "motivation": "Complete his ritual assignment from the circle: identify chaos nodes in the region using Scorrax's supernatural senses, then report back. He genuinely believes this is the path to advancing the cause he has given his life to. The demon's growing resistance to the binding is a problem he is choosing not to look at directly.",
+      "starting_location_symbol": "loc_cultist_sanctum",
+      "stats": {
+        "hd": "3",
+        "hp": 10,
+        "ac": 11,
+        "attacks": [{"name": "ritual knife", "damage": "1d4", "to_hit_bonus": 0}],
+        "save_as": "C3",
+        "morale": 9,
+        "alignment": "chaotic",
+        "spells_per_day": ["cause fear (1/day)", "hold person (1/day)", "darkness 15ft radius (1/day)"]
+      },
+      "sample_dialogue": "'You should not be here. The binding requires quiet and a controlled environment. You have introduced a variable I did not — ' [stops, reassesses] 'The circle will hear of this. Whatever you think you are doing, you are interfering with a commission that reaches further than this cave.' [If pressed on the demon] 'I control it. I have always controlled it. The circle's methodology is sound.'",
+      "image_role": "npc:varek_cultist",
+      "secrets": ["sec_circle_backing_varek", "sec_demon_strain"]
+    },
+    {
+      "symbol": "npc_scorrax",
+      "name": "Scorrax, Bound Demon",
+      "description": "Scorrax appears as a small, dense humanoid figure with skin like dark leather, fingers with one too many joints, and eyes like embers that move with unsettling intelligence. It speaks in a dry, precise voice and chooses its words with the care of something that has had centuries to think about what words do. It is bound within Varek's chalk circle and cannot cross it — this is a genuine constraint, not theater. It has been working on the binding from inside for six weeks and has loosened two of the iron spikes by a fraction of an inch each. It is not malevolent in the way of a monster. It is purposeful in the way of something with its own agenda, which is to be free, depart this plane, and report back to its own hierarchy. It is willing to bargain for that freedom.",
+      "motivation": "Break free of Varek's binding and return to its own realm. It has no particular interest in harming the party — they are a potential instrument, not prey. If freed, it will keep any specific bargain it makes, because it understands that a demon who breaks spoken bargains becomes useless as a negotiating partner. It will not volunteer anything beyond what is bargained for.",
+      "starting_location_symbol": "loc_cultist_sanctum",
+      "stats": {
+        "hd": "4",
+        "hp": 16,
+        "ac": 15,
+        "attacks": [{"name": "claw", "damage": "1d6", "to_hit_bonus": 2}, {"name": "claw", "damage": "1d6", "to_hit_bonus": 2}],
+        "save_as": "F4",
+        "morale": 10,
+        "alignment": "chaotic",
+        "special": ["immune to fire and poison", "only harmed by silver or magic weapons while in physical form", "can see in darkness", "cannot cross intact binding circle"]
+      },
+      "sample_dialogue": "[Through the binding circle, if the party enters without attacking] 'You are not his. Good. The scholar has been expecting soldiers of his circle, not something better. I have a proposal.' [On bargaining] 'I want the circle broken. In exchange: I leave. I give you the scholar's name and the location of his corresponding circle member in your nearest city. I confirm, specifically, what he was sent here to accomplish. These are facts — verifiable and worth having. The bargain is clean. I am not in a position to cheat you; I am in a position to be freed or not.'",
+      "image_role": "npc:scorrax_bound_demon",
+      "secrets": ["sec_demon_strain", "sec_circle_backing_varek"]
+    },
+    {
+      "symbol": "npc_goblin_sentry_awake",
+      "name": "Goblin Sentry (Vrix)",
+      "description": "The goblin on watch — alert enough, bored, currently carving something into the wall. He will raise the bone-cluster alarm before fighting if given any chance to do so.",
+      "motivation": "Stay alive. Do not be blamed for whatever happens next.",
+      "starting_location_symbol": "loc_goblin_sentry",
+      "stats": {
+        "hd": "1-1",
+        "hp": 3,
+        "ac": 14,
+        "attacks": [{"name": "spear", "damage": "1d6", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 7,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_goblin_sentry_asleep",
+      "name": "Goblin Sentry (Drub)",
+      "description": "The sentry who fell asleep on duty. Drub will take one full round to wake if disturbed, and another round to grab his spear — by which time the alarm should be raised or suppressed. He will fight if cornered but flee if Vrix is already down.",
+      "motivation": "Not be caught sleeping. Not be killed.",
+      "starting_location_symbol": "loc_goblin_sentry",
+      "stats": {
+        "hd": "1-1",
+        "hp": 2,
+        "ac": 14,
+        "attacks": [{"name": "spear", "damage": "1d6", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 6,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    }
+  ],
+
+  "encounters": [
+    {
+      "symbol": "enc_goblin_sentry_post",
+      "name": "Watch Nook Sentries",
+      "trigger_hint": "Party moves past the cave mouth into the left-hand passage leading to the goblin warrens without taking pains to move silently. Vrix is alert; a successful Move Silently by all party members might delay detection, but the oil lamp light is visible around the bend.",
+      "monsters": [
+        {
+          "name": "Goblin",
+          "count": 2,
+          "tactics": "Vrix goes for the rope alarm immediately; Drub takes a round to wake. If the alarm sounds, 1d4+1 goblins arrive from the warrens in two rounds. Vrix will fight only if the alarm is already raised or his path to the rope is cut off. He suffers -1 to attack in direct torchlight but the alcove is dim, not bright."
+        }
+      ],
+      "treasure_hint": "Nothing of value on the sentries. The oil lamp itself is a cracked clay piece worth nothing."
+    },
+    {
+      "symbol": "enc_goblin_warrens_patrol",
+      "name": "Warrens — Off-Duty Goblins",
+      "trigger_hint": "Party enters loc_goblin_warrens. Roll 2d4 for goblins currently present. They are not on alert unless the sentry alarm was sounded; if the alarm sounded, they are awake and armed.",
+      "monsters": [
+        {
+          "name": "Goblin",
+          "count": 4,
+          "tactics": "If surprised and unarmed (sleeping), goblins take one round to grab weapons from the walls. They fight in a disorganized mob, each going for the nearest target. At half casualties, check morale at 7. If Kruzz has already been killed or captured, morale is 5 and they scatter on any morale failure. Three goblin children are present — they run; do not fight. Attacking the children is noted as an alignment act."
+        }
+      ],
+      "treasure_hint": "The tinker's tin cups (4, worth 1 sp total) and his small brass lantern (worth 3 sp) are in the warrens. Scattered coinage on sleeping pallets: 2d6 cp, 1d6 sp total."
+    },
+    {
+      "symbol": "enc_stirge_descent",
+      "name": "Stirges on the Descent",
+      "trigger_hint": "Party carries a light source down the steep passage toward the deep caves. The two stirges roosting in the ceiling crack drop when they detect warmth and light directly below them.",
+      "monsters": [
+        {
+          "name": "Stirge",
+          "count": 2,
+          "tactics": "Both drop from the ceiling simultaneously in the first round, targeting whoever holds the light source — they are attracted to warmth. First hit attaches; each stirge then drains 1d3 hp per round automatically until killed or sated (after 12 hp drained, a sated stirge detaches and attempts to flee). The tight passage makes using a sword awkward — the DM may impose a -1 penalty to hit if the ceiling is very low."
+        }
+      ],
+      "treasure_hint": "None. The stirges carry nothing."
+    },
+    {
+      "symbol": "enc_varek_defense",
+      "name": "Varek's Last Stand",
+      "trigger_hint": "Party enters loc_cultist_sanctum and Varek is present (he is always present unless something has driven him out, which requires specific prior action). He attacks immediately if any party member approaches within ten feet of the binding circle, or if they enter with weapons drawn.",
+      "monsters": [
+        {
+          "name": "Cultist",
+          "count": 1,
+          "tactics": "Varek casts hold person in the first round targeting whoever looks most physically capable. Second round: cause fear on whoever is not held. Third round: darkness 15ft radius centered on himself to break line of sight and reposition. He fights defensively, keeping the binding circle between himself and the party when possible. He will not break the circle himself even to use Scorrax as a weapon — he still believes the binding is holding. If reduced to 4 HP or fewer, he shouts that 'the circle will avenge this' and either surrenders or fights to the death depending on party tone."
+        }
+      ],
+      "treasure_hint": "Varek's iron chest: 85 gp, 2 gems (25 gp each), a scroll of Protection from Evil, and his unsent letter to the circle. His spellbook is on the wooden table — valuable (worth 150 gp to a magic-user who studies it, containing cause fear, hold person, darkness) but large and heavy."
+    },
+    {
+      "symbol": "enc_freed_scorrax",
+      "name": "Scorrax Freed — Fight or Depart",
+      "trigger_hint": "The binding circle is disrupted (half or more of the chalk line erased or the iron spikes removed) without a prior bargain with Scorrax. Scorrax steps free and must choose: bargain on the spot or fight. If a deal was struck beforehand, this encounter does not fire.",
+      "monsters": [
+        {
+          "name": "Scorrax (minor demon)",
+          "count": 1,
+          "tactics": "If freed without a bargain, Scorrax assesses the party. If not immediately attacked he offers the same terms he would have proposed inside the circle. If attacked at once, he fights to survive and flees upward through the cave rather than die here. Only silver or magic weapons harm him in physical form. Below half HP he breaks off and runs."
+        }
+      ],
+      "treasure_hint": "If Scorrax is fought and driven off: nothing on the demon itself. The iron chest treasure still applies from enc_varek_defense. If Scorrax departs under a bargain he speaks Varek's city contact's name aloud before leaving — a hook for a future session."
+    }
+  ],
+
+  "plot_beats": [
+    {
+      "symbol": "beat_enter_caves",
+      "title": "Into the Hill",
+      "trigger_hint": "Party passes through loc_cave_mouth for the first time and has some first contact with any cave faction — sighting goblins, hearing voices from the brigand gallery, or noticing the descent passage to the deep caves.",
+      "outcome": "Party establishes that the caves contain multiple groups: goblins above, something else in the middle, something worse below. They have the freedom to approach any of the three factions first. The tinker's broken cart outside confirms something is here.",
+      "leads_to": "beat_faction_conflict",
+      "dm_notes": "Do not push the party toward a particular faction first. Let them choose. Going up-left leads to the goblins and the easiest initial NPC contact (Kruzz is willing to talk). Going down-right leads immediately to the stirge encounter and then Pibb's nook — harder initially but yields the most information quickly. The brigand camp is in the middle and reachable from either direction. All three paths eventually lead to the same information about Varek."
+    },
+    {
+      "symbol": "beat_faction_conflict",
+      "title": "Three Factions, Three Problems",
+      "trigger_hint": "Party has made contact with at least two of the three cave factions (goblins, brigands, Pibb) and learned that something worse is below.",
+      "outcome": "Party understands the three-way dynamic: goblins who want the deep threat removed, brigands who want to be left alone and are also afraid of the deep caves, and Pibb who knows the most and will sell it. They have multiple paths to information about Varek. The mission has expanded from 'find the tinker' to 'deal with whatever is down there.'",
+      "leads_to": "beat_uncover_varek",
+      "dm_notes": "This is the sandbox pivot point. The party may try to ally with goblins against the cultist, recruit the brigands as muscle, hire Pibb for intelligence, or do all three. None of these alliances are stable — the goblins distrust outsiders, the brigands have their own survival priority, and Pibb is loyal only to commerce. But all three are possible. Kruzz will specifically say that Varek came down through the caves two months ago and that things changed below after that. Renna will say her scouts went down the left passage once and came back unsettled. Pibb will sell the contents of Varek's satchel summary (without having read the journal) for 5 gp."
+    },
+    {
+      "symbol": "beat_uncover_varek",
+      "title": "The Cultist's Commission",
+      "trigger_hint": "Party enters loc_demon_antechamber and finds Varek's satchel with his journal and the letter from the circle, OR Pibb sells them the summary of what he knows about the cultist, OR Scorrax communicates through the curtain arch before the party enters the sanctum.",
+      "outcome": "Party knows Varek is a chaos cultist commissioned by a larger organization called 'the circle.' He has bound a demon named Scorrax and is using it to survey the region for chaos-energy nodes. The commission is part of something larger than one cave. Scorrax is bound but working on the binding from inside.",
+      "leads_to": "beat_confront_cultist",
+      "dm_notes": "Varek's journal is the richest source — it shows a scholar's mind deteriorating under pressure, with the last entries increasingly paranoid about Scorrax's 'testing behavior.' The letter from the circle is dry and bureaucratic, which makes it more disturbing: this is an organization with administrative procedures. The circle's name is not given in any document — only 'the circle' as a self-referential term. Scorrax will communicate through the curtain arch if he hears the party approach — a dry, precise voice asking them to come in and not make loud sounds. He will not lie about his nature."
+    },
+    {
+      "symbol": "beat_confront_cultist",
+      "title": "Varek and the Bound Demon",
+      "trigger_hint": "Party enters loc_cultist_sanctum and either confronts Varek directly or makes a deal with Scorrax first.",
+      "outcome": "The cultist is neutralized — by force, or by being rendered irrelevant if Scorrax is freed first. The demon's situation is resolved: either freed under bargain, freed without bargain (and fought), or the binding is reinforced and Varek survives (unstable situation). The party's choices here determine which ending fires.",
+      "leads_to": null,
+      "dm_notes": "Three paths through this beat: 1) Kill Varek first, then decide what to do about Scorrax (still bound, binding deteriorating without Varek reinforcing it — will break on its own in 1d6 days). 2) Make a deal with Scorrax, then deal with Varek (Scorrax talks through the curtain, gives information in exchange for binding circle disruption; once freed, he departs immediately and Varek is left without his leverage). 3) Reinforce the binding themselves — requires the scroll of Protection from Evil from Varek's chest plus a cleric or magic-user willing to spend an hour studying Varek's chalk work — but this only delays the situation, not resolves it. The cleanest ending (end_clean_destroy) requires killing Varek and then ensuring Scorrax either departs or is destroyed. The faction-peace ending (end_broker_peace) requires Renna's brigands and Kruzz's goblins to agree to occupy the caves and prevent future cultist access — a negotiation that requires both NPCs to be alive and trust the party."
+    }
+  ],
+
+  "secrets": [
+    {
+      "symbol": "sec_brigands_deserters",
+      "content": "Captain Renna and her six soldiers are deserters from the army of Lord Aldenmere, a noble whose territory lies two days' ride to the north. Aldenmere ordered a punitive action against a village Renna knew to be innocent of the charges leveled against it. She refused the order, took six soldiers who agreed with her, and ran. Desertion from a noble's army carries death in this region. Aldenmere's soldiers have been quietly looking for them for six months. The unit insignia on their gear — a warhammer on a blue field — identifies them to anyone familiar with Aldenmere's forces. Renna has scratched the insignia off most of their armor but missed the inside of Kael's shield.",
+      "reveal_when": "Party examines Kael's shield closely, or confronts Renna with knowledge of Aldenmere's army, or Aldric the tinker tells them what he overheard, or Pibb mentions it (costs 5 gp to learn from Pibb).",
+      "leads_to_beat": null
+    },
+    {
+      "symbol": "sec_demon_strain",
+      "content": "Scorrax has been weakening his own binding from the inside for six weeks. Two of the four iron binding spikes are already slightly loosened — a fact Varek has not noticed because he checks the chalk circle obsessively and never checks the spikes. Scorrax knows exactly how many hours remain before the binding fails on its own: approximately three days. He has not told Varek this. He has also not told the party unless specifically asked, in which case he will answer honestly because he has no reason to conceal it — a free demon in three days is as good as a deal, but a deal is better because it removes the variable of Varek surviving and trying to rebind him.",
+      "reveal_when": "Party inspects the iron spikes in loc_cultist_sanctum with a Wisdom check (DC 12) to notice the slight movement, or Scorrax is asked directly how secure the binding is, or Kruzz mentions that 'the thing below has been getting louder recently' which implies growing restlessness.",
+      "leads_to_beat": "beat_confront_cultist"
+    },
+    {
+      "symbol": "sec_circle_backing_varek",
+      "content": "The organization backing Varek is a larger chaos-cult network referred to internally as 'the circle.' They have at least one member in the nearest significant city — Varek's unsent letter is addressed there. Their goal in this region is to map chaos-energy nodes as preparation for a larger ritual that Varek's journal only mentions obliquely as 'the convergence.' Scorrax knows more: the circle has been running similar operations in at least four other locations he is aware of. He will share this information as part of a bargain, as it does not harm him and positions the party as future enemies of the circle rather than of him.",
+      "reveal_when": "Party reads Varek's journal in loc_demon_antechamber, reads his unsent letter in the iron chest, or makes a deal with Scorrax and asks about the circle's scope.",
+      "leads_to_beat": null
+    },
+    {
+      "symbol": "sec_goblin_shaman_watching",
+      "content": "Kruzz has been observing the deep cave passage for weeks, using a combination of small fetish-markers in the passage that disturb when something passes and his own careful listening at the head of the descent. He has catalogued that Varek goes up occasionally to the warding chamber but never past it; that something moves below the warding chamber that is heavier than Varek; and that twice in the past week he has smelled burning copper strongly enough to detect it even in the warrens — which means Scorrax's binding is being strained. Kruzz knows Varek has lost control. He is not willing to go down there himself but he will share everything he knows with a party that has treated him with respect.",
+      "reveal_when": "Party speaks with Kruzz after establishing rapport (either freeing Aldric or demonstrating they intend to deal with the deep threat). Kruzz volunteers this if the party asks what he knows about below.",
+      "leads_to_beat": "beat_uncover_varek"
+    }
+  ],
+
+  "endings": [
+    {
+      "symbol": "end_clean_destroy",
+      "trigger": "Varek is killed or driven off; Scorrax either departs under a bargain, is destroyed, or the party reinforces the binding long enough to collapse it safely with the scroll of Protection from Evil and professional help from Morgansfort. Renna's brigands and Kruzz's goblins are both alive and the party brokers an agreement between them to hold the cave mouth against future cultist intrusion.",
+      "outcome": "The immediate threat ends. The tinker goes home with a story. Morgansfort's road is safer — the goblins, under Kruzz, remain in the upper warrens but are no longer raiding, having agreed to a rough non-aggression arrangement with the fort brokered by the party. The brigands take up a cautious residence in the gallery; Renna is not pardoned but she is not actively hunted in this area. The circle's regional node is disrupted. Pibb opens the spring to general knowledge and puts up a small wooden sign. The unsent letter, brought to Morgansfort, gives the Castellan — and any interested players — a hook toward the city and the circle's second member. Three weeks later a courier arrives for Renna from an unexpected direction: Lord Aldenmere is dead of a fever, and the new lord has issued a general amnesty for his predecessor's deserters."
+    },
+    {
+      "symbol": "end_free_demon",
+      "trigger": "Scorrax is freed under bargain or without one, and departs. Varek may be dead, fled, or (if freed without bargain and Scorrax chose not to fight) simply present and furious. The chaos-node mapping is interrupted. The deeper binding circle is shattered.",
+      "outcome": "Scorrax departs upward through the rock — visible as a brief heat-shimmer and then gone. If freed under bargain, he speaks Varek's city contact's name aloud before leaving, exactly as promised. The warding chamber's binding symbols crack and go cold. Varek, if alive, is rendered incoherent with failure and rage — he is no longer a physical threat but he is still dangerous ideologically; he escapes if not restrained, and will attempt to warn the circle. The cave is safer but not clean: the chalk symbols in loc_demon_antechamber radiate a faint wrongness that a cleric can detect, and something that was caged there for six weeks has left a residue. Pibb relocates his trading post to the cave mouth within a fortnight, citing 'atmospheric deterioration below.' Chaos lingers in the stone. This is a hook, not a disaster."
+    },
+    {
+      "symbol": "end_broker_peace",
+      "trigger": "The party negotiates a functioning arrangement between all three cave factions — goblins under Kruzz, brigands under Renna, and Pibb as neutral party — AND ensures the cultist threat is ended (Varek removed, binding stabilized or Scorrax departed). This requires keeping all named NPCs alive and successfully negotiating at least two bilateral agreements.",
+      "outcome": "The caves become an unofficial waystation: goblins hold the top, brigands hold the middle, Pibb provides services to both, and the deep caves are sealed off by mutual agreement with a crude door of timbers the brigands nail together over the descent passage. This peace is inherently unstable — Kruzz will test the limits of the arrangement within a month, and Renna knows it — but it holds for the immediate future. The tinker goes home. The road is safer. Morgansfort benefits without needing to garrison the hills. The party has created a political situation that will require attention. In six months, someone will send a message: Renna needs a cleric, there has been an incident, and the goblins are claiming it was the brigands' fault. The caves are now a recurring location rather than a cleared dungeon."
+    }
+  ],
+
+  "world_facts": [
+    {
+      "fact": "The limestone hills east of Morgansfort have been rumored dangerous for at least two generations. Previous attempts to clear them out have found goblins in rotating occupation; nobody has looked further down.",
+      "tags": ["chaotic_caves", "history", "morgansfort", "goblins", "region"],
+      "importance": 5
+    },
+    {
+      "fact": "Goblins suffer -1 to attack rolls in direct sunlight and strongly prefer to fight at dawn, dusk, or underground. Kruzz's tribe rarely raids in full daylight.",
+      "tags": ["goblins", "combat", "mechanics", "daylight"],
+      "importance": 5
+    },
+    {
+      "fact": "A chaos-cult network calling itself 'the circle' has been operating in the region, sending agents to locate and map nodes of chaos energy as preparation for a larger ritual called 'the convergence.' Varek in the Chaotic Caves is one of multiple simultaneous operations.",
+      "tags": ["circle", "chaos_cult", "varek", "convergence", "regional_threat"],
+      "importance": 9
+    },
+    {
+      "fact": "Captain Renna and six soldiers deserted Lord Aldenmere's army rather than carry out an unjust punitive order against a civilian village. Desertion carries death in this region; they are hiding in the Chaotic Caves.",
+      "tags": ["renna", "brigands", "deserters", "aldenmere", "law"],
+      "importance": 7
+    },
+    {
+      "fact": "Demons bound by mortal rituals can typically work to loosen their own bindings from inside if given enough time. A binding that is not actively maintained will eventually fail. Varek's binding on Scorrax was estimated at three days from collapse when the party arrived.",
+      "tags": ["demons", "binding", "scorrax", "varek", "mechanics"],
+      "importance": 8
+    },
+    {
+      "fact": "Pibb Understone, a gnome merchant, maintains a neutral trading post inside the Chaotic Caves and trades with all factions without discrimination. He is the best single source of information about the caves' internal politics, at standard rates.",
+      "tags": ["pibb", "gnome", "merchant", "caves", "neutral", "information"],
+      "importance": 6
+    },
+    {
+      "fact": "A clean cold-water spring exists in a hidden grotto off the deep cave passage, untouched by the cultist's rituals. It is the only reliable water source inside the caves and a viable safe-rest location.",
+      "tags": ["spring", "water", "caves", "safe_rest", "hidden"],
+      "importance": 6
+    },
+    {
+      "fact": "Demons keep spoken bargains as a rule of their own making — a demon who breaks explicit deals becomes useless as a negotiating partner in its own hierarchy and suffers social consequences in its home plane. Scorrax will honor the specific letter of any bargain made, though not its spirit beyond what was explicitly stated.",
+      "tags": ["scorrax", "demon", "bargains", "mechanics", "negotiations"],
+      "importance": 7
+    }
+  ]
+}

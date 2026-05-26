@@ -1,0 +1,609 @@
+{
+  "format_version": "1.0",
+  "synopsis": "The Vampire Queen Serafina rules a mountain palace carved from an ancient dwarven hold, her court a nightmare of thralls, undead courtiers, and stolen pageantry. She has taken Mira, daughter of Lord Aldenwyr, and demands blood-tribute from surrounding settlements. The party is hired to rescue Mira and end Serafina's reign — but the deeper they go, the more complicated the truth becomes. Serafina made her bargain willingly, centuries ago, to save her people from a winter plague. She is not entirely without honour. Grendak, ghost of the last dwarven king, haunts the deeps and knows where the real coffin is hidden. Elena, the librarian-spawn, wants death more than the party does. And Mira has been drinking Serafina's blood for three days.",
+  "tone": "gothic horror — candlelit stone, old debts, and the peculiar dignity of monsters who remember being human. Death is real, level drain is real, and torchlight matters. Not grim-dark, but not softened either.",
+  "image_style": "dark gothic ink illustration, candlelit stone halls, vampire court, old dwarven stonework, ink and wash with deep shadows",
+  "image_negative_prompt": "modern objects, photographic, watermark, text artifacts, extra fingers, bright colours, anime, cartoonish, 5e art style",
+  "level_range": [3, 5],
+  "estimated_sessions": 5,
+  "starting_hook": "Lord Aldenwyr's herald finds the party in the nearest town — or the herald's body is found on the road, his message still sealed in his coat. The seal reads: 'My daughter Mira was taken from our estate three nights past. Her window was open, the servants found dead at their posts — drained white. A letter was left on her pillow bearing one word: Tribute. I know whose hand. I will pay whatever price is named. Come to Aldenwyr Hall before the week is out.' The village on the mountain's western slope tells the rest: the blood-tax, the wolves that run the passes at night, and the lights in the high windows that never go dark.",
+  "starting_location_symbol": "loc_mountain_approach",
+
+  "locations": [
+    {
+      "symbol": "loc_mountain_approach",
+      "name": "The Mountain Approach",
+      "description": "The road to the palace climbs through pine forest that thins as the slope steepens, giving way to bare grey rock above the treeline. The path is old — dwarven-cut, with stone gutters and occasional iron rings driven into the cliff face where pack-animals could be secured. Most of the rings are rusted. The stonework is sound. At the upper treeline, a smell of wet fur and old blood clings to the air; wolf tracks in the mud go in both directions, fresh enough to be from the last few hours. Bats cross the sky in irregular patterns even in daylight, circling back rather than flying in straight lines. Someone is watching. The palace itself is not visible until the final switchback: a black mass of towers pressed against the mountain's shoulder, lit from within by amber light that seeps through shuttered windows.",
+      "parent_symbol": null,
+      "image_role": "scene:mountain_approach_exterior",
+      "metadata": {
+        "area": "Approach",
+        "features": ["dwarven-cut road", "iron rings", "wolf tracks", "circling bats"],
+        "atmosphere": "watched, cold, high altitude",
+        "encounter_chance": "wolf sentinels patrol every 2 hours; 1-in-6 chance per hour of bat swarm reporting to Serafina"
+      }
+    },
+    {
+      "symbol": "loc_gatehouse",
+      "name": "The Gatehouse",
+      "description": "The palace gatehouse was built over an older dwarven arch — the lower courses of stonework are heavier, cut with geometric precision that the later human builders could not quite match. The portcullis is iron, mostly intact, held up by a rusted mechanism in the guardroom above. The gatehouse passage is thirty feet long and narrow; murder-holes have been cut in the ceiling, though no one has poured oil through them in living memory. Two skeleton guards stand motionless in the niches to either side of the inner gate, their bones draped in the remnants of armour that was good quality when they wore it in life. They come to attention and attack when any living creature passes the inner threshold without the blood-token Serafina issues to her tributaries. A third skeleton is slumped in the portcullis mechanism room above, its hand on the release lever. If the party kills the lower guards and investigates above, they can lower the portcullis behind them, blocking pursuit.",
+      "parent_symbol": null,
+      "image_role": "scene:gatehouse_passage",
+      "metadata": {
+        "area": "Outer Defences",
+        "features": ["dwarven lower stonework", "iron portcullis", "murder-holes", "portcullis mechanism above", "skeleton guards"],
+        "tactical_note": "portcullis can be lowered from above, sealing the passage"
+      }
+    },
+    {
+      "symbol": "loc_outer_courtyard",
+      "name": "The Outer Courtyard",
+      "description": "Once a formal garden, now a ruin of dead hedges and cracked stone basins. The symmetry of the original layout is still visible — paths radiating from a central fountain, low walls of ornamental stone enclosing what were once planting beds. Nothing grows. The soil is black and smells of old iron. The central fountain is still intact: a stone basin carved with intertwined serpents, currently filled with dark water that does not move despite the wind. Anyone who drinks from or touches the fountain water must save versus Poison or lose 1d6 hit points as the water pulls at their life — it has been cursed so long that the curse has become a habit. On the far side of the courtyard, a door of iron-banded oak leads into the palace proper. The door is not locked. Nothing approaches the outer courtyard at night without Serafina's sanction.",
+      "parent_symbol": "loc_gatehouse",
+      "image_role": "scene:outer_courtyard_ruin",
+      "metadata": {
+        "area": "Outer Defences",
+        "features": ["ruined garden", "dead hedges", "cursed fountain", "iron-banded door"],
+        "fountain_trap": "touch or drink — save vs Poison or lose 1d6 hp",
+        "encounter": "2d4 giant bats roost in the dead hedges; disturbed by noise or light"
+      }
+    },
+    {
+      "symbol": "loc_grand_hall",
+      "name": "The Grand Hall",
+      "description": "The largest room in the palace, its ceiling lost in shadow forty feet above. Dwarven pillars — six of them, each carved with the interlocked geometric patterns of the old hold — support the vaulted ceiling. Between the pillars, tapestries have been hung that depict scenes from Serafina's mortal life: mountain campaigns, a burning city, a treaty signing. The figures are accurate but the colours are wrong — everything rendered in deep burgundy and black, as though the weaver could not remember other colours. Serafina holds court here from midnight to the third hour of morning, seated on a chair of black wood at the far end. Her court consists of four vampire spawn in courtly dress, a pair of wights that stand as bodyguards, and whatever thralls are currently in service. During these hours, approaching the hall without stealth will result in immediate confrontation. At all other times, the hall is empty save for two skeleton guards that pace the perimeter.",
+      "parent_symbol": null,
+      "image_role": "scene:grand_hall_court",
+      "metadata": {
+        "area": "Palace Proper",
+        "features": ["six dwarven pillars", "tapestries of Serafina's history", "black wood throne", "court schedule midnight to 3am"],
+        "court_hours_npcs": ["npc_serafina", "npc_viktor", "four vampire spawn", "two wights"],
+        "off_hours_npcs": ["two skeleton guards"]
+      }
+    },
+    {
+      "symbol": "loc_banquet_room",
+      "name": "The Banquet Room",
+      "description": "Adjacent to the grand hall through a pair of carved doors, the banquet room is set for a feast that is never eaten and never cleared. Candles burn in iron candelabras — real candles, replaced by thralls each evening. The table holds food in various states of decay, though the arrangement is always renewed at the top with fresh bread and meat that Serafina procures for the performance of normality she seems to require. Seated at the table are six ghouls in court dress: three men, three women, their faces powdered to approach human colour at a distance, their hands folded on the table. They maintain the pose with unnerving patience. If the party enters and behaves as guests — sitting, reaching for food, addressing the figures politely — the ghouls maintain the pose for two full rounds before attacking. If the party enters with weapons drawn or a torch held forward, the ghouls attack immediately. The ghoul at the head of the table, in a grey velvet coat, was once Serafina's court chamberlain.",
+      "parent_symbol": "loc_grand_hall",
+      "image_role": "scene:banquet_ghoul_feast",
+      "metadata": {
+        "area": "Palace Proper",
+        "features": ["set feast table", "iron candelabras", "six ghouls in court dress"],
+        "ghoul_count": 6,
+        "chamberlain_ghoul": "wears grey velvet coat, morale 10 rather than standard 9",
+        "treasure": "silver candelabras worth 40 gp each (6 total), court jewellery on ghouls worth 3d6 gp per ghoul"
+      }
+    },
+    {
+      "symbol": "loc_chapel",
+      "name": "The Defiled Chapel",
+      "description": "A small stone chapel that once served the dwarven hold's craftsmen — the original dedication symbols carved above the arch are dwarven runes that translate, roughly, to 'work well done honours the maker.' Serafina has not destroyed the chapel so much as inverted it. The altar cloth is black. The font holds not water but something darker and thicker. Copper censers burn incense that smells of old blood. In the corner, chained to the wall with iron manacles, sits Father Aldric — a cleric of modest means who was captured three weeks ago when he was foolish enough to come to the palace alone to perform an exorcism. He is thin, dehydrated, and has not been allowed to pray aloud, but he is alive. Serafina values him as an object lesson and as a hostage against the local temple. He knows a great deal about vampires from his training and research and will share everything freely. The chain can be broken with a Strength check (target: open doors table, two-handed) or picked at the lock (iron padlock, standard difficulty).",
+      "parent_symbol": "loc_grand_hall",
+      "image_role": "scene:defiled_chapel_prisoner",
+      "metadata": {
+        "area": "Palace Proper",
+        "features": ["dwarven rune arch", "inverted altar", "blood-font", "iron manacles"],
+        "prisoner": "npc_aldric",
+        "chain_break": "Strength check vs open-doors; padlock can be picked"
+      }
+    },
+    {
+      "symbol": "loc_library",
+      "name": "The Library",
+      "description": "A long room lined floor to ceiling with shelves, most of which hold real books — Serafina was a scholar in her mortal life and has maintained the habit across centuries. The collection covers history, natural philosophy, cartography, military theory, and a significant section on the theory and practice of necromancy. A reading table runs down the centre with candle-stands at intervals. Elena, the vampire spawn librarian, is typically found here with a book open before her, though she has read everything in the room at least twice. She was a scholar named Elena Vasricht who came to study Serafina's collection forty years ago and was turned when Serafina found her particularly interesting. Some of Elena's scholarly personality remains; she is precise, slightly absent-minded in affect, and visibly pained by the thought of the books burning. On the shelves: a chronicle of the dwarven hold's history (reveals Grendak's story and the existence of the escape tunnel), and a treatise on vampire vulnerabilities written in the neutral academic voice of someone who has had a very long time to be objective about her own condition (Elena wrote it herself, about herself).",
+      "parent_symbol": "loc_grand_hall",
+      "image_role": "scene:library_candlelit_shelves",
+      "metadata": {
+        "area": "Palace Proper",
+        "features": ["floor-to-ceiling shelves", "reading table", "dwarven chronicle", "Elena's self-written treatise"],
+        "npc_present": "npc_elena",
+        "key_texts": ["Chronicle of the Ironhold — reveals Grendak and escape tunnel", "Treatise on Vampiric Vulnerabilities — Elena's self-written work, clinically accurate"]
+      }
+    },
+    {
+      "symbol": "loc_trophy_room",
+      "name": "The Trophy Room",
+      "description": "A gallery off the main corridor, its walls hung with the evidence of Serafina's centuries: weapons taken from adventurers who came to kill her, portraits of people who are now dead, a case of jewellery taken from tribute-payers, and a row of iron plaques engraved with names and dates. The plaques are the most disturbing element. They are neat, precise, and clearly maintained — each name is someone who came to destroy Serafina and did not succeed. The most recent plaque reads 'Bram, Paladin of the Sunward Flame. Came in the month of the Crow, three years past.' The earliest is dated in a calendar system no one living uses. The jewellery case holds items with enough value to be meaningful: 120 gp in assorted pieces. One item — a silver locket on a chain — has a miniature portrait inside of a woman who is recognisably, if younger, Serafina herself from when she was human. She does not know this piece is here; a former servant collected it from her belongings during the early years of her transformation.",
+      "parent_symbol": "loc_grand_hall",
+      "image_role": "scene:trophy_gallery_plaques",
+      "metadata": {
+        "area": "Palace Proper",
+        "features": ["iron plaques with names of defeated heroes", "jewellery case", "portraits", "silver locket"],
+        "treasure": "120 gp in jewellery, silver locket (10 gp value, but significant as leverage or roleplay)",
+        "plaque_count": "17 named hunters, spanning several centuries",
+        "secret_locket": "contains Serafina's human portrait — she does not know it is here"
+      }
+    },
+    {
+      "symbol": "loc_dungeons",
+      "name": "The Palace Dungeons",
+      "description": "Stairs descend from the servants' corridor into a stone-cut dungeon that the dwarves originally used as a cold store. The cells are carved from solid rock with iron-bar doors, each cell large enough for a pallet and a bucket. The current inmates: Mira Aldenwyr, in the end cell, alive and apparently sleeping even in the middle of the day (Serafina has been feeding her blood every second night, beginning the enthrallment process). Two other prisoners — a merchant who refused the blood-tax and a travelling soldier who had the bad luck to make camp near the palace — are in the middle cells, frightened but unharmed. A single ghoul acts as gaoler, seated on a stool at the stair-foot with a ring of keys on its belt. Mira will wake if the cell is opened, but she is confused, slow, and oddly reluctant to leave — she has begun to feel the pull of the enthrallment. She will not resist being taken, but she will look back at the stairs as the party leaves.",
+      "parent_symbol": "loc_grand_hall",
+      "image_role": "scene:dungeon_cells_prisoner",
+      "metadata": {
+        "area": "Palace Proper",
+        "features": ["rock-cut cells", "iron-bar doors", "ghoul gaoler", "key ring"],
+        "prisoners": ["npc_mira (end cell)", "merchant (middle cell, unharmed)", "soldier (middle cell, unharmed)"],
+        "gaoler": "one ghoul, morale 9, keys on belt",
+        "mira_condition": "partially enthralled — reluctant to leave, slow, confused"
+      }
+    },
+    {
+      "symbol": "loc_crypt_antechamber",
+      "name": "The Crypt Antechamber",
+      "description": "A landing at the bottom of a stair that descends from behind the library's false bookshelf — the mechanism is a simple pivot triggered by removing a specific volume (Elena's treatise on vampiric vulnerabilities). The antechamber is a transition space between the palace proper and the old dwarven crypt-works below: the stonework shifts here, the walls becoming older, heavier, and cut with the interlocking geometric patterns of dwarven craft rather than human work. Two iron braziers hold cold coals — they have not been lit in decades. On the far wall, carved into the stone above the descending stair, is a dwarven inscription that translates as: 'Here lie those who built in stone and endured. The living pass at need. The uninvited find stone walls that know how to close.' This is decorative intimidation; the walls do not actually close. A ghost is visible at the bottom of the stair, faintly luminescent — Grendak, the last dwarven king, who will speak to the party if approached without weapons drawn.",
+      "parent_symbol": "loc_library",
+      "image_role": "scene:crypt_antechamber_descent",
+      "metadata": {
+        "area": "Deep Hold",
+        "features": ["false bookshelf entrance", "dwarven stonework", "cold braziers", "carved inscription", "Grendak visible below"],
+        "access": "false bookshelf triggered by removing Elena's treatise",
+        "npc_present": "npc_grendak (at stair bottom)"
+      }
+    },
+    {
+      "symbol": "loc_thrall_quarters",
+      "name": "The Thrall Quarters",
+      "description": "A long hall of the old dwarven dormitory style — stone sleeping platforms built into the walls at two heights, each wide enough for a large dwarf to sleep comfortably. The platforms are now occupied by coffins: eight plain wooden boxes, each containing a vampire spawn in the daylight sleep. The coffins are arranged with the same order the dwarven dormitory once had — two rows of four, with a central aisle. Viktor's coffin is at the far end, set apart, slightly larger than the others. During daylight hours, all eight spawn are in the torpor of daylight sleep and cannot be roused by normal noise; they will respond to fire, direct sunlight (if any could be brought to bear), or the sound of combat. Viktor sleeps lightly enough that any attack on another coffin has a 3-in-6 chance of waking him. The chamber smells of old wood, cold stone, and something sweetly wrong.",
+      "parent_symbol": "loc_crypt_antechamber",
+      "image_role": "scene:thrall_quarters_coffins",
+      "metadata": {
+        "area": "Deep Hold",
+        "features": ["dwarven stone sleeping platforms", "eight coffins", "Viktor's larger coffin at far end"],
+        "combat_notes": "daytime: all spawn in torpor, fire or combat wakes them; Viktor wakes on 3-in-6 if another coffin attacked",
+        "spawn_count": 7,
+        "spawn_hp": "typical 18 hp each, AC 16, HD 4+1"
+      }
+    },
+    {
+      "symbol": "loc_serafinas_chambers",
+      "name": "Serafina's Private Chambers",
+      "description": "If the grand hall is performance, these chambers are the rare private space behind it. Three connecting rooms: a sitting room with shelves of personal books and a writing desk covered in correspondence, a dressing room with a wardrobe of clothing in styles spanning three centuries, and a sleeping room with a stone platform topped with a mattress of dark wool — she does not sleep here, but she uses the space for thinking. On the writing desk: a letter begun and not finished, addressed to no one, describing her fatigue with the centuries. A locked iron box under the writing desk (key on Serafina's person) holds a small journal in cramped archaic script — her earliest writing, from before her transformation, describing the plague that drove her to the bargain. Reading it with the knowledge of what she became makes the bargain comprehensible, if not forgivable. A secret door behind the wardrobe leads to the true sanctum below.",
+      "parent_symbol": "loc_crypt_antechamber",
+      "image_role": "scene:vampire_private_chambers",
+      "metadata": {
+        "area": "Deep Hold",
+        "features": ["sitting room", "dressing room", "sleeping platform", "writing desk with unfinished letter", "locked iron box with early journal", "secret wardrobe door"],
+        "key_objects": ["early journal (reveals bargain motivation)", "unfinished letter (Serafina's private exhaustion)"],
+        "secret_door": "behind wardrobe, leads to loc_inner_sanctum"
+      }
+    },
+    {
+      "symbol": "loc_inner_sanctum",
+      "name": "The Inner Sanctum",
+      "description": "Below the private chambers, accessible through the secret wardrobe door and a short descending passage, this chamber is the oldest part of the hold — a natural cave that the dwarves shaped minimally, preserving its rough walls while cutting a flat floor and a vaulted ceiling. The air is perfectly still and cold. A stone sarcophagus sits at the centre, its lid carved not with Serafina's likeness but with a mountain, a star above the peak, and below the mountain, a city. This is her true resting place. The coffin of native earth she presents to the world — the elaborate one in a room adjacent to the grand hall, placed where any hunter with the right knowledge would look — is a decoy. This is what actually holds her between the sleeps. If she is reduced to 0 hit points elsewhere, her mist-form will move toward this chamber as quickly as it can. The sarcophagus can be opened by two people working together (it is heavy stone) or by one person with significant strength. Inside, resting on dark soil from the mountain pass she crossed when she first came here: her sleeping body, pale as carved ivory, utterly still. This is where she must be staked.",
+      "parent_symbol": "loc_serafinas_chambers",
+      "image_role": "scene:inner_sanctum_sarcophagus",
+      "metadata": {
+        "area": "Deep Hold",
+        "features": ["natural cave with cut floor", "stone sarcophagus with mountain carving", "native earth"],
+        "tactical_note": "true resting place — staking must happen here; decoy coffin is near grand hall",
+        "sarcophagus_open": "requires two people or exceptional strength"
+      }
+    },
+    {
+      "symbol": "loc_escape_tunnel",
+      "name": "The Dwarven Escape Tunnel",
+      "description": "Behind a heavy stone door in the crypt antechamber's east wall — the door is part of the wall's carved geometric pattern and requires knowing to look, plus a successful examination (DC 13 Intelligence to notice the seam, no roll needed once Grendak points it out) — a rough-cut tunnel descends for two hundred feet through the mountain's shoulder before emerging through a concealed stone hatch in a pine thicket three hundred feet below the palace on the mountain's eastern face. The tunnel is dwarven-built and sound. The floor is dry. It smells of old stone and nothing else. Serafina does not know this tunnel exists — it postdates her arrival and was built by Grendak's craftsmen as a last resort. Grendak had the record of it destroyed when he became a ghost, not wanting Serafina to find it; he now offers the knowledge as payment for the party's help in freeing his people's hold.",
+      "parent_symbol": "loc_crypt_antechamber",
+      "image_role": "scene:escape_tunnel_stone_passage",
+      "metadata": {
+        "area": "Deep Hold",
+        "features": ["concealed stone door in geometric pattern", "200ft rough-cut tunnel", "concealed hatch exit in pine thicket"],
+        "discovery": "DC 13 Intelligence; automatic if Grendak reveals it",
+        "serafina_knowledge": "unknown to her — she never found it"
+      }
+    }
+  ],
+
+  "npcs": [
+    {
+      "symbol": "npc_serafina",
+      "name": "Serafina, Vampire Queen",
+      "description": "A tall woman in her apparent early thirties, pale as polished bone, with dark hair worn loose and eyes the colour of dried blood. She moves with deliberate economy — no gesture is wasted, no expression accidental. Her clothing is always black, always several centuries out of fashion, always immaculate. She is not mindlessly cruel; she manages her court with something approaching cold competence, and she remembers every name on those iron plaques. She is tired in a way that centuries produce and she cannot quite suppress. When she is angry, the temperature in the room drops. When she is interested, she goes very still. She will not negotiate from weakness, but she will negotiate from curiosity.",
+      "motivation": "Maintain her hold, maintain the tribute that sustains her court, and find some way to be left alone for another century. She took Mira as a demonstration of what happens when tribute lapses — not out of personal appetite. She does not eat people she finds interesting, and she finds almost everyone interesting, briefly.",
+      "starting_location_symbol": "loc_grand_hall",
+      "stats": {
+        "hd": "9*",
+        "hp": 40,
+        "ac": 16,
+        "attacks": [
+          {"name": "bite", "damage": "1d10", "to_hit_bonus": 5, "special": "drains 2 levels on hit (no save in BFRPG core)"}
+        ],
+        "save_as": "F9",
+        "morale": 11,
+        "alignment": "chaotic",
+        "special": [
+          "Flies at 60 ft (bat form)",
+          "Charm gaze — save vs Spells at -2 or be charmed",
+          "Assumes mist, wolf, or bat form at will",
+          "Regenerates 3 hp per round",
+          "Repelled by garlic, holy symbols, mirrors, running water, direct sunlight",
+          "Reduced to 0 hp returns to mist, flees to inner sanctum coffin",
+          "Drains 2 levels per bite"
+        ]
+      },
+      "sample_dialogue": "'You came a long way up a cold mountain. I respect the effort. Sit.' [If the party asks about Mira] 'The girl is unharmed. She is here because her father did not send last quarter's tribute and I needed the conversation to happen. It is happening now.' [If pressed on the bargain] 'I chose it. I would choose it again. My people did not die of the plague. That is what matters. That is the only thing that has ever mattered.'",
+      "image_role": "npc:serafina_vampire_queen",
+      "secrets": ["sec_serafina_bargain", "sec_true_coffin_location"]
+    },
+    {
+      "symbol": "npc_viktor",
+      "name": "Viktor, Vampire Champion",
+      "description": "A broad-shouldered vampire in the armour he wore in life — plate that has been maintained for two hundred years with the obsessive care of a professional soldier. His face is square and scarred and serious. He was a mercenary captain when Serafina found him and she turned him with his full consent, which is the foundation of a loyalty that is not compelled but chosen. He does not speak often. When he does, he is direct to the point of bluntness. He is not subtle and does not try to be. He is the most dangerous thing in the palace in a direct fight, and he knows it, and it makes him calm rather than arrogant.",
+      "motivation": "Protect Serafina and the court. That is the whole of it. He is not cruel by preference but he will do whatever the protection requires.",
+      "starting_location_symbol": "loc_thrall_quarters",
+      "stats": {
+        "hd": "7*",
+        "hp": 31,
+        "ac": 16,
+        "attacks": [
+          {"name": "bite", "damage": "1d10", "to_hit_bonus": 4, "special": "drains 2 levels on hit"},
+          {"name": "sword", "damage": "1d8+2", "to_hit_bonus": 4}
+        ],
+        "save_as": "F7",
+        "morale": 11,
+        "alignment": "chaotic",
+        "special": [
+          "Flies at 60 ft (bat form)",
+          "Charm gaze — save vs Spells at -2 or be charmed",
+          "Assumes mist, wolf, or bat form at will",
+          "Regenerates 3 hp per round",
+          "Repelled by garlic, holy symbols, mirrors, running water, direct sunlight",
+          "Reduced to 0 hp returns to mist, flees to own coffin",
+          "Drains 2 levels per bite"
+        ]
+      },
+      "sample_dialogue": "'If you're here to end her, you won't. If you're here to talk, she'll decide whether to listen. Either way, you answer to me first.' [If defeated in combat and at mercy] 'Finish it or don't. I have been here two centuries. I am not afraid of what comes after.'",
+      "image_role": "npc:viktor_champion",
+      "secrets": null
+    },
+    {
+      "symbol": "npc_aldric",
+      "name": "Father Aldric, Imprisoned Cleric",
+      "description": "A cleric of modest means in his late forties — thin, brown-bearded, and currently wearing the torn remains of travelling robes that were practical rather than impressive. Three weeks of captivity have given him time to think more carefully than he has ever been made to. He came here alone with a holy symbol and good intentions and learned quickly that good intentions and a holy symbol are not the same as a plan. He is not bitter about this, exactly; he is wry about it. He Turn Undead as a 4th-level cleric, which is meaningful in this environment.",
+      "motivation": "Get out, warn the temple, and perhaps be slightly more prepared next time he attempts something this foolish. He will help the party in every way available to him and asks nothing in return except his freedom.",
+      "starting_location_symbol": "loc_chapel",
+      "stats": {
+        "hd": "4",
+        "hp": 18,
+        "ac": 12,
+        "attacks": [
+          {"name": "mace", "damage": "1d6", "to_hit_bonus": 2}
+        ],
+        "save_as": "C4",
+        "morale": 8,
+        "alignment": "lawful",
+        "special": [
+          "Turn Undead as C4",
+          "Cure Light Wounds 2/day",
+          "Cure Disease 1/day",
+          "Protection from Evil 1/day"
+        ]
+      },
+      "sample_dialogue": "'Vampires are repelled by garlic, mirrors, holy symbols held with genuine faith — the faith matters, I've tested it — and running water they cannot cross willingly. A stake through the heart while they sleep in their coffin, followed by beheading and exposure to sunlight. In that order. The coffin must be the true one, not a decoy. They almost always keep a decoy.' [On Serafina] 'She brought me food. Three times, she sent food. I do not know what to do with that information but I cannot discard it.'",
+      "image_role": "npc:father_aldric_prisoner",
+      "secrets": ["sec_mira_enthrallment"]
+    },
+    {
+      "symbol": "npc_mira",
+      "name": "Mira Aldenwyr, the Captive",
+      "description": "A young woman of twenty, dark-haired, normally sharp-eyed and forthright — her father's letters describe her as opinionated and difficult to manage, which is clearly a complaint from a man whose daughter is smarter than him. Currently she is pale, slow, and oddly calm. The enthrallment is partial: three days of Serafina's blood means she is not fully turned, not yet, but the pull is there. She will follow instructions but sometimes pauses at unexpected moments, looking toward the deepest part of the hold, before continuing. She does not understand why. She is not yet dangerous to the party. She will be in approximately four more days unless the enthrallment is broken by Cure Disease from a cleric of sufficient level.",
+      "motivation": "She wants to go home and she is frightened about the fact that part of her does not want to go home, and she does not understand that part yet.",
+      "starting_location_symbol": "loc_dungeons",
+      "stats": {
+        "hd": "1",
+        "hp": 5,
+        "ac": 10,
+        "attacks": [
+          {"name": "dagger", "damage": "1d4", "to_hit_bonus": 0}
+        ],
+        "save_as": "F1",
+        "morale": 6,
+        "alignment": "neutral",
+        "special": [
+          "Partially enthralled — Cure Disease (cast by C3+) breaks it if done within 6 days of first blood-feeding",
+          "After 7 days total, fully turned; becomes vampire spawn under Serafina's command"
+        ]
+      },
+      "sample_dialogue": "'I want to leave. I — yes, of course I want to leave. She didn't hurt me. She talked to me. I don't — I think she's been lonely for a very long time.' [Long pause, looking back down the stairs.] 'I'm coming. I said I'm coming.'",
+      "image_role": "npc:mira_captive",
+      "secrets": ["sec_mira_enthrallment"]
+    },
+    {
+      "symbol": "npc_grendak",
+      "name": "Grendak, Ghost of the Last Dwarf King",
+      "description": "A translucent figure in the style of dwarven craftsmanship: stocky, broad-shouldered, wearing the carved stone crown and formal robes of a dwarven king, all rendered in faint blue-white luminescence. His expression is the particular bitterness of someone who has watched their work be disrespected for a long time without being able to do anything about it. He is bound to the hold — cannot leave the deep levels — and has been watching Serafina occupy it for centuries. He has not lost his mind, which makes his situation worse, not better. He will be hostile to the party at first contact (they appear to be yet more servants of the queen) but can be persuaded through demonstrated opposition to Serafina, respect for the dwarven hold, or simply patience with his initial anger.",
+      "motivation": "See Serafina and her court expelled from the hold so that his people's rest is no longer defiled. He has accepted that no dwarves are coming back. He wants the wrong thing undone, and then he wants peace.",
+      "starting_location_symbol": "loc_crypt_antechamber",
+      "stats": {
+        "hd": "7*",
+        "hp": 30,
+        "ac": 15,
+        "attacks": [
+          {"name": "spectral touch", "damage": "1d8", "to_hit_bonus": 3, "special": "save vs Paralysis or frozen with cold for 1 round"}
+        ],
+        "save_as": "F7",
+        "morale": 11,
+        "alignment": "lawful",
+        "special": [
+          "Immune to sleep, charm, hold, and non-magical weapons",
+          "Silver weapons deal half damage, magical weapons full damage",
+          "Cannot leave the deep hold levels",
+          "If treated with genuine respect, will not attack the party"
+        ]
+      },
+      "sample_dialogue": "'More soft-flesh grave-robbers. Who sent you — the queen or the other queen?' [If the party explains] 'You want to kill her. Everyone wants to kill her. No one has managed it in — how long has it been? I stopped counting decades ago.' [If the party earns his respect] 'The coffin she shows you is not the coffin that matters. I know where she truly sleeps. And there is a way out of this mountain that she does not know of. Both of these I will share — if you finish what you came to do.'",
+      "image_role": "npc:grendak_ghost_king",
+      "secrets": ["sec_true_coffin_location", "sec_escape_tunnel"]
+    },
+    {
+      "symbol": "npc_elena",
+      "name": "Elena Vasricht, Vampire Spawn Librarian",
+      "description": "A small, thin woman who looks perhaps thirty-five, with the ink stains on her fingers that a scholar accumulates and, in her case, never lost because her transformation preserved the moment of it. She wears a grey dress that was practical forty years ago and is now merely old. She speaks in the precise, slightly distracted manner of someone who is always partly thinking about something else. Part of Elena's original personality survived — the scholar's habits, the interest in ideas, the discomfort with disorder — and these elements are in constant low-grade conflict with the hunger and the loyalty compulsion of vampiric spawn. She has written the treatise on vampiric vulnerabilities as a form of self-analysis, and she understands exactly what she is, and she hates it with the calm precision of an academic who has studied the problem thoroughly and reached an unpleasant conclusion.",
+      "motivation": "She wants to be ended properly — her coffin found, her sleeping body staked and beheaded, her existence concluded. She cannot want this strongly enough to act on it herself; the compulsion prevents it. She can, however, provide the party with almost everything they need if they offer her freedom from existence as payment. She will not betray Serafina until the deal is struck, and then she will honour it completely.",
+      "starting_location_symbol": "loc_library",
+      "stats": {
+        "hd": "4+1*",
+        "hp": 19,
+        "ac": 16,
+        "attacks": [
+          {"name": "bite", "damage": "1d10", "to_hit_bonus": 3, "special": "drains 2 levels on hit"}
+        ],
+        "save_as": "F4",
+        "morale": 9,
+        "alignment": "chaotic",
+        "special": [
+          "Charm gaze — save vs Spells at -2 or charmed",
+          "Regenerates 3 hp per round",
+          "Repelled by garlic, holy symbols, running water, direct sunlight",
+          "Reduced to 0 hp returns to mist, flees to own coffin (in thrall quarters)",
+          "Drains 2 levels per bite",
+          "Compulsion prevents active betrayal of Serafina without an explicit deal"
+        ]
+      },
+      "sample_dialogue": "'You are looking for the queen's weaknesses. I wrote a monograph on the subject. It is on the third shelf from the top, east wall, between the volume on historical poisons and the cartographic survey of the eastern range. I am not offering it to you without conditions.' [If the party agrees to end her] 'My coffin is in the thrall quarters. The fourth one from the left, with a crack across the lid from when they moved it. When you have staked the queen — in her true coffin, not the decoy — come to mine and do the same. Do not do mine first. The compulsion will make me fight you if you try before she is gone. This is not a threat. It is a practical concern.'",
+      "image_role": "npc:elena_librarian_spawn",
+      "secrets": ["sec_elena_ally", "sec_true_coffin_location", "sec_mira_enthrallment"]
+    }
+  ],
+
+  "encounters": [
+    {
+      "symbol": "enc_wolf_sentinels",
+      "name": "Wolf Pack — Mountain Approach",
+      "trigger_hint": "Party is on the mountain approach, especially after dark or if they are making significant noise. The wolves circle in from upslope, using the terrain. They do not attack immediately — they pace the party at range for one round before closing, giving one chance for a reaction.",
+      "monsters": [
+        {
+          "name": "Wolf",
+          "count": 5,
+          "tactics": "Serafina has charmed these wolves as sentinels. They are not mindlessly aggressive; they harry and drive the party toward the gatehouse rather than trying to kill them outright. If two are killed, the remainder break and run back up the slope. They will howl on first contact, which may alert the palace — DM's discretion based on timing."
+        }
+      ],
+      "treasure_hint": "None. The wolves are ordinary wolves aside from the charm; their fur is worth 2d4 sp to a trapper if the party is inclined to be mercenary about it."
+    },
+    {
+      "symbol": "enc_bat_swarm",
+      "name": "Giant Bat Swarm — Courtyard",
+      "trigger_hint": "Party enters the outer courtyard at night, or makes significant light or noise in the courtyard at any hour. The bats in the dead hedges stir, circle once, then attack if the party remains exposed.",
+      "monsters": [
+        {
+          "name": "Giant Bat",
+          "count": 8,
+          "tactics": "Giant Bats use dive-and-retreat — attacking in groups of two or three, then pulling back to the ceiling before diving again. They target anyone carrying a torch or other light source first. They have AC 13, HD 2, hp 9, move 40ft fly, bite 1d4, save as F1, morale 8. They break off if more than half are killed or if all light sources are extinguished."
+        }
+      ],
+      "treasure_hint": "None. The bats are natural, not magical — though Serafina can assume bat form, she does not need to consort with actual bats."
+    },
+    {
+      "symbol": "enc_skeleton_gatehouse",
+      "name": "Skeleton Guards — Gatehouse",
+      "trigger_hint": "Party crosses the inner threshold of the gatehouse without a blood-token (a small wax seal Serafina issues to tributaries). The skeletons come to attention and move to intercept.",
+      "monsters": [
+        {
+          "name": "Skeleton",
+          "count": 3,
+          "tactics": "Two attack the foremost party members; the third moves to the portcullis mechanism room and attempts to lower the portcullis to trap the party in the passage. If the party has a cleric, this is a prime opportunity for a Turn Undead — success clears the encounter entirely."
+        }
+      ],
+      "treasure_hint": "The skeletons carry nothing. The gatehouse guardroom above has a wooden chest with 40 sp in old tribute coin and a list of current blood-tax rates written in a formal hand."
+    },
+    {
+      "symbol": "enc_banquet_ghouls",
+      "name": "Banquet Room — The Court at Table",
+      "trigger_hint": "Party enters the banquet room. The ghouls maintain their seated pose for two rounds if the party does not approach aggressively; they attack immediately if weapons are drawn or holy symbols presented on entry.",
+      "monsters": [
+        {
+          "name": "Ghoul",
+          "count": 6,
+          "tactics": "The ghouls use the table and chairs for cover, pushing the furniture into the party's advance during the first round. The chamberlain-ghoul at the head of the table directs the others: two attack frontally, two circle to flank, two target the party member who appears to be a spellcaster. Paralysis is their primary weapon — once a target is paralysed, two ghouls redirect to finish them. Elves are immune to ghoul paralysis."
+        }
+      ],
+      "treasure_hint": "Six silver candelabras worth 40 gp each (240 gp total, but heavy — 10 lb each). Court jewellery on the ghouls: 3d6 gp per ghoul."
+    },
+    {
+      "symbol": "enc_viktor_champion",
+      "name": "Viktor in the Thrall Quarters",
+      "trigger_hint": "Party enters the thrall quarters during daytime (Viktor sleeps but wakes on 3-in-6 if another coffin is attacked); or party encounters Viktor in the grand hall or corridors at night if Serafina has sent him to intercept. Viktor does not flee. Viktor does not negotiate unless he has been reduced below half hit points and the party explicitly offers terms.",
+      "monsters": [
+        {
+          "name": "Viktor, Vampire Champion",
+          "count": 1,
+          "tactics": "Viktor fights methodically. He opens with the bite against the highest-AC target to test armour, then switches to the sword for sustained combat. He uses his charm gaze on any cleric or magic-user in the second round, trying to neutralise the party's most dangerous support. If reduced below 10 hp, he shifts to bat form and withdraws to his coffin — but not before trying to take one more target below zero. If his coffin has been destroyed, he fights to 0 hp and dissipates."
+        },
+        {
+          "name": "Vampire Spawn",
+          "count": 3,
+          "tactics": "If Viktor is in the thrall quarters and combat lasts more than 2 rounds, 1d3 woken spawn join per round. They fight without tactics — direct attacks on the nearest living target."
+        }
+      ],
+      "treasure_hint": "Viktor wears a ring of feather falling (magic) on his right hand and carries a war-scarred iron medallion with no magical properties but obvious sentimental value — it was his captain's badge from his mortal life."
+    },
+    {
+      "symbol": "enc_serafina_confrontation",
+      "name": "Serafina — Grand Hall or Inner Sanctum",
+      "trigger_hint": "Party confronts Serafina in the grand hall during court hours, or discovers her in the inner sanctum when she has retreated as mist. The confrontation can be fought, negotiated, or resolved through the bargain ending.",
+      "monsters": [
+        {
+          "name": "Serafina, Vampire Queen",
+          "count": 1,
+          "tactics": "Serafina does not begin combat immediately unless attacked or threatened directly. She uses the first round to assess the party and attempt charm gaze on the most dangerous-looking member. If a holy symbol is presented, she withdraws to maintain distance. She will spend one round in dialogue if the party allows it — this is not weakness, it is intelligence; she is gathering information. In serious combat, she uses bat form to reach the ceiling and dive on isolated targets, combining bite with charm attempts. If reduced below 15 hp, she shifts to mist and retreats to the inner sanctum. Only destroying her in the true coffin ends the threat."
+        },
+        {
+          "name": "Wight",
+          "count": 2,
+          "tactics": "Court bodyguards. Move to interpose themselves between Serafina and the nearest party member. They do not retreat."
+        }
+      ],
+      "treasure_hint": "On Serafina's person: the key to the iron box in her chambers, a ring of protection +1, and 30 gp in antique coin. In the inner sanctum, near the sarcophagus: a chest with 200 gp, a spell scroll of Protection from Evil (cleric, 3rd level equivalent), and the native earth of the true coffin — which, if destroyed, means Serafina cannot reform after being reduced to 0 hp."
+    }
+  ],
+
+  "plot_beats": [
+    {
+      "symbol": "beat_arrival",
+      "title": "The Palace at First Light",
+      "trigger_hint": "Party reaches the mountain approach and gets their first look at the palace, and/or arrives at Aldenwyr Hall for the briefing from Lord Aldenwyr.",
+      "outcome": "Party understands the mission: rescue Mira, end Serafina's blood-tax. They have some sense of the approach's dangers (wolves, bats, the gatehouse) and can make first contact with local villagers who describe the tribute system and the general fear of the place. The scope of the task becomes real.",
+      "leads_to": "beat_find_mira",
+      "dm_notes": "Lord Aldenwyr is a secondary character — desperate, willing to pay well (300 gp total, 100 up front if the party negotiates), and too frightened to go himself. He knows only that Serafina took Mira; he does not know the palace's layout. The village on the mountain's western slope is a better source: three generations of tribute-payers who know the access road, the wolf patrols, and the fact that the palace lights never go out. One old villager, Petra, actually made a tribute delivery seven years ago and can describe the outer courtyard and the grand hall entrance, including the fact that the ghouls sit at the banquet table — she thought they were people, briefly, and then she did not."
+    },
+    {
+      "symbol": "beat_find_mira",
+      "title": "The Captive in the Deep Cells",
+      "trigger_hint": "Party locates the palace dungeons and finds Mira. This may happen early (direct mission focus) or late (after exploring other areas). Father Aldric in the chapel can confirm Mira's location if the party rescues him first.",
+      "outcome": "Party finds Mira alive but visibly wrong — too calm, too pale, a beat slow to respond. If Father Aldric is present, he immediately recognises the signs of partial enthrallment and tells the party they have a limited time. The dungeon prisoners (merchant, soldier) can be freed easily. The ghoul gaoler must be dealt with.",
+      "leads_to": "beat_learn_serafina",
+      "dm_notes": "The exact state of Mira should be played carefully. She is cooperative but the hesitation is visible. Players who ask her directly 'do you want to leave?' should hear her say yes — and then pause — and then say it again with more effort. The partial enthrallment is not mind control; it is pull. She can resist it. She is choosing to resist it. But it costs her something each time. If the party is perceptive, this is their first signal that Serafina is not simply predatory — there is something in how Mira describes Serafina's conversations that suggests a person rather than a monster."
+    },
+    {
+      "symbol": "beat_learn_serafina",
+      "title": "The Bargain and the Plague",
+      "trigger_hint": "Party reads Serafina's early journal from the iron box in her chambers, or Elena agrees to share the library's information in exchange for the ending-deal, or Grendak (once allied) recounts what he witnessed of her arrival centuries ago.",
+      "outcome": "Party learns Serafina's origin: a mortal woman of some position who led her people through a mountain region during a catastrophic winter plague. She bargained with something old and cold — gave up her mortality and accepted the hunger — in exchange for immunity and the power to protect her people. She kept them alive. She has been paying the price ever since. Whether this changes the party's approach to the final confrontation is entirely their decision.",
+      "leads_to": "beat_confront_viktor",
+      "dm_notes": "The early journal is the most direct route. The writing is archaic but readable, and it describes in matter-of-fact terms: the dying, the cold, the choice. There is no self-pity in it, which makes it more affecting. The bargain itself is not described in the journal — only the decision to accept it and its immediate aftermath. Grendak's account is different: he was king of the hold when Serafina arrived, already transformed, seeking shelter. He refused her entry; she took it by force, killing his guards but leaving his people's crypts undisturbed. He has had centuries to think about whether that distinction matters. He will share this if the party asks and he has come to trust them."
+    },
+    {
+      "symbol": "beat_confront_viktor",
+      "title": "The Champion Falls",
+      "trigger_hint": "Party confronts Viktor — in the thrall quarters during daylight, in the corridors, or in the grand hall if he intercepts them at Serafina's direction.",
+      "outcome": "Viktor is defeated or destroyed. If defeated but not destroyed (reduced to 0 hp by non-sunlight means, his coffin intact), he will retreat to it and reform. If his coffin is destroyed first, he fights to 0 hp and does not return. With Viktor out of the picture, access to the deep hold becomes significantly safer and the thrall quarters can be cleared at more leisure.",
+      "leads_to": "beat_final_confrontation",
+      "dm_notes": "Viktor is the most straightforward major fight in the palace. He has no hidden depths — he is loyal, he is competent, he does not beg. If the party somehow wants to negotiate with him after defeating him, he has nothing to offer and would find the attempt puzzling. He was a soldier; this is the end of a battle. He is comfortable with that. The ring of feather falling is a useful item for the rest of the adventure — the escape tunnel exit is in a pine thicket on a steep slope and the descent is treacherous."
+    },
+    {
+      "symbol": "beat_final_confrontation",
+      "title": "The Queen in Her True Place",
+      "trigger_hint": "Party reaches the inner sanctum — via the secret wardrobe door in Serafina's chambers — and confronts Serafina there, or finds her sleeping body in the true coffin. Grendak's information is required to find this location without a thorough search of the chambers.",
+      "outcome": "Serafina is destroyed (standard or tragic ending), or a bargain is struck (negotiated ending). Grendak is freed. Elena gets her ending if the deal was made. Mira's fate is determined by the party's speed.",
+      "leads_to": null,
+      "dm_notes": "The negotiated ending is only available if the party has read the early journal or heard Grendak's account — they need to know enough of Serafina's history to propose terms she would consider. A party that rushes in without this knowledge cannot negotiate, not because the option is blocked mechanically, but because they do not know what to offer. Serafina's price for a genuine bargain: the blood-tax is lifted, Mira is released unharmed, but the palace remains hers. She will keep the tribute routes closed for one generation. This is not an entirely satisfying resolution — she is still here, she is still what she is — but it is a real one. What she does a generation from now is a problem for a future party."
+    }
+  ],
+
+  "secrets": [
+    {
+      "symbol": "sec_mira_enthrallment",
+      "content": "Mira Aldenwyr has been fed Serafina's blood every second night for three days. The enthrallment process in BFRPG terms functions as a progressive charm that resists magical removal without Cure Disease. At three days, she is partially affected — slowed, pale, subject to a pull toward the palace's deeper levels. At seven days from first feeding, she becomes fully turned and rises as a vampire spawn under Serafina's command. The timeline can be broken at any point before the seventh day with Cure Disease from a cleric of 3rd level or higher. Father Aldric can cast it if freed; Elena can confirm the diagnosis and timeline if the deal is made; Serafina herself, if negotiated with, will confirm the situation with clinical honesty.",
+      "reveal_when": "Party observes Mira's condition closely and succeeds on an Intelligence check, or asks Father Aldric to examine her, or asks Elena what the blood-feeding does, or confronts Serafina with the question directly.",
+      "leads_to_beat": "beat_find_mira"
+    },
+    {
+      "symbol": "sec_serafina_bargain",
+      "content": "Serafina was not always a monster. She was a woman of authority — the record in Grendak's chronicle suggests a minor noblewoman leading refugees, but her own early journal is more personal: she describes her people dying of the plague, the children first, then the elderly, and the specific night she accepted the terms of something she found in the dark of the mountain pass. The bargain was genuinely entered. She saved the people she could. The hunger and the centuries came after, and she adapted to both. She is not tormented by the bargain the way Vance was in the Morgansfort module — she made her peace with the cost. But she is tired, and she is lonely, and the library is the only thing she reads for pleasure rather than necessity. This complexity does not require the party to spare her. It is simply the truth of what she is.",
+      "reveal_when": "Party reads Serafina's early journal from the iron box in her chambers, or Grendak recounts the history of her arrival, or Elena describes Serafina's original bargain in exchange for the ending-deal.",
+      "leads_to_beat": "beat_learn_serafina"
+    },
+    {
+      "symbol": "sec_true_coffin_location",
+      "content": "The coffin in the elaborate room adjacent to the grand hall — the one any knowledgeable vampire-hunter would find first — is a decoy. It contains native earth and a sleeping effigy; touching it triggers a cold alarm that Serafina feels. The true coffin is the stone sarcophagus in the inner sanctum below her private chambers, accessible only through the secret door behind the wardrobe. Serafina has never told anyone its location. Grendak knows because he watched her build the sanctum in the hold's stone. Elena knows because she is a scholar and worked it out from context and from the layout of the crypt antechamber. Either will share the information — Grendak if the party earns his trust, Elena if the ending-deal is struck.",
+      "reveal_when": "Party earns Grendak's trust and asks about the coffin, or strikes the deal with Elena and asks the same question, or finds Serafina's private journal which includes a single oblique reference to the place she 'truly rests'.",
+      "leads_to_beat": "beat_final_confrontation"
+    },
+    {
+      "symbol": "sec_elena_ally",
+      "content": "Elena Vasricht the vampire spawn librarian is a potential ally — arguably the most useful one in the palace — but she cannot act against Serafina without an explicit deal. The compulsion that binds vampire spawn to their maker prevents it. However, the deal is simple: promise to end her properly (stake, behead, in her own coffin, which is the cracked one fourth from the left in the thrall quarters) after Serafina is destroyed, and Elena will provide everything she knows — the true coffin's location, Mira's timeline and cure, the contents of the treatise on vampiric vulnerabilities, the access to the crypt antechamber via the false bookshelf, and the name of the specific volume that triggers the mechanism. She keeps her word absolutely, not out of honour but because she has no reason to lie to people who are going to give her what she wants.",
+      "reveal_when": "Party speaks with Elena beyond initial pleasantries, picks up on her distress, and asks directly what she wants or whether she would help them. She will not volunteer this — the compulsion stops her from initiating betrayal — but she will answer an honest question honestly.",
+      "leads_to_beat": "beat_learn_serafina"
+    },
+    {
+      "symbol": "sec_escape_tunnel",
+      "content": "The dwarven escape tunnel behind the concealed door in the crypt antechamber's east wall was built by Grendak's craftsmen as a last resort and is unknown to Serafina. It exits in a pine thicket three hundred feet below the palace on the eastern face — away from the gatehouse, away from the wolf sentinels, and downslope toward the valley rather than up toward the approach road. Grendak will reveal it only after the party has committed to destroying Serafina, or if they have rescued at least one prisoner from the dungeons. He offers it as a practical gift and a test of whether the party actually intends to finish the job rather than take the information and run.",
+      "reveal_when": "Party allies with Grendak and he judges them committed to the task, or party searches the crypt antechamber thoroughly (DC 13 Intelligence to notice the seam in the geometric pattern).",
+      "leads_to_beat": null
+    }
+  ],
+
+  "endings": [
+    {
+      "symbol": "end_destroy_and_rescue",
+      "trigger": "Serafina is destroyed in her true coffin (staked, then beheaded, then exposed to sunlight or holy water) before Mira reaches the seventh day of enthralment. Mira has received Cure Disease or the enthralment ends with Serafina's destruction (either breaks it). Viktor must also be destroyed or his coffin must have been destroyed.",
+      "outcome": "Serafina's court collapses at her destruction: the spawn in the thrall quarters who survive go into a fugue state and can be dispatched without further combat, or they scatter down the mountain and become someone else's problem. The palace is dark and quiet within an hour. Grendak's ghost appears in the grand hall for the last time, standing before his people's old pillars, and thanks the party in dwarven-accented Common. He says: 'Build something better here, or leave it for the stone.' Then he fades. Mira is recovered — shaky, traumatised, ultimately whole. Lord Aldenwyr pays the agreed fee plus a bonus. The blood-tax villages hold a quiet celebration. Elena's coffin, if the deal was made, is dealt with last — a private, witnessed, cleanly executed end. The palace is available as a base of operations if the party wants it, though the dwarven deep hold will eventually attract its own complications."
+    },
+    {
+      "symbol": "end_destroy_mira_lost",
+      "trigger": "Serafina is destroyed in her true coffin, but Mira has reached or passed the seventh day without receiving Cure Disease. She completes the transformation and rises as a vampire spawn — initially confused, then increasingly subject to the hunger. Without Serafina's command structure she is not controlled but she is not safe.",
+      "outcome": "The court collapses as in the first ending. Grendak appears and departs. But the party faces Mira — aware of who she is, aware of what has happened to her, and hungry. The party must make a choice: attempt to restrain her and find a way to reverse the transformation (no known method exists in standard BFRPG; this is a quest hook for a follow-on adventure), or put her down. Neither option is without cost. Lord Aldenwyr, if told the truth, does not blame the party, which is almost worse than if he did. He sits with the news for a long time. He pays the fee. He does not speak for a while after that."
+    },
+    {
+      "symbol": "end_bargain",
+      "trigger": "Party negotiates with Serafina before or during the final confrontation, offering terms she considers acceptable. This requires knowledge of her history (the early journal or Grendak's account) and a concrete proposal. The minimum viable offer: the blood-tax is permanently lifted, Mira is released unharmed with enthralment cured (Serafina provides a vial of her own blood in reverse — the mechanism she uses to reverse partial turnings, used rarely and requiring her to want to use it), and the party agrees not to reveal the true coffin's location. In exchange, the palace remains hers.",
+      "outcome": "Mira is released and cured — Serafina is precise and efficient about it, without warmth but also without cruelty. The tribute villages are informed the tax is lifted; they do not know why and are not sure they trust it, but the wolves stop running the roads within a week. Grendak appears and watches the party leave. He says nothing. He does not fade. He has more waiting to do. Elena, if the deal with her was also struck, has her ending honoured by the party — Serafina does not intervene, and Elena, waiting in the library when the party comes back, simply closes her book and nods. The truce holds for as long as the party and Serafina are both alive and remember its terms. What happens after is not this adventure's concern."
+    }
+  ],
+
+  "world_facts": [
+    {
+      "fact": "The mountain palace was once the Ironhold, a dwarven stronghold built four centuries ago by King Grendak's ancestors to control the mountain pass. Serafina took it by force two centuries past, killing the last of the hold's defenders but leaving the crypts undisturbed — a distinction that Grendak's ghost has had two centuries to decide whether it matters.",
+      "tags": ["ironhold", "dwarves", "grendak", "serafina", "history", "palace"],
+      "importance": 9
+    },
+    {
+      "fact": "Serafina made her bargain centuries ago to save her people from a winter plague during a mountain crossing. She was not tricked — she understood the terms. She has been paying the cost since: the hunger, the centuries, the loneliness. She is not tormented by it. She made her peace. She is simply tired.",
+      "tags": ["serafina", "bargain", "history", "vampire", "origin", "plague"],
+      "importance": 10
+    },
+    {
+      "fact": "Vampires in this region maintain a decoy coffin near the most accessible part of their lair. The true resting place is always hidden. A vampire reduced to 0 hit points returns to mist and will attempt to reach the true coffin; only destroying the body in the true coffin ends the threat permanently.",
+      "tags": ["vampire", "coffin", "mechanics", "combat", "tactics"],
+      "importance": 9
+    },
+    {
+      "fact": "Vampire spawn are vampire-kind of lesser power, created by a vampire's blood-feeding over several nights. They are bound to their maker by compulsion and retain some of their original personality — but the compulsion prevents active betrayal without being explicitly released or the maker being destroyed.",
+      "tags": ["vampire spawn", "undead", "mechanics", "enthralment"],
+      "importance": 8
+    },
+    {
+      "fact": "Partial enthralment by vampire blood-feeding can be broken by Cure Disease cast by a cleric of 3rd level or higher, if applied before full turning is complete. Full turning — seven days after first feeding — cannot be reversed by any known means in the standard canon.",
+      "tags": ["enthralment", "mechanics", "cleric", "cure disease", "mira"],
+      "importance": 9
+    },
+    {
+      "fact": "Grendak's ghost is bound to the deep levels of the old Ironhold and cannot leave them. He has been present for two centuries of Serafina's occupation and has watched every hunter who has come for her fail. He is bitter, not broken, and will help the party if they demonstrate genuine intent and treat the hold's history with respect.",
+      "tags": ["grendak", "ghost", "ironhold", "ally", "bound"],
+      "importance": 8
+    },
+    {
+      "fact": "Elena Vasricht, the vampire spawn librarian, wrote a clinically accurate treatise on vampiric vulnerabilities — stakes of ash wood through the heart while the vampire sleeps, beheading, exposure to direct sunlight or immersion in running water, holy symbols held with genuine faith, and garlic as a persistent repellent. She wants to be included in the list of solved problems. Her coffin is the fourth from the left in the thrall quarters, with a crack across the lid.",
+      "tags": ["elena", "vampire", "vulnerabilities", "mechanics", "library", "spawn"],
+      "importance": 8
+    },
+    {
+      "fact": "The dwarven escape tunnel, built in secret by Grendak's craftsmen, exits in a pine thicket on the eastern face of the mountain. It is unknown to Serafina. Its entrance is concealed behind a section of geometric carved wall in the crypt antechamber, indistinguishable from the surrounding pattern to those who do not know to look.",
+      "tags": ["escape tunnel", "dwarves", "ironhold", "secret passage", "exit"],
+      "importance": 7
+    },
+    {
+      "fact": "Ghouls are immune to sleep and charm effects but not to Turn Undead. Ghoul paralysis affects all living creatures except elves. A paralysed creature cannot move or act for 2d4 turns.",
+      "tags": ["ghoul", "undead", "mechanics", "paralysis", "combat"],
+      "importance": 6
+    },
+    {
+      "fact": "Wights can only be harmed by silver or magical weapons. Ordinary steel passes through them. A wight's claw drains one experience level per hit with no saving throw in BFRPG core rules. A creature drained to zero levels rises as a wight under the drainer's command in 1d4 days.",
+      "tags": ["wight", "undead", "mechanics", "level drain", "silver weapons"],
+      "importance": 9
+    }
+  ]
+}
