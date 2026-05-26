@@ -693,7 +693,7 @@ async def test_malformed_tool_args_does_not_poison_next_prompt(  # type: ignore[
     # The recovery system note is present so the model has a clear
     # signal that a call didn't land.
     assert any(
-        msg.get("role") == "system" and msg.get("content") == _TOOL_REJECTION_RECOVERY_NOTE
+        msg.get("role") == "user" and msg.get("content") == _TOOL_REJECTION_RECOVERY_NOTE
         for msg in second_call_messages
     ), "expected the sanitised recovery system note in the next prompt"
 
@@ -748,7 +748,7 @@ async def test_unknown_tool_does_not_poison_next_prompt(  # type: ignore[no-unty
 
     # Recovery note present.
     assert any(
-        msg.get("role") == "system" and msg.get("content") == _TOOL_REJECTION_RECOVERY_NOTE
+        msg.get("role") == "user" and msg.get("content") == _TOOL_REJECTION_RECOVERY_NOTE
         for msg in second_call_messages
     )
 
@@ -864,7 +864,7 @@ async def test_all_rejected_with_narration_preserves_prose(  # type: ignore[no-u
 
     # And the recovery note is there.
     assert any(
-        m.get("role") == "system" and m.get("content") == _TOOL_REJECTION_RECOVERY_NOTE
+        m.get("role") == "user" and m.get("content") == _TOOL_REJECTION_RECOVERY_NOTE
         for m in second_call_messages
     )
 

@@ -268,7 +268,10 @@ class _AccumulatedToolCall:
         if function is not None:
             name_part = getattr(function, "name", None)
             if name_part:
-                self.name = (self.name + name_part) if self.name else name_part
+                raw_name = (self.name + name_part) if self.name else name_part
+                # qwen3_coder occasionally leaks the [TOOL_CALLS] token into
+                # the function name; strip it so dispatch resolves correctly.
+                self.name = raw_name.removeprefix("[TOOL_CALLS]").strip()
             args_part = getattr(function, "arguments", None)
             if args_part:
                 self.arguments += args_part
@@ -619,7 +622,12 @@ async def take_turn(
             for event in rejection_events:
                 yield event
             if rejection_events:
-                messages.append({"role": "system", "content": _TOOL_REJECTION_RECOVERY_NOTE})
+                # Use "user" role, not "system": vLLM rejects a system
+                # message after a tool message with HTTP 400. The
+                # [engine: ...] prefix tells the model this is not player
+                # speech — same convention as PLAYER ATTRIBUTION in the
+                # system prompt.
+                messages.append({"role": "user", "content": _TOOL_REJECTION_RECOVERY_NOTE})
 
             # Loop back for another stream; the model now sees the
             # honourable tool results (and any recovery note) in history.
