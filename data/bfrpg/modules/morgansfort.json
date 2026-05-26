@@ -1,0 +1,1017 @@
+{
+  "format_version": "1.0",
+  "synopsis": "Morgansfort, a frontier keep guarding the northern pass, is beset by goblin raids out of the Greenhill Caves. When the party is hired to deal with the threat, they find the goblins are pawns — silver coins bearing an old noble crest point toward the overgrown ruins of Lord Vance's manor, where a fallen paladin now haunts his own tomb, bound to a shadow pact he never truly chose. The adventure moves from the keep's market-square politics through a goblin cave-complex and into a haunted manor, building toward a confrontation with an undead lord who may be as much a victim as a monster.",
+  "tone": "gritty — BFRPG-canonical. Player characters can die. Danger is telegraphed, not softened. Torchlight, mud, and the smell of old blood.",
+  "image_style": "dark fantasy illustration, ink and wash, torchlit stone",
+  "image_negative_prompt": "modern objects, photographic, watermark, text artifacts, extra fingers, bright colors, anime",
+  "level_range": [1, 3],
+  "estimated_sessions": 6,
+  "starting_hook": "A courier meets the party on the road — or word reaches them at the nearest town — that Castellan Thorvald of Morgansfort is paying for swords. Three merchant caravans have been hit in a fortnight. A child's older brother went missing near the eastern hills. The road north is becoming a gamble. The pay is fifty gold pieces each, on proof the raids have stopped.",
+  "starting_location_symbol": "loc_keep_gate",
+
+  "locations": [
+    {
+      "symbol": "loc_keep_gate",
+      "name": "Morgansfort Gatehouse",
+      "description": "The gatehouse squats at the end of a rutted approach road, its two drum towers patched with mismatched stone from two centuries of repairs. The portcullis is iron-shod oak, pitted with old fire damage that no one has scraped clean. A pair of guards in dented chain mail watch from the wall-walk with the particular boredom of men who have been on watch since before dawn. A wooden board nailed beside the gate bears a list of tolls — most crossed out and rewritten at least twice. Beyond the arch, the smell of cook-smoke and horse dung drifts out to meet arrivals. The gate is open from dawn to dusk; at night a bell-rope hangs inside for legitimate visitors.",
+      "parent_symbol": null,
+      "image_role": "scene:keep_gate_exterior",
+      "metadata": {
+        "area": "Morgansfort Keep",
+        "features": ["portcullis", "two drum towers", "wall-walk", "toll board"],
+        "guard_count": 2,
+        "open_hours": "dawn to dusk"
+      }
+    },
+    {
+      "symbol": "loc_common_hall",
+      "name": "Common Hall",
+      "description": "A long, low-beamed hall running the length of the keep's eastern range. Trestle tables occupy the middle, scarred with knife marks and decades of spilled ale. Off-duty soldiers sleep in rope bunks stacked three high against the north wall; their gear hangs on iron pegs above them. A clay hearth at the far end burns damp wood that fills the hall with a permanent haze. This is where the keep's soldiers eat, gamble, and argue. Information travels fast in here — anyone who spends an hour listening to conversation will hear most of the fort's current anxieties. The raids, Captain Audrik's impatience, and the strange lights seen in the east are all common topics.",
+      "parent_symbol": "loc_keep_gate",
+      "image_role": "scene:common_hall_interior",
+      "metadata": {
+        "area": "Morgansfort Keep",
+        "features": ["trestle tables", "rope bunks", "clay hearth"],
+        "social_hub": true,
+        "rumor_chance": "high"
+      }
+    },
+    {
+      "symbol": "loc_smithy",
+      "name": "Jeb's Smithy",
+      "description": "A stone forge-shed leaning against the inner wall, open-fronted and permanently hot. Iron tools hang on chains from the rafters: tongs, hammers, quenching rods. Jeb keeps a tidy shop for a man who works in fire — his anvil is swept clean after every session and his scrap iron sorted by weight. The smell of quenched metal and charcoal is thick enough to taste. Jeb himself is usually hammering at something, pausing only to blink rapidly when addressed — a nervous tic he has had for years. A wooden box under his workbench contains the coin he was paid for a 'rush repair job' by a goblin raider who wandered in alone under a white cloth three weeks ago. He has not told anyone except to mention it obliquely.",
+      "parent_symbol": "loc_keep_gate",
+      "image_role": "scene:smithy_forge",
+      "metadata": {
+        "area": "Morgansfort Keep",
+        "npc_present": "npc_jeb_smith",
+        "features": ["anvil", "forge", "iron tools", "wooden box with coin"],
+        "key_object": "goblin_silver_coin"
+      }
+    },
+    {
+      "symbol": "loc_chapel",
+      "name": "Chapel of St. Cayne",
+      "description": "A small stone chapel with a slate roof and a single narrow window of thick greenish glass that gives the interior a perpetual underwater light. St. Cayne, god of roads and travelers, is depicted in a carved wooden relief above the altar: a cloaked figure standing at a crossroads, one hand raised in blessing, the other holding a lantern. The altar cloth is embroidered with road-marking symbols. Mother Serra keeps the chapel meticulously clean, with fresh rushes on the floor changed every third day. A locked iron chest behind the altar holds the chapel's small treasury and a locked journal — Serra's personal record of the old stories she has collected from travelers over twenty years. She will share the story of Lord Vance if asked with genuine curiosity, not suspicion.",
+      "parent_symbol": "loc_keep_gate",
+      "image_role": "scene:chapel_interior",
+      "metadata": {
+        "area": "Morgansfort Keep",
+        "npc_present": "npc_mother_serra",
+        "deity": "St. Cayne",
+        "features": ["carved altar relief", "embroidered altar cloth", "locked iron chest"],
+        "services": ["healing", "Turn Undead", "lore on Lord Vance"]
+      }
+    },
+    {
+      "symbol": "loc_market",
+      "name": "Market Square",
+      "description": "A roughly cobbled square inside the main walls, barely large enough for six stalls. Three are permanent: a dried-goods seller, a leatherworker, and Trader Magda's canvas-covered table, which seems to stock whatever she thinks someone needs. The other three spaces rotate between a traveling herbalist, a tinker, and whoever rolls in with a cart of something to sell. The square is also where notices are posted — a board on a central post currently bears a smudged notice about the goblin raids and an older one offering two silver for information on missing livestock. Old Theo can often be found sleeping against the base of the post in the afternoon, a clay cup beside him.",
+      "parent_symbol": "loc_keep_gate",
+      "image_role": "scene:market_square",
+      "metadata": {
+        "area": "Morgansfort Keep",
+        "npc_present": ["npc_trader_magda", "npc_beggar_theo"],
+        "features": ["notice board", "six stalls", "permanent traders"],
+        "notice_board_contents": ["goblin raid warning", "livestock reward"]
+      }
+    },
+    {
+      "symbol": "loc_mayors_office",
+      "name": "Mayor Aldric's Office",
+      "description": "A cluttered room above the common hall, reached by a creaking exterior stair. Mayor Aldric is the civilian administrator of the keep's surrounding village — he manages tax collection, civil disputes, and supply contracts, and is careful to distinguish his authority from the Castellan's. The room smells of tallow candles and old paper. Shelves sag under ledger books. A desk faces the door, its surface buried in correspondence. Aldric is a nervous, precise man who is out of his depth with the raids; he will eagerly point the party toward Thorvald and ask them to keep him informed, then forget to pay for the information. He has no secret agenda — he is simply a bureaucrat in a dangerous place.",
+      "parent_symbol": "loc_keep_gate",
+      "image_role": "scene:mayors_office",
+      "metadata": {
+        "area": "Morgansfort Keep",
+        "features": ["ledger shelves", "correspondence desk", "exterior stair access"],
+        "npc_function": "civilian administrator"
+      }
+    },
+    {
+      "symbol": "loc_barracks",
+      "name": "Soldier Barracks",
+      "description": "The main barracks occupies the keep's western range — a two-story stone building with narrow arrow-slit windows and heavy wooden doors. The ground floor holds weapon racks, a practice dummy, and a duty roster chalked on the wall. The upper floor is bunk space for soldiers not sleeping in the common hall. Captain Audrik uses a small room at the top of the stairs as a planning room; a map of the surrounding area is pinned to a board, with the locations of the three raided caravans marked in red ink. He has already sketched a route to what he believes is the cave entrance — he is not wrong, but he has underestimated the force inside.",
+      "parent_symbol": "loc_keep_gate",
+      "image_role": "scene:barracks_interior",
+      "metadata": {
+        "area": "Morgansfort Keep",
+        "npc_present": "npc_captain_audrik",
+        "features": ["weapon racks", "practice dummy", "duty roster", "raid map"],
+        "key_object": "audrik_raid_map"
+      }
+    },
+    {
+      "symbol": "loc_jail",
+      "name": "Keep Jail",
+      "description": "Three cells cut from the bedrock beneath the keep, reached by a steep stair from the barracks guardroom. The cells smell of damp stone and old straw. Iron bars, bolted into the rock with lead, divide each cell from a central passage. A single oil lamp hangs on a peg in the passage — it is always lit, day and night, as a condition the current jailer negotiated years ago. One cell holds a goblin prisoner who was taken during the last raid, wounded in the leg and surly. He will not speak Common willingly, but he understands it perfectly. If given food and treated without cruelty, he can be persuaded to confirm that there is a 'pale spirit man' who sends orders through the shaman — this corroborates other evidence of Vance's involvement.",
+      "parent_symbol": "loc_keep_gate",
+      "image_role": "scene:jail_cells",
+      "metadata": {
+        "area": "Morgansfort Keep",
+        "features": ["three rock-cut cells", "iron bar doors", "goblin prisoner"],
+        "prisoner": "wounded goblin scout, knows of Vance as 'pale spirit man'",
+        "interrogation_dc": "treat the goblin with basic decency to unlock dialogue"
+      }
+    },
+
+    {
+      "symbol": "loc_cave_entrance",
+      "name": "Greenhill Cave Mouth",
+      "description": "The cave entrance is hidden in a fold of the hillside, east of the fort by roughly three miles, below a stand of twisted hawthorn that clings to the slope. The mouth is low — tall humans must duck — and framed by crumbling stone that looks deliberately shaped, though the goblins did not shape it. Generations of passage have worn a smooth track through the mud just inside. The smell of unwashed bodies and woodsmoke drifts out faintly. The goblins have draped a mat of woven grass across the interior that serves as a visual screen without blocking airflow. Fresh boot-prints in the mud outside indicate activity within the last few hours. There is no obvious guard here — the real watch post is just inside.",
+      "parent_symbol": null,
+      "image_role": "scene:cave_entrance_hillside",
+      "metadata": {
+        "area": "Greenhill Caves",
+        "features": ["low entrance", "hawthorn cover", "grass screen", "worn mud track"],
+        "visibility": "hidden — DC 13 Wisdom to spot from the road",
+        "smell_radius": "detectable within 30 feet downwind"
+      }
+    },
+    {
+      "symbol": "loc_cave_sentry",
+      "name": "Sentry Post",
+      "description": "Just beyond the grass screen, the passage widens into a rough chamber barely large enough for four people to stand. Two rough stools face the entrance. A clay pot of smoldering punk — a slow-burning rope used to light torches quickly — sits between them, serving as an alarm device as well as a light source. The goblins on watch have a clear sightline to the entrance and can shout a warning in two seconds. Crude pictograms scratched into the cave wall mark a tally of kills — merchants and horses, mostly. A horn hangs on a peg: one blast summons two more goblins from the common area within a round, two blasts brings Gnashfang himself in two rounds.",
+      "parent_symbol": "loc_cave_entrance",
+      "image_role": "scene:cave_sentry_post",
+      "metadata": {
+        "area": "Greenhill Caves",
+        "npc_present": ["npc_goblin_scout_1", "npc_goblin_scout_2"],
+        "features": ["two stools", "smoldering punk", "tally marks", "signal horn"],
+        "alarm_horn": {
+          "one_blast": "2 goblins arrive in 1 round",
+          "two_blasts": "Gnashfang arrives in 2 rounds"
+        }
+      }
+    },
+    {
+      "symbol": "loc_cave_common",
+      "name": "Goblin Common Burrow",
+      "description": "The main living area of the cave complex — a natural cavern expanded by decades of chipping and scraping. Sleeping pallets of dried grass and stolen wool fill the floor in rough rows. Gnawed bones, cracked pottery, and copper coins litter the passages between them. A fire-pit in the center has a hole chipped in the ceiling above it; the smoke disperses but never fully clears, leaving a grey haze at head height. Personal weapons hang on the walls or lie beside sleeping spots. At any given time, 1d6 off-duty goblins are here — sleeping, arguing, or sharpening blades. The two cave wolves are chained near the south wall when not being walked by Gnashfang.",
+      "parent_symbol": "loc_cave_entrance",
+      "image_role": "scene:goblin_common_burrow",
+      "metadata": {
+        "area": "Greenhill Caves",
+        "npc_present": ["npc_cave_wolf_1", "npc_cave_wolf_2", "npc_goblin_warrior_1", "npc_goblin_warrior_2"],
+        "features": ["sleeping pallets", "central fire-pit", "wolf chains", "loot scatter"],
+        "random_goblins": "1d6 off-duty goblins present at any time"
+      }
+    },
+    {
+      "symbol": "loc_cave_shaman",
+      "name": "Shaman's Chamber",
+      "description": "Shaman Grix has screened off a side passage with a curtain of bone and leather strips that clatter as anyone passes through. Inside, the chamber smells of burnt herbs and something older and colder underneath — a smell that does not belong in a goblin's lair. The walls are marked with spiraling symbols in charcoal and what looks like dried blood, centered on a crack in the far wall that descends into the rock. Grix conducts her communions here, pressing her hands against the crack and listening. The orders from Vance do not come as words but as feelings: urgency, target, route. She interprets them with a shaman's intuition and translates them into raids. A clay pot near the crack holds six silver coins bearing the Vance crest — payment tendered through a wight messenger she met only in darkness.",
+      "parent_symbol": "loc_cave_entrance",
+      "image_role": "scene:shaman_chamber",
+      "metadata": {
+        "area": "Greenhill Caves",
+        "npc_present": "npc_shaman_grix",
+        "features": ["bone curtain", "spiral symbols", "rock crack", "six silver coins"],
+        "key_object": "vance_silver_coins",
+        "secret_link": "sec_vance_coin_sigil"
+      }
+    },
+    {
+      "symbol": "loc_cave_treasure",
+      "name": "Chief's Lair and Treasure Pit",
+      "description": "Gnashfang's personal territory is a larger chamber at the rear of the complex, its ceiling high enough for him to stand straight. A throne of sorts — a captain's chair taken from a caravan — occupies the far end, draped in a stolen wool cloak. A locked iron chest beside it holds the bulk of the tribe's plunder: 230 sp, 45 gp, three pieces of crude jewelry (worth 2d6 gp each), and a potion of healing in a stoppered glass vial that Gnashfang has not identified and would not trust if he did. The chest is locked; Gnashfang wears the key around his neck. A second wolf pelt nailed to the wall serves as a territorial marker. The walls are thick with scratch-marks at waist height — Gnashfang's habit when thinking.",
+      "parent_symbol": "loc_cave_entrance",
+      "image_role": "scene:gnashfang_lair",
+      "metadata": {
+        "area": "Greenhill Caves",
+        "npc_present": "npc_gnashfang",
+        "features": ["caravan throne-chair", "locked iron chest", "wolf pelt marker"],
+        "treasure": {
+          "sp": 230,
+          "gp": 45,
+          "jewelry": "3 pieces, 2d6 gp each",
+          "magic": "potion of healing (unidentified)"
+        },
+        "chest_key": "on Gnashfang's person"
+      }
+    },
+    {
+      "symbol": "loc_cave_tomb",
+      "name": "Hidden Elven Tomb-Chamber",
+      "description": "Behind a section of cave wall in the shaman's passage that has been worked smooth with old tools — unmistakably elven craft compared to the goblin scraping elsewhere — a disguised door pivots on a stone pin when the correct stone is pressed. Beyond lies a chamber sealed for centuries before Vance found and opened it. The air inside is cold and perfectly still; no torch-flame wavers here. Four stone biers hold the remains of elven warriors, their weapons corroded to rust, their armor oxidized to green lace. The walls bear carvings of a forest scene that the elves believed continued into the next world. At the far end, a stone table holds a sealed iron box — Vance's, not elven. Inside the box: a bundle of orders written in a precise, thin hand on yellowed parchment, and seven silver coins. The orders concern raid timing and road targets and are signed with a stylized V above the hand-on-black-field sigil.",
+      "parent_symbol": "loc_cave_entrance",
+      "image_role": "scene:elven_tomb_chamber",
+      "metadata": {
+        "area": "Greenhill Caves",
+        "features": ["false stone door", "four elven biers", "forest-wall carvings", "Vance's iron box"],
+        "key_objects": ["signed orders", "seven silver coins with Vance crest"],
+        "hidden": true,
+        "detect_dc": "DC 14 Intelligence to notice the worked stone differs; DC 11 to find the pivot-stone once noticed",
+        "secrets": ["sec_cave_is_elven_tomb", "sec_vance_coin_sigil"]
+      }
+    },
+
+    {
+      "symbol": "loc_tomb_approach",
+      "name": "Forested Approach to Vance's Hold",
+      "description": "The track that once ran to Vance's manor has been swallowed by twenty years of forest growth. Oaks have pushed through the old gravel and split it. The undergrowth is wrong — too quiet, birds absent, small animals absent. The track is still faintly visible as a depression between root mounds, leading eastward into thickening trees. As the party draws near, the temperature drops by several degrees without obvious cause. Old iron fence-posts, long fallen, are visible in the brush at intervals; they once marked the manor's outer boundary. Moss covers everything, even stones that should face south and dry in the afternoon. A raven sits on the highest visible branch and watches without calling. The raven is ordinary — it is simply the only bird willing to be here.",
+      "parent_symbol": null,
+      "image_role": "scene:forested_approach",
+      "metadata": {
+        "area": "Wraith Tomb / Vance's Hold",
+        "features": ["overgrown track", "fallen fence-posts", "unnatural silence", "temperature drop"],
+        "atmosphere": "oppressive, wrong — nature withdrawing from a tainted place",
+        "navigation": "can be found by following directions from Grix's chamber or from the cave tomb's orders"
+      }
+    },
+    {
+      "symbol": "loc_tomb_gatehouse",
+      "name": "Collapsed Gatehouse",
+      "description": "The outer gatehouse has partially collapsed on its left tower; the right tower still stands, its cap stones fallen inward. The portcullis is frozen in the raised position by decades of rust. The gate passage itself is clear but dark, its cobbles slick with green growth. On the inner face of the right tower, carved into the stone, is the Vance family crest — a silver hand on a black field, picked out in paint so old it has almost flaked away entirely. Gravel and stone fragments crunch underfoot. Two of Vance's skeletons patrol the courtyard visible beyond the arch, moving in a slow, irregular circuit that covers the full open ground. They do not investigate shadows or sounds unless something moves within thirty feet.",
+      "parent_symbol": "loc_tomb_approach",
+      "image_role": "scene:collapsed_gatehouse",
+      "metadata": {
+        "area": "Wraith Tomb / Vance's Hold",
+        "npc_present": ["npc_vance_skeleton_1", "npc_vance_skeleton_2"],
+        "features": ["collapsed left tower", "frozen portcullis", "Vance crest carving", "patrolling skeletons"],
+        "patrol_radius": "30 feet from the gatehouse arch into the courtyard",
+        "key_object": "vance_crest_in_stone"
+      }
+    },
+    {
+      "symbol": "loc_tomb_hall",
+      "name": "Haunted Audience Hall",
+      "description": "The great hall of the manor is still roofed but its windows are long broken, their frames eaten by rot, admitting wind and thin light in equal measure. The long table that once seated twenty still stands, set with pewter dishes that have tarnished to near black. The chairs are scattered, several overturned. Tapestries cling to the walls in grey shreds — their subjects are no longer visible, though one fragment shows what might be the lower half of a armored figure kneeling. Two zombie figures — what remain of household servants — move slowly between the table and a side door, enacting the motions of serving a meal that no longer exists. They will attack anything that disturbs the tableau. A locked writing desk in the corner holds nothing of value. The stairs at the back of the hall lead down to the sanctum.",
+      "parent_symbol": "loc_tomb_approach",
+      "image_role": "scene:haunted_hall_interior",
+      "metadata": {
+        "area": "Wraith Tomb / Vance's Hold",
+        "features": ["long table set for twenty", "tarnished pewter dishes", "shredded tapestries", "zombie servants", "writing desk", "stairs to sanctum"],
+        "zombies_count": 2,
+        "note": "The zombie servants are not listed as named NPCs — treat as standard BFRPG zombies, HD 2, AC 12, 1d8 damage"
+      }
+    },
+    {
+      "symbol": "loc_tomb_sanctum",
+      "name": "Vance's Sanctum",
+      "description": "Below the hall, a vaulted chamber that Vance used as a study in life and still uses as one — or the habit of it remains in the undead thing he has become. Shelves hold books in various states of decay; most are ordinary administrative records, surveys, household accounts. One shelf holds seven books that are different: bound in dark leather, written in a cramped hand that grows progressively more erratic across the years they span. The last book is Vance's personal journal, ending mid-sentence in a year twenty years past. Reading it — especially the final entries — reveals his horror at what the pact was costing him, his attempt to undo it, and his failure. On the central table, a black iron bowl holds the tools of whatever dark ritual he conducts here: candles made from animal fat, a ceremonial knife with a blade of obsidian, and a folded map of the region with roads marked and raid targets circled in the same thin handwriting as the orders found in the elven tomb.",
+      "parent_symbol": "loc_tomb_approach",
+      "image_role": "scene:vance_sanctum",
+      "metadata": {
+        "area": "Wraith Tomb / Vance's Hold",
+        "features": ["decaying bookshelves", "seven journal volumes", "ritual table", "obsidian knife", "regional raid map"],
+        "key_object": "vance_personal_journal",
+        "secrets": ["sec_vance_tormented"],
+        "journal_triggers": ["beat_vance_revealed"]
+      }
+    },
+    {
+      "symbol": "loc_tomb_beneath",
+      "name": "The Tomb Beneath",
+      "description": "A stair cut from solid bedrock descends below the sanctum into a natural cave that Vance fitted with rough stone work before his death — or near-death. At the bottom, four stone pillars support a low ceiling. Phosphorescent lichen on the walls gives a faint blue-green light that illuminates without warming; torches burn normally here but feel somehow unwelcome. At the center, a stone sarcophagus, its lid carved with a figure in paladin's armor, hands crossed on a shield. The carving is technically accomplished but deeply wrong in proportion — the hands are too large, the face expressionless where it should show peace. This is where Vance rests when he rests, which is infrequently. There is a 60% chance he is present when the party enters. If not, he will arrive within 1d6 rounds, sensing the intrusion. The two wights stand in alcoves to either side of the sarcophagus, motionless until Vance commands or until the sarcophagus is touched.",
+      "parent_symbol": "loc_tomb_approach",
+      "image_role": "scene:tomb_beneath_coffin",
+      "metadata": {
+        "area": "Wraith Tomb / Vance's Hold",
+        "npc_present": ["npc_lord_vance", "npc_vance_wight_1", "npc_vance_wight_2"],
+        "features": ["bedrock stair", "four stone pillars", "phosphorescent lichen", "carved sarcophagus"],
+        "vance_present_chance": "60% on entry",
+        "arrival_if_absent": "1d6 rounds"
+      }
+    }
+  ],
+
+  "npcs": [
+    {
+      "symbol": "npc_castellan_thorvald",
+      "name": "Castellan Thorvald",
+      "description": "A broad man in his late fifties with a soldier's posture and a soldier's economy of movement. His armor is always worn, always maintained. His face is deeply lined and his beard is iron-grey, trimmed close. He speaks slowly and with deliberate weight — he is not an eloquent man but he chooses his words carefully, which makes his silences more telling. He has commanded this keep for fourteen years and trusts his own judgment above all others. That judgment is currently compromised by an old debt.",
+      "motivation": "Defend the keep and its people at all costs. Contain the goblin threat before it becomes a route closure. Say nothing about Vance unless directly cornered.",
+      "starting_location_symbol": "loc_barracks",
+      "stats": {
+        "hd": "5",
+        "hp": 28,
+        "ac": 16,
+        "attacks": [{"name": "sword", "damage": "1d8+1", "to_hit_bonus": 3}],
+        "save_as": "F5",
+        "morale": 10,
+        "alignment": "lawful"
+      },
+      "sample_dialogue": "'The raids cost us three caravans and a family's winter supplies. I need them stopped, not studied. Come back when the caves are empty.' [If pressed on the coin sigil] 'Where did you hear that name? That is — that is old history. Attend to the goblins first.'",
+      "image_role": "npc:castellan_thorvald",
+      "secrets": ["sec_thorvald_knows"]
+    },
+    {
+      "symbol": "npc_jeb_smith",
+      "name": "Jeb the Blacksmith",
+      "description": "A cheerful, barrel-chested man of forty with forearms scarred from thirty years at the forge. He blinks rapidly when surprised or nervous — a tic he acquired after an accident with a burst ingot. He is genuinely friendly and talks freely, but he is embarrassed about the goblin incident and will circle around it before admitting the coin exists. He has kept it because it is fine silver and he could not bring himself to spend something so old.",
+      "motivation": "Honest work, fair payment, and no trouble. He is not brave but he is not dishonest either.",
+      "starting_location_symbol": "loc_smithy",
+      "stats": {
+        "hd": "1",
+        "hp": 5,
+        "ac": 10,
+        "attacks": [{"name": "hammer", "damage": "1d4", "to_hit_bonus": 1}],
+        "save_as": "F1",
+        "morale": 6,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "'I'm telling you the coin's not worth trouble. It's just old money. The fellow who gave it me was alone, carrying a rag, said he needed a bolt re-pinned — I didn't ask questions. I should have. The face on it though — that's not any king I know.'",
+      "image_role": "npc:jeb_smith",
+      "secrets": ["sec_vance_coin_sigil"]
+    },
+    {
+      "symbol": "npc_mother_serra",
+      "name": "Mother Serra",
+      "description": "A middle-aged woman with a round, serious face and the calm manner of someone who has tended the dying more than once. She wears plain grey robes with a road-mark badge of St. Cayne pinned at the shoulder. She is not soft — she has opinions and states them — but she listens before she speaks. She knows the story of Lord Vance because a traveler told it to her five years ago, and she wrote it down, and she recognized the name when the raids began.",
+      "motivation": "Tend to the sick, maintain the faith, and not let old darkness go unnamed. She believes the truth, even a terrible one, is better than a useful lie.",
+      "starting_location_symbol": "loc_chapel",
+      "stats": {
+        "hd": "3",
+        "hp": 14,
+        "ac": 12,
+        "attacks": [{"name": "mace", "damage": "1d6", "to_hit_bonus": 1}],
+        "save_as": "C3",
+        "morale": 8,
+        "alignment": "lawful",
+        "special": ["Turn Undead as C3", "Cure Light Wounds 2/day"]
+      },
+      "sample_dialogue": "'Lord Vance was a paladin of this very saint — St. Cayne, god of roads and those who keep them safe. There is a cruelty in that, I think. Whatever he bargained with, it knew what it was doing.' [On the coin] 'A silver hand on black. That is the Vance crest. Old family. Good blood once. Bring me the coin and I will show you.'",
+      "image_role": "npc:mother_serra",
+      "secrets": ["sec_vance_tormented"]
+    },
+    {
+      "symbol": "npc_captain_audrik",
+      "name": "Captain Audrik",
+      "description": "Young for his rank — perhaps twenty-eight — with a soldier's build and a politician's awareness of how he appears. His armor is well-maintained, his posture deliberate. He wants the raid to be his operation, his victory, his commendation. He is not incompetent; his map of the cave approach is accurate. He is, however, impatient and unwilling to consider that the goblins might be a symptom rather than the disease. He will try to attach himself to the party's mission, or at least extract detailed reports from them.",
+      "motivation": "Military glory. A successful punitive expedition against the caves would make his career. Thorvald's caution infuriates him.",
+      "starting_location_symbol": "loc_barracks",
+      "stats": {
+        "hd": "3",
+        "hp": 16,
+        "ac": 15,
+        "attacks": [{"name": "longsword", "damage": "1d8", "to_hit_bonus": 2}],
+        "save_as": "F3",
+        "morale": 9,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "'Thorvald will have us wait until they raid a fourth caravan. I have a route, I have the numbers. I have been asking for authorization for twelve days. If you're going in, take me. Or at least take my map — I'll want it back.'",
+      "image_role": "npc:captain_audrik",
+      "secrets": null
+    },
+    {
+      "symbol": "npc_trader_magda",
+      "name": "Trader Magda",
+      "description": "A sharp-eyed woman in her forties who dresses for weather rather than impression. She trades with merchants, soldiers, and passing adventurers without prejudice, and she listens to all of them. She is the best-informed person in the fort, and she knows it. She is not malicious but she is transactional — useful information costs something, even if it is only goodwill. She has heard the phrase 'pale lord of the east wood' from two separate merchants in the last month and filed it away.",
+      "motivation": "Profit and continued access to the road. She needs the northern pass open. A dead trade route is a dead livelihood.",
+      "starting_location_symbol": "loc_market",
+      "stats": {
+        "hd": "1",
+        "hp": 4,
+        "ac": 10,
+        "attacks": [{"name": "dagger", "damage": "1d4", "to_hit_bonus": 0}],
+        "save_as": "T2",
+        "morale": 6,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "'Two merchants said it, separately, weeks apart. A pale lord in the eastern trees. One of them was drunk, the other wasn't. I don't trade in rumors for free, but I'll tell you that one at cost — because if there's something in that wood, I want it dealt with before it touches my supply lines.'",
+      "image_role": "npc:trader_magda",
+      "secrets": ["sec_vance_coin_sigil"]
+    },
+    {
+      "symbol": "npc_innkeeper_boris",
+      "name": "Boris the Innkeeper",
+      "description": "A bald, heavy-set man with a warm voice who runs the keep's only common room. He has an excellent memory for faces and a practiced neutrality with strangers. He will rent beds, sell mediocre stew, and refill cups cheerfully. He has no secrets but knows who has been spending time with whom.",
+      "motivation": "A full common room, peaceful nights, and no damage to the furniture.",
+      "starting_location_symbol": "loc_common_hall",
+      "stats": {
+        "hd": "1",
+        "hp": 5,
+        "ac": 10,
+        "attacks": [{"name": "cudgel", "damage": "1d4", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 6,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "'Bed's a copper. Stew's whatever we have. The soldiers get rowdy after the second watch change — if you want quiet, take the corner room upstairs and bolt it.'",
+      "image_role": "npc:innkeeper_boris",
+      "secrets": null
+    },
+    {
+      "symbol": "npc_farmer_hilde",
+      "name": "Hilde the Farmer",
+      "description": "A weathered woman of fifty with strong hands and the direct manner of someone who has no time for hedging. She lost four goats and a cow to goblin raiders three weeks ago and wants justice or at least payment. She will tell the party exactly where she found the tracks and in which direction they led.",
+      "motivation": "Restitution for her losses and safety for her remaining stock. She is not interested in heroism — she is interested in her farm surviving the winter.",
+      "starting_location_symbol": "loc_market",
+      "stats": {
+        "hd": "1",
+        "hp": 4,
+        "ac": 10,
+        "attacks": [{"name": "pitchfork", "damage": "1d4", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 7,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "'Tracks came from the east, followed the creek for a half-mile, then cut uphill through the hawthorn. I followed them as far as I dared. There is a smell up there that does not belong.'",
+      "image_role": "npc:farmer_hilde",
+      "secrets": null
+    },
+    {
+      "symbol": "npc_tanner_oswin",
+      "name": "Oswin the Tanner",
+      "description": "A nervous, thin man of thirty-five whose profession ensures he is always slightly apart from others in the market. He claims to have seen lights moving in the eastern wood on three separate nights, bobbing in a way that no lantern should move. He is afraid to say much more in public and will speak freely only if approached privately.",
+      "motivation": "Not to be ignored, and not to be seen as making trouble. He believes what he saw and wants it to mean something.",
+      "starting_location_symbol": "loc_market",
+      "stats": {
+        "hd": "1",
+        "hp": 3,
+        "ac": 10,
+        "attacks": [{"name": "knife", "damage": "1d4", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 5,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "[In private] 'Three nights running. A blue-white light, moving between the trees — not swaying like a carried lantern. More like it was gliding. The third night there were two of them. I went inside and did not look again.'",
+      "image_role": "npc:tanner_oswin",
+      "secrets": null
+    },
+    {
+      "symbol": "npc_beggar_theo",
+      "name": "Old Theo",
+      "description": "A hunched man of perhaps sixty with a grey beard and eyes that are sharper than his posture suggests. He dresses in layers of old cloth and sleeps where he can. He has been at the fort for three years, and no one quite knows where he came from. He drinks too much and talks in circles, but certain topics — the eastern wood, old noble families, a soldier's duty — make him go still and quiet in a way that is different from ordinary reticence. He was once a retainer in Lord Vance's household, present on the campaign where Vance made his pact. He has lived with the knowledge for twenty years and it has cost him everything he used to be.",
+      "motivation": "Not to have to remember. But if someone comes asking in the right way — with patience, without judgment, perhaps with food — the truth has been waiting to be told.",
+      "starting_location_symbol": "loc_market",
+      "stats": {
+        "hd": "1",
+        "hp": 3,
+        "ac": 10,
+        "attacks": [{"name": "walking stick", "damage": "1d4", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 6,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "[If trusted] 'I was there. I saw him take the blade. I saw him say the words — I did not understand them but I knew they were wrong. He did it to save us. His own men. He didn't know the cost until it was paid.' [Long pause.] 'I ran. I have been running since.'",
+      "image_role": "npc:beggar_theo",
+      "secrets": ["sec_theo_retinue", "sec_vance_tormented"]
+    },
+    {
+      "symbol": "npc_child_marta",
+      "name": "Marta",
+      "description": "A precocious girl of twelve with mud on her boots and the careful observation of a child who has learned not to be underestimated by adults. Her older brother Pieter went looking for 'goblin treasure' near the hills eight days ago and has not come back. She has already scouted the approach road twice and is planning a third trip. She will tell the party everything she knows about the approach to the caves, including details Hilde did not notice, and she will try to follow them.",
+      "motivation": "Find her brother. She believes he is still alive, possibly as a goblin prisoner. She is wrong — Pieter died in the first day, and his body is in the cave common area — but the party need not tell her immediately.",
+      "starting_location_symbol": "loc_market",
+      "stats": {
+        "hd": "0",
+        "hp": 2,
+        "ac": 10,
+        "attacks": [{"name": "thrown stone", "damage": "1d2", "to_hit_bonus": 0}],
+        "save_as": "Normal Man",
+        "morale": 8,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": "'The guard captain won't listen. Boris won't listen. You're the ones who came about the raids, aren't you? I know the way to the hills. I've been twice already. I can show you the hidden track.' [On being told to stay behind] 'I'll stay behind the second time. Come back and tell me.'",
+      "image_role": "npc:child_marta",
+      "secrets": null
+    },
+    {
+      "symbol": "npc_guardsman_petr",
+      "name": "Guardsman Petr",
+      "description": "A young soldier of twenty-two who joined the guard two years ago from a farming village. He has not yet been tested in real combat. He is idealistic about duty and visibly nervous about whether he would meet it. He is friendly with the party if they treat him as a peer, not a hireling. He can serve as a guide or a backup combatant if the party is short on numbers, though he will break on a morale roll of 8 or below if things go badly.",
+      "motivation": "Prove he is the soldier he believes himself to be. Do his duty without flinching.",
+      "starting_location_symbol": "loc_barracks",
+      "stats": {
+        "hd": "1",
+        "hp": 6,
+        "ac": 14,
+        "attacks": [{"name": "spear", "damage": "1d6", "to_hit_bonus": 1}],
+        "save_as": "F1",
+        "morale": 8,
+        "alignment": "lawful"
+      },
+      "sample_dialogue": "'The Captain says we wait for orders. He's right, I know he's right. But eight days is a long time to wait when there's a kid missing.' [If invited along] 'Yes. I mean — yes. Let me get my shield.'",
+      "image_role": "npc:guardsman_petr",
+      "secrets": null
+    },
+    {
+      "symbol": "npc_gnashfang",
+      "name": "Gnashfang, Hobgoblin Chief",
+      "description": "A large hobgoblin standing nearly six feet, with reddish-brown skin, a broken tusk, and a permanently aggrieved expression. He wears a patchwork of looted armor — mismatched plates over chain — and carries a wide-bladed weapon that is half sword, half cleaver. He is smarter than most goblins and knows it, which has made him arrogant. He dislikes Vance's orders but obeys them because Vance pays in silver and the wights that deliver those orders are not something he wants to fight. He will not surrender but he might negotiate briefly if offered something he values more than the fight.",
+      "motivation": "Loot, dominance over his tribe, and survival. He respects force and despises weakness.",
+      "starting_location_symbol": "loc_cave_treasure",
+      "stats": {
+        "hd": "4",
+        "hp": 20,
+        "ac": 15,
+        "attacks": [{"name": "cleaver-sword", "damage": "2d4+1", "to_hit_bonus": 3}],
+        "save_as": "F4",
+        "morale": 9,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": "'You want in my cave, you pay me. You want to leave, you also pay me. This is business.' [If losing badly] 'The pale man will hear of this! He has soldiers you have never dreamed of!' [This is the clearest direct link to Vance he will give.]",
+      "image_role": "npc:gnashfang",
+      "secrets": null
+    },
+    {
+      "symbol": "npc_shaman_grix",
+      "name": "Grix, Goblin Shaman",
+      "description": "A female goblin of indeterminate age, shorter than most, with pale yellowish skin and eyes that reflect torchlight slightly differently than they should. She moves with unusual deliberateness and speaks rarely. She is not obviously malevolent — she is ambitious and her ambition has led her to listen to things she should have left unheard. She discovered the crack in her chamber connects, somehow, to Vance's will, and has cultivated the connection because it gives her power over Gnashfang. She does not fully understand what she is dealing with. She has begun dreaming in Vance's memories.",
+      "motivation": "Power and understanding, in that order. She wants to know what is in the tomb behind the false wall. She does not want to die.",
+      "starting_location_symbol": "loc_cave_shaman",
+      "stats": {
+        "hd": "2*",
+        "hp": 10,
+        "ac": 12,
+        "attacks": [{"name": "bone staff", "damage": "1d4", "to_hit_bonus": 1}],
+        "save_as": "M2",
+        "morale": 7,
+        "alignment": "chaotic",
+        "spells": ["sleep", "cause fear"]
+      },
+      "sample_dialogue": "[If cornered alone] 'I am not your enemy. The pale lord is your enemy. I am only his instrument — and instruments can be put down or picked up.' [She will trade information on Vance's location for safe passage. She may or may not keep her word.]",
+      "image_role": "npc:shaman_grix",
+      "secrets": ["sec_cave_is_elven_tomb", "sec_vance_coin_sigil"]
+    },
+    {
+      "symbol": "npc_goblin_scout_1",
+      "name": "Goblin Scout (Skrit)",
+      "description": "One of the two regular sentries at the cave entrance — wiry, quick-eyed, and bored. Named Skrit by the others. He will sound the alarm before fighting if given the chance.",
+      "motivation": "Stay alive and stay out of Gnashfang's way.",
+      "starting_location_symbol": "loc_cave_sentry",
+      "stats": {
+        "hd": "1-1",
+        "hp": 3,
+        "ac": 14,
+        "attacks": [{"name": "scimitar", "damage": "1d6", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 7,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_goblin_scout_2",
+      "name": "Goblin Scout (Nib)",
+      "description": "The second sentry. Nib is the one who reaches for the alarm horn first — he is more alert than Skrit, and more jumpy.",
+      "motivation": "Stay alive. Do not be the one who failed to sound the warning.",
+      "starting_location_symbol": "loc_cave_sentry",
+      "stats": {
+        "hd": "1-1",
+        "hp": 4,
+        "ac": 14,
+        "attacks": [{"name": "scimitar", "damage": "1d6", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 7,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_goblin_scout_3",
+      "name": "Goblin Scout (Yark)",
+      "description": "A patrol scout who ranges outside the cave. Yark works alone and relies on speed over combat. If encountered on the road, he will flee before fighting.",
+      "motivation": "Report back without being killed.",
+      "starting_location_symbol": "loc_cave_entrance",
+      "stats": {
+        "hd": "1-1",
+        "hp": 3,
+        "ac": 14,
+        "attacks": [{"name": "short bow", "damage": "1d6", "to_hit_bonus": 0}, {"name": "scimitar", "damage": "1d6", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 6,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_goblin_warrior_1",
+      "name": "Goblin Warrior (Fang)",
+      "description": "One of Gnashfang's three personal warriors, distinguished by a notched blade and a scar across the nose. Fang will not flee while Gnashfang is standing.",
+      "motivation": "Gnashfang's approval. Tribal status.",
+      "starting_location_symbol": "loc_cave_treasure",
+      "stats": {
+        "hd": "1-1",
+        "hp": 4,
+        "ac": 14,
+        "attacks": [{"name": "scimitar", "damage": "1d6", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 8,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_goblin_warrior_2",
+      "name": "Goblin Warrior (Brak)",
+      "description": "A heavier goblin than most, who fights with a shield as well as a blade. Brak will attempt to flank anyone engaging Gnashfang directly.",
+      "motivation": "Personal safety through Gnashfang's survival.",
+      "starting_location_symbol": "loc_cave_treasure",
+      "stats": {
+        "hd": "1-1",
+        "hp": 4,
+        "ac": 15,
+        "attacks": [{"name": "scimitar", "damage": "1d6", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 8,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_goblin_warrior_3",
+      "name": "Goblin Warrior (Tetch)",
+      "description": "The youngest of Gnashfang's warriors, overconfident, and the most likely to break first if the fight goes against the tribe.",
+      "motivation": "Prove worth to Gnashfang. Panic if things go badly.",
+      "starting_location_symbol": "loc_cave_common",
+      "stats": {
+        "hd": "1-1",
+        "hp": 3,
+        "ac": 14,
+        "attacks": [{"name": "scimitar", "damage": "1d6", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 7,
+        "alignment": "chaotic"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_cave_wolf_1",
+      "name": "Cave Wolf (Thresh)",
+      "description": "A large, pale-furred wolf that Gnashfang has kept since it was a pup. Thresh is loyal to Gnashfang specifically and will attack anything that threatens him, ignoring its own morale rating while Gnashfang is in view.",
+      "motivation": "Pack loyalty. Protect Gnashfang.",
+      "starting_location_symbol": "loc_cave_common",
+      "stats": {
+        "hd": "2+2",
+        "hp": 11,
+        "ac": 13,
+        "attacks": [{"name": "bite", "damage": "1d6", "to_hit_bonus": 2}],
+        "save_as": "F2",
+        "morale": 9,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_cave_wolf_2",
+      "name": "Cave Wolf (Murk)",
+      "description": "The second wolf, darker-coated, less attached to Gnashfang personally but territorial about the cave. Murk patrols independently when unchained and will howl to alert the common area if it detects intruders.",
+      "motivation": "Territory. Hunger.",
+      "starting_location_symbol": "loc_cave_common",
+      "stats": {
+        "hd": "2+2",
+        "hp": 11,
+        "ac": 13,
+        "attacks": [{"name": "bite", "damage": "1d6", "to_hit_bonus": 2}],
+        "save_as": "F2",
+        "morale": 8,
+        "alignment": "neutral"
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_lord_vance",
+      "name": "Lord Vance, Wraith-lord",
+      "description": "Lord Vance appears as the paladin he once was, but drained of color — pale skin, pale hair, armor the grey of old ash. He does not walk so much as drift, his feet a handspan above the ground. His eyes are dark and aware, and that is the most disturbing thing about him: he is present. He knows who he is, what he has become, and the full weight of the harm he has caused. He fights with a cold touch that drains life, but he does not attack immediately — he watches, and if the party allows it, he will speak first. He is not looking for a fight. He does not know what he is looking for.",
+      "motivation": "Fulfill the shadow pact — which compels him to expand shadow's reach into the region. But the remnant of his paladin's will fights this constantly, and he is losing. He wants release more than victory, but he cannot simply choose it.",
+      "starting_location_symbol": "loc_tomb_beneath",
+      "stats": {
+        "hd": "6*",
+        "hp": 27,
+        "ac": 15,
+        "attacks": [{"name": "incorporeal touch", "damage": "1d6", "to_hit_bonus": 4, "special": "level drain 1 level on hit, save vs Death Ray to resist"}],
+        "save_as": "F6",
+        "morale": 10,
+        "alignment": "chaotic",
+        "special": ["immune to sleep, charm, hold", "silver or magic weapons to hit", "turn as Wraith", "level drain on touch"]
+      },
+      "sample_dialogue": "[If the party allows him to speak] 'I know what you came to do. Do it if you must. But first — tell me. Is the chapel of Cayne still standing? Is there still a cleric who keeps the roads?' [A beat.] 'I wanted to know that one thing. You may proceed.'",
+      "image_role": "npc:lord_vance",
+      "secrets": ["sec_vance_tormented"]
+    },
+    {
+      "symbol": "npc_vance_wight_1",
+      "name": "Wight (Sergeant Dorn)",
+      "description": "What remains of Sergeant Dorn, who served Vance for fifteen years. The flesh is intact but grey and cold, the eyes flat. Dorn follows Vance's will without question now, but there is a habit of standing at attention when not moving that feels like a memory of discipline.",
+      "motivation": "Serve Vance. Destroy intruders.",
+      "starting_location_symbol": "loc_tomb_beneath",
+      "stats": {
+        "hd": "3",
+        "hp": 14,
+        "ac": 14,
+        "attacks": [{"name": "claw", "damage": "1d4", "to_hit_bonus": 2, "special": "level drain 1 level on hit, save vs Death Ray to resist"}],
+        "save_as": "F3",
+        "morale": 12,
+        "alignment": "chaotic",
+        "special": ["silver or magic weapons to hit", "level drain on claw"]
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_vance_wight_2",
+      "name": "Wight (Soldier Fen)",
+      "description": "The second wight, who was a young soldier at the time of the pact — barely older than Petr the guardsman is now. The youth of the original face makes the emptiness of it more disturbing.",
+      "motivation": "Serve Vance. Destroy intruders.",
+      "starting_location_symbol": "loc_tomb_beneath",
+      "stats": {
+        "hd": "3",
+        "hp": 14,
+        "ac": 14,
+        "attacks": [{"name": "claw", "damage": "1d4", "to_hit_bonus": 2, "special": "level drain 1 level on hit, save vs Death Ray to resist"}],
+        "save_as": "F3",
+        "morale": 12,
+        "alignment": "chaotic",
+        "special": ["silver or magic weapons to hit", "level drain on claw"]
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_vance_skeleton_1",
+      "name": "Skeleton Guard (Gatehouse, West)",
+      "description": "A complete skeleton in rusted plate fragments, animated by Vance's will. Patrols the gatehouse courtyard in a slow circuit.",
+      "motivation": "Guard the perimeter. Attack intruders on detection.",
+      "starting_location_symbol": "loc_tomb_gatehouse",
+      "stats": {
+        "hd": "1",
+        "hp": 4,
+        "ac": 12,
+        "attacks": [{"name": "scimitar", "damage": "1d6", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 12,
+        "alignment": "chaotic",
+        "special": ["immune to sleep, charm, hold", "half damage from piercing and slashing weapons"]
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    },
+    {
+      "symbol": "npc_vance_skeleton_2",
+      "name": "Skeleton Guard (Gatehouse, East)",
+      "description": "The second skeleton guard, mirroring the patrol of the first. They move in opposite directions so that the courtyard has no blind moment.",
+      "motivation": "Guard the perimeter. Attack intruders on detection.",
+      "starting_location_symbol": "loc_tomb_gatehouse",
+      "stats": {
+        "hd": "1",
+        "hp": 4,
+        "ac": 12,
+        "attacks": [{"name": "scimitar", "damage": "1d6", "to_hit_bonus": 0}],
+        "save_as": "F1",
+        "morale": 12,
+        "alignment": "chaotic",
+        "special": ["immune to sleep, charm, hold", "half damage from piercing and slashing weapons"]
+      },
+      "sample_dialogue": null,
+      "image_role": null,
+      "secrets": null
+    }
+  ],
+
+  "encounters": [
+    {
+      "symbol": "enc_goblin_patrol",
+      "name": "Goblin Road Ambush",
+      "trigger_hint": "Party is traveling the northern road between the fort and the cave approaches, especially in the late afternoon or early morning when goblins prefer to operate. Roll for encounter each hour on a 1-2 on a d6.",
+      "monsters": [
+        {
+          "name": "Goblin",
+          "count": 5,
+          "tactics": "Goblins emerge from both sides of the road simultaneously, attempting to split the party's attention. They target horses and light-bearers first. If more than half fall, the remainder attempt to flee into the brush. They suffer -1 to attack rolls in full daylight."
+        },
+        {
+          "name": "Hobgoblin",
+          "count": 1,
+          "tactics": "The hobgoblin patrol leader hangs back for the first round to assess, then engages the most heavily armed party member. He has a whistle to signal retreat but uses it only when he personally believes the fight is lost."
+        }
+      ],
+      "treasure_hint": "The hobgoblin carries 2d6 sp and a folded note in crude pictograms — a stylized hand-on-black that functions as a patrol authorization from Vance's agents. This is a soft reveal of the coin sigil."
+    },
+    {
+      "symbol": "enc_cave_entrance_guard",
+      "name": "Cave Sentry Post",
+      "trigger_hint": "Party enters the cave mouth and passes through the grass screen. Triggers immediately — there is no stealth option on the main track unless the party explicitly announces they are moving silently and succeeds on a Dexterity check.",
+      "monsters": [
+        {
+          "name": "Goblin Scout (Skrit)",
+          "count": 1,
+          "tactics": "Skrit will shout an alarm on sight. If the party is visibly powerful, he shouts and dives behind his stool rather than attacking, trusting Nib to reach the horn."
+        },
+        {
+          "name": "Goblin Scout (Nib)",
+          "count": 1,
+          "tactics": "Nib goes for the alarm horn immediately. If he reaches it and sounds one blast, two more goblins arrive from loc_cave_common in one round. Two blasts brings Gnashfang in two rounds. Priority: horn over survival."
+        }
+      ],
+      "treasure_hint": "Nothing on the sentries of value. The horn itself is carved bone and worth 2 sp to a collector."
+    },
+    {
+      "symbol": "enc_gnashfang_confrontation",
+      "name": "Chief's Lair — Final Cave Fight",
+      "trigger_hint": "Party enters loc_cave_treasure, or Gnashfang has been summoned by the alarm horn. This is the climactic cave encounter. If Grix is not yet dealt with, she participates here — casting sleep first, targeting whoever has attacked the most aggressively.",
+      "monsters": [
+        {
+          "name": "Gnashfang, Hobgoblin Chief",
+          "count": 1,
+          "tactics": "Gnashfang fights from behind his throne-chair for the first round, using it as light cover. He attacks whoever looks weakest first — this is not cowardice, it is tactical. He will use his cave wolves if they are present and unchained. At half HP, he shouts about the pale lord to intimidate, which is also his way of trying to negotiate."
+        },
+        {
+          "name": "Goblin Warrior",
+          "count": 2,
+          "tactics": "Fang and Brak. Fang engages directly; Brak moves to flank using the cave walls. They do not retreat while Gnashfang fights."
+        },
+        {
+          "name": "Grix, Goblin Shaman",
+          "count": 1,
+          "tactics": "Grix casts sleep in the first round if four or more party members are present. She then casts cause fear on whoever appears to be leading. If she drops to 4 HP or below, she will attempt to flee through the bone curtain to her chamber and then out through a back passage she knows, aiming to warn Vance. If caught, she will bargain."
+        }
+      ],
+      "treasure_hint": "Gnashfang's locked chest: 230 sp, 45 gp, three crude jewelry pieces (2d6 gp each), one unidentified potion of healing. Key is on Gnashfang's neck-cord."
+    },
+    {
+      "symbol": "enc_vance_hall_undead",
+      "name": "Haunted Hall — Undead Servants",
+      "trigger_hint": "Party enters loc_tomb_hall. The zombie servants attack when the party moves within 10 feet of the table or attempts to access the far staircase. Vance is not present in this encounter — this is the threshold fight, meant to test resources before the final confrontation.",
+      "monsters": [
+        {
+          "name": "Zombie",
+          "count": 2,
+          "tactics": "The zombies enact their serving ritual until disturbed. Once triggered, they attack the nearest living creature each round without tactics or retreat. They are slow — movement 20 — and cannot pursue fleeing characters effectively. A cleric turning undead here can clear this encounter entirely, which is intentional: it rewards the cleric class before the harder fight below."
+        }
+      ],
+      "treasure_hint": "The pewter tableware is worth 15 gp total if collected and transported. The locked writing desk contains nothing of value."
+    },
+    {
+      "symbol": "enc_vance_final",
+      "name": "The Tomb Beneath — Lord Vance",
+      "trigger_hint": "Party descends to loc_tomb_beneath. Vance is present on a 60% chance; otherwise arrives in 1d6 rounds. The wights do not move until Vance commands or the sarcophagus is touched. If the party has read the journal aloud, Vance does not attack first — he waits and listens.",
+      "monsters": [
+        {
+          "name": "Lord Vance, Wraith-lord",
+          "count": 1,
+          "tactics": "If combat starts, Vance targets the highest-level character first, seeking to drain them. He uses the pillars for cover against ranged attacks (they are solid stone). He will not pursue out of the tomb room — the pact anchors him here. If reduced to 0 HP by normal weapons (not silver or magic), he dissipates and reforms in 1d6 rounds at full HP. Silver or magic weapons can destroy him permanently. A cleric offering absolution on behalf of St. Cayne before the final blow can trigger end_clean."
+        },
+        {
+          "name": "Wight (Sergeant Dorn)",
+          "count": 1,
+          "tactics": "Moves on Vance's command. Engages the party's second-strongest fighter. Does not retreat."
+        },
+        {
+          "name": "Wight (Soldier Fen)",
+          "count": 1,
+          "tactics": "Moves on Vance's command. Engages whoever attacked Dorn. Does not retreat."
+        }
+      ],
+      "treasure_hint": "Vance carries nothing. In the sarcophagus: a paladin's holy symbol of St. Cayne (silver, worth 50 gp but also a genuine relic), a folded letter in Vance's hand addressed to 'whoever finds this,' and a ring of protection +1 (magic) that Vance was given at his ordination and kept even into undeath."
+    }
+  ],
+
+  "plot_beats": [
+    {
+      "symbol": "beat_arrival_briefing",
+      "title": "A Commission from the Castellan",
+      "trigger_hint": "Party first meets Castellan Thorvald in loc_barracks or loc_keep_gate and asks about the raids.",
+      "outcome": "Party understands the threat: goblin raiders out of the eastern hills, three caravans hit, one civilian missing. Thorvald offers 50 gp each on delivery of proof the raids have stopped. They are pointed toward the caves.",
+      "leads_to": "beat_goblin_tip",
+      "dm_notes": "Thorvald recognized the Vance family crest on the coin Jeb showed him last week. He said nothing then and will say nothing now — but watch for tells: he pauses before saying the word 'eastern,' and he specifically does not mention the coin when briefing the party, even though it is material evidence. A player who notices Thorvald's evasiveness should be rewarded — perhaps a Wisdom check reveals he is choosing words carefully. Do not force this; if players miss it, the coin trail still leads to Vance through other routes. Thorvald is not villainous — he is protecting the memory of a man his father served. That distinction matters for how he plays."
+    },
+    {
+      "symbol": "beat_goblin_tip",
+      "title": "Silver Coins and Strange Lights",
+      "trigger_hint": "Party speaks to at least two keep NPCs about the raids — Jeb, Serra, Magda, Oswin, or Theo — and follows a thread about the coins, the lights, or Theo's past.",
+      "outcome": "Party has a concrete thread pointing beyond the caves. The coin with the Vance crest is the clearest thread, but any of the four routes (coin, lights, Theo's past, Serra's stories) leads to the same understanding: there is something in the eastern wood that is not goblin.",
+      "leads_to": "beat_caves_secret",
+      "dm_notes": "This beat should feel like the party doing good detective work, not following a scripted path. All four threads are equally valid. If the party skips most of the keep NPCs and goes straight to the caves, the thread is still waiting for them in loc_cave_shaman and loc_cave_tomb — the beat just fires later. The coin is the most tactile clue: let players handle it, describe the crest in detail (silver hand raised, fingers spread, on a black field), and let them ask Serra or Magda to identify it. Old Theo is the richest thread but requires the party to treat him with patience. If they push too hard, he closes up. If a player rolepalys genuine kindness — sharing food, not pressing — Theo's story comes out in fragments across two or three conversations."
+    },
+    {
+      "symbol": "beat_caves_secret",
+      "title": "The Goblins Are Someone's Pawns",
+      "trigger_hint": "Party finds loc_cave_tomb — the hidden elven chamber — and examines the iron box containing Vance's signed orders and silver coins.",
+      "outcome": "Party knows with certainty: the goblins are operating under outside direction. The sigil on the orders matches the coins. The orders reference road targets and timing. The signature is a V above the Vance crest. The goblins are a tool, not the threat.",
+      "leads_to": "beat_vance_revealed",
+      "dm_notes": "Shaman Grix may flee here to warn Vance — roll for it if she was not killed during enc_gnashfang_confrontation: on a 4+ on a d6, she escapes through the back passage. If she does, Vance will be present when the party arrives at the manor rather than arriving after them. This changes the opening of enc_vance_final but not its substance. The elven tomb itself is a reward for curiosity — describe it with care. The four biers, the forest carvings, the stillness. Players who are paying attention will notice the tomb was opened from the inside out at the door, not the outside in. Vance found it; he opened it for his own use; he may not have known or cared whose rest he disturbed."
+    },
+    {
+      "symbol": "beat_vance_revealed",
+      "title": "The Fall of a Paladin",
+      "trigger_hint": "Party reads Vance's personal journal in loc_tomb_sanctum, or Old Theo finally tells his full story, or a cleric casts Speak with Dead on any of Vance's undead servants.",
+      "outcome": "Party understands the full truth: Vance was a paladin of St. Cayne who took a mortal wound on campaign, made a pact with a shadow power to survive long enough to get his men home, and was transformed by it against his will. He has been trapped in the pact for twenty years. The raids are a compulsion, not a choice — he is forced to extend shadow's reach or suffer. He hates what he does.",
+      "leads_to": "beat_vance_confronted",
+      "dm_notes": "The journal's final entries are the key. The handwriting deteriorates across the seven volumes — confident and measured in volume one, cramped and erratic in the last. The final entry is mid-sentence, ending with '...and I cannot find the chapel from here. If someone finds this, tell Serra—'. He never finished the thought. A cleric in the party who reads this aloud in the chapel of St. Cayne before the final fight will trigger the conditions for end_clean. You do not need to tell the players this mechanically — just note that Mother Serra goes very still when she hears the words, and nods once, and says 'then we know what to do.' That is enough."
+    },
+    {
+      "symbol": "beat_vance_confronted",
+      "title": "The Wraith-Lord at Rest",
+      "trigger_hint": "Party enters loc_tomb_beneath and faces Lord Vance.",
+      "outcome": "Vance is destroyed, finds peace (end_clean), is destroyed without absolution (end_grey), or escapes (end_tragic), depending on party approach and preparation.",
+      "leads_to": null,
+      "dm_notes": "This is the only beat where player choices branch into different endings, and the branching should feel earned rather than arbitrary. The clean ending requires active effort — the party must have read the journal, must bring that knowledge to the confrontation, and a paladin or cleric must offer absolution explicitly. Do not award the clean ending to a party that simply kills Vance quickly. Vance will pause before fighting if given the chance to speak. His first words are always a question about the chapel of St. Cayne — whether it still stands. If a player answers honestly and with compassion, he is listening. If a cleric or paladin then formally offers absolution in the name of St. Cayne, describing themselves as standing in place of the saint who cannot reach him here — Vance's form goes still, the cold in the room lifts, and the undead simply stop. The wights fall. Vance thanks whoever spoke and then fades without violence. It should feel like a weight leaving the room."
+    }
+  ],
+
+  "secrets": [
+    {
+      "symbol": "sec_vance_coin_sigil",
+      "content": "The silver coins found in goblin possession — on Gnashfang's chest key-cord, in Grix's clay pot, in the iron box in the elven tomb, and carried by the hobgoblin patrol leader — bear the Vance family crest: a silver hand raised, palm outward, on a black field. Vance is paying the goblins as proxies, using wights as delivery agents. The coins are old enough that no current mint would recognize them, but Mother Serra, Trader Magda, and Castellan Thorvald (who will not volunteer this) can all identify the crest.",
+      "reveal_when": "Party examines any of the silver coins closely and asks about the design, or shows the coin to a knowledgeable NPC.",
+      "leads_to_beat": "beat_goblin_tip"
+    },
+    {
+      "symbol": "sec_thorvald_knows",
+      "content": "Castellan Thorvald recognized the Vance family crest on the coin Jeb showed him the week before the party's arrival. He stayed silent because his father served under Lord Vance's father, and the Thorvald family owes the Vance family a debt of honor from that service. He cannot bring himself to be the one who names Vance as the enemy, even an undead Vance. He has private correspondence in a locked drawer in his quarters that establishes this connection — old letters from Vance's father to Thorvald's father, and one letter from Vance himself, written fifteen years ago when Vance was still barely himself, asking Thorvald not to look eastward.",
+      "reveal_when": "Party confronts Thorvald directly with the coin evidence and does not accept evasion, or a party member searches his private quarters and finds the locked drawer.",
+      "leads_to_beat": null
+    },
+    {
+      "symbol": "sec_theo_retinue",
+      "content": "Old Theo was Soldier Theo, a retainer in Lord Vance's household who rode on the campaign where Vance was mortally wounded. He witnessed Vance speak the pact words over the body of a fallen soldier (he did not understand then what they were). He watched Vance's wound close, watched the color leave his eyes, watched the men celebrate a miracle. He knew it was not a miracle. He deserted three months later when he saw what Vance was becoming, fled south, and has spent twenty years moving from town to town, drinking until the memory blurs. He came to Morgansfort two years ago without realizing how close he was to the source of what he ran from.",
+      "reveal_when": "Party befriends Theo through patience and genuine kindness — sharing food, giving him space, not pressing. The story comes in fragments. The full account requires at least two extended conversations.",
+      "leads_to_beat": "beat_vance_revealed"
+    },
+    {
+      "symbol": "sec_cave_is_elven_tomb",
+      "content": "The deepest hidden chamber in the Greenhill Caves is an elven tomb predating human settlement of the region by at least four centuries. It held four elven warriors. The door is elven craft — nearly invisible from the goblin side — and Vance discovered it during an early exploration of the caves, before the goblins took up residence. He recognized its isolation and used it as a staging ground and dead-drop for his agents. The goblins do not know the room exists. Grix suspects something is behind the wall in her chamber but has not located the door.",
+      "reveal_when": "Party finds the pivot-stone door in loc_cave_shaman's passage. DC 14 Intelligence to notice the worked stone, DC 11 to find the pivot-stone once noticed.",
+      "leads_to_beat": "beat_caves_secret"
+    },
+    {
+      "symbol": "sec_vance_tormented",
+      "content": "Lord Vance is not mindlessly evil and did not choose undeath freely. He took a mortal wound during a campaign and made a pact with a shadow power to survive long enough to lead his surviving men home. The pact's price was his humanity and the obligation to extend shadow's reach into the region, expressed as compulsive raids through proxy agents. Part of his original paladin's will survives and fights the compulsion constantly, losing ground year by year. He wants release — either destruction with absolution, or some annulment of the pact he cannot achieve alone. He cannot simply stop. His journal, ending mid-sentence, is the clearest evidence of this.",
+      "reveal_when": "Party reads Vance's personal journal in loc_tomb_sanctum, or Old Theo tells his full story, or a cleric casts Speak with Dead on any wight or skeleton in Vance's service.",
+      "leads_to_beat": "beat_vance_confronted"
+    }
+  ],
+
+  "endings": [
+    {
+      "symbol": "end_clean",
+      "trigger": "A paladin or cleric in the party reads or summarizes Vance's journal aloud in the Chapel of St. Cayne, and then offers formal absolution in St. Cayne's name during the confrontation in loc_tomb_beneath before the final blow is struck. Mother Serra must be alive and present at the chapel reading for the full effect, though the absolution in the tomb works without her.",
+      "outcome": "Vance's form stills when absolution is offered. The cold lifts from the room. The wights and skeleton guards simply stop, their animation severed. Vance thanks whoever spoke — his voice audible once in the twenty years since his fall — and fades without violence. The shadow pact dissolves. The following morning, Castellan Thorvald presents himself before the party in full armor, confesses his knowledge of Vance's identity and his silence, and resigns his commission with honor — placing it literally at the party's feet. The keep is safe. The northern road reopens. Mother Serra holds a service of thanksgiving. Old Theo is found that evening at the chapel steps, asleep and smiling for the first time in years."
+    },
+    {
+      "symbol": "end_grey",
+      "trigger": "Vance is destroyed by force — reduced to 0 HP with silver or magic weapons — without absolution being offered, or with absolution offered but the conditions not met (journal unread, no cleric, no paladin).",
+      "outcome": "The tomb goes cold and silent. The wights and skeletons collapse. The party has won in a technical sense, but there is no peace in the room — only absence. The dark corruption in the lowest chamber lingers; a cleric can sense it. The goblins scatter without Gnashfang's leadership, but within a season new goblins will move into the caves, drawn by the existing tunnels and the residual shadow taint. Thorvald never admits his knowledge — the secret dies with him, eventually. The northern road reopens. Three months later, a merchant reports seeing lights in the eastern wood again. The DM should note this and return to it in a future session."
+    },
+    {
+      "symbol": "end_tragic",
+      "trigger": "Vance is reduced to 0 HP by non-silver, non-magical weapons, dissipates, and the party does not return before he reforms; or the party is driven from the tomb and cannot regroup in time; or the party kills Thorvald's garrison by accident during a botched negotiation and Thorvald dies attempting to buy them time in the aftermath.",
+      "outcome": "Vance retreats to a deeper sanctum beneath the tomb — a third level not yet mapped. The goblins regroup under Grix if she survived, or under a new Hobgoblin lieutenant sent by whatever shadow power backs Vance. Thorvald, if he lived, is killed in a retaliatory raid within a fortnight — he dies in the gatehouse passage, buying time for a civilian evacuation, and is found with his sword drawn and his back to the door. The threat will return and be larger for the delay. The adventure is a failure, but not a permanent one — this is setup for a harder second module, not a dead end."
+    }
+  ],
+
+  "world_facts": [
+    {
+      "fact": "Morgansfort has guarded the northern pass for two centuries and has never been taken by force.",
+      "tags": ["morgansfort", "history", "keep", "northern_pass"],
+      "importance": 7
+    },
+    {
+      "fact": "The Greenhill Caves were once an elven burial site, predating human settlement of the region by at least four centuries.",
+      "tags": ["greenhill_caves", "elves", "history", "dungeon"],
+      "importance": 6
+    },
+    {
+      "fact": "Lord Vance was a paladin of St. Cayne — god of roads and travelers — who made a dark pact to survive a mortal wound on campaign twenty years ago. The pact transformed him into an undead wraith-lord bound to extend shadow's reach.",
+      "tags": ["lord_vance", "undead", "pact", "st_cayne", "paladin", "history"],
+      "importance": 10
+    },
+    {
+      "fact": "Goblins suffer -1 to attack rolls in full daylight and prefer to operate at dawn, dusk, or night.",
+      "tags": ["goblins", "combat", "mechanics", "daylight"],
+      "importance": 5
+    },
+    {
+      "fact": "Mother Serra at the Chapel of St. Cayne can Turn Undead as a third-level cleric and knows prayers of healing. She holds old stories about Lord Vance and will share them if approached honestly.",
+      "tags": ["mother_serra", "cleric", "chapel", "turn_undead", "healing", "lore"],
+      "importance": 7
+    },
+    {
+      "fact": "The Vance family crest is a silver hand raised palm-outward on a black field. Any silver coin bearing this device was minted by the Vance family estate and is now at least twenty years old.",
+      "tags": ["vance", "crest", "coin", "clue", "sigil"],
+      "importance": 8
+    },
+    {
+      "fact": "Old Theo, the beggar in Morgansfort's market square, was once a soldier in Lord Vance's retinue and was present when Vance made his pact. He has lived with that knowledge for twenty years.",
+      "tags": ["theo", "vance", "history", "retinue", "witness"],
+      "importance": 8
+    },
+    {
+      "fact": "Silver weapons and magical weapons are required to harm wights and wraith-lords. Ordinary steel passes through them without effect.",
+      "tags": ["undead", "mechanics", "combat", "wight", "wraith", "silver"],
+      "importance": 9
+    }
+  ]
+}
