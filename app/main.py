@@ -226,7 +226,7 @@ def create_app() -> FastAPI:
         return _TEMPLATES.TemplateResponse(
             request,
             "party_setup.html",
-            {"user": user, "campaign": campaign},
+            {"user": user, "campaign": campaign, "is_owner": membership.role == "owner"},
         )
 
     @app.get("/campaigns/{campaign_id}/chargen", response_class=HTMLResponse)

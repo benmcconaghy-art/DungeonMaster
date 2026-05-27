@@ -555,6 +555,68 @@ def _invite_state(invite: models.CampaignInvite, *, now_iso: str) -> str:
     return "active"
 
 
+@router.get("/{campaign_id}/invite-code", response_model=InviteResponse)
+async def get_or_mint_invite(
+    campaign_id: str,
+    user: CurrentUser,
+    db: DbSession,
+) -> InviteResponse:
+    """Owner-only: return a valid invite code for the campaign.
+
+    Finds the most recent active (non-revoked, non-used, non-expired) invite
+    and re-signs it. If none exists, mints a fresh one. This lets the party
+    setup page show a join code on load without minting a new row every visit.
+    """
+    campaign, membership = await _require_membership(db, campaign_id=campaign_id, user=user)
+    if membership.role != "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="only the campaign owner can view invite codes",
+        )
+
+    now = _now_iso()
+    existing = (
+        await db.scalars(
+            select(models.CampaignInvite)
+            .where(models.CampaignInvite.campaign_id == campaign_id)
+            .where(models.CampaignInvite.revoked_at.is_(None))
+            .where(models.CampaignInvite.used_at.is_(None))
+            .where(models.CampaignInvite.expires_at > now)
+            .order_by(desc(models.CampaignInvite.created_at))
+            .limit(1)
+        )
+    ).first()
+
+    if existing is not None:
+        payload: dict[str, Any] = {
+            "invite_id": existing.id,
+            "campaign_id": campaign.id,
+        }
+        code = _invite_signer().dumps(payload)
+        return InviteResponse(
+            code=code,
+            expires_in_seconds=_INVITE_MAX_AGE_S,
+            invite_id=existing.id,
+        )
+
+    invite = models.CampaignInvite(
+        campaign_id=campaign.id,
+        created_by=user.id,
+        expires_at=_expires_iso(),
+    )
+    db.add(invite)
+    await db.commit()
+    await db.refresh(invite)
+
+    payload = {"invite_id": invite.id, "campaign_id": campaign.id}
+    code = _invite_signer().dumps(payload)
+    return InviteResponse(
+        code=code,
+        expires_in_seconds=_INVITE_MAX_AGE_S,
+        invite_id=invite.id,
+    )
+
+
 @router.post(
     "/{campaign_id}/invite",
     response_model=InviteResponse,
