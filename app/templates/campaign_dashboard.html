@@ -56,6 +56,13 @@
             </div>
             <div class="head-side">
               {{ fc.member_count }} member{% if fc.member_count != 1 %}s{% endif %}
+              {% if fc.is_owner %}
+              <button type="button"
+                      class="campaign-del-btn"
+                      data-delete-campaign="{{ fc.id }}"
+                      data-campaign-name="{{ fc.name }}"
+                      aria-label="Delete campaign {{ fc.name }}">Delete</button>
+              {% endif %}
             </div>
           </header>
 
@@ -140,24 +147,9 @@
       {% if other_campaigns %}
         <div style="margin-top: var(--s-2); display: flex; flex-direction: column; gap: var(--s-3);">
           {% for c in other_campaigns %}
-            {% if c.active_session_id %}
-            <a href="/play/{{ c.active_session_id }}" class="campaign-row">
-              <div>
-                <h3 class="name">{{ c.name }}</h3>
-                <div class="titles">
-                  {{ c.ruleset }} <span style="color: var(--parchment-mute);">·</span>
-                  {{ c.member_count }} player{% if c.member_count != 1 %}s{% endif %}
-                </div>
-              </div>
-              <div class="ts-block">
-                <span class="verb">Resume session</span>
-                {% if c.last_played_relative %}last played · {{ c.last_played_relative }}{% else %}never played{% endif %}
-              </div>
-              <span class="arrow" aria-hidden="true">→</span>
-            </a>
-            {% else %}
-            <form method="post" action="/api/campaigns/{{ c.id }}/sessions" data-on-success="redirect-to-session" class="campaign-row-form">
-              <button type="submit" class="campaign-row" aria-label="Start a new session of {{ c.name }}">
+            <div class="campaign-row-wrap">
+              {% if c.active_session_id %}
+              <a href="/play/{{ c.active_session_id }}" class="campaign-row">
                 <div>
                   <h3 class="name">{{ c.name }}</h3>
                   <div class="titles">
@@ -166,13 +158,37 @@
                   </div>
                 </div>
                 <div class="ts-block">
-                  <span class="verb">Start session</span>
+                  <span class="verb">Resume session</span>
                   {% if c.last_played_relative %}last played · {{ c.last_played_relative }}{% else %}never played{% endif %}
                 </div>
                 <span class="arrow" aria-hidden="true">→</span>
-              </button>
-            </form>
-            {% endif %}
+              </a>
+              {% else %}
+              <form method="post" action="/api/campaigns/{{ c.id }}/sessions" data-on-success="redirect-to-session" class="campaign-row-form">
+                <button type="submit" class="campaign-row" aria-label="Start a new session of {{ c.name }}">
+                  <div>
+                    <h3 class="name">{{ c.name }}</h3>
+                    <div class="titles">
+                      {{ c.ruleset }} <span style="color: var(--parchment-mute);">·</span>
+                      {{ c.member_count }} player{% if c.member_count != 1 %}s{% endif %}
+                    </div>
+                  </div>
+                  <div class="ts-block">
+                    <span class="verb">Start session</span>
+                    {% if c.last_played_relative %}last played · {{ c.last_played_relative }}{% else %}never played{% endif %}
+                  </div>
+                  <span class="arrow" aria-hidden="true">→</span>
+                </button>
+              </form>
+              {% endif %}
+              {% if c.is_owner %}
+              <button type="button"
+                      class="campaign-del-btn"
+                      data-delete-campaign="{{ c.id }}"
+                      data-campaign-name="{{ c.name }}"
+                      aria-label="Delete campaign {{ c.name }}">Delete</button>
+              {% endif %}
+            </div>
           {% endfor %}
         </div>
       {% endif %}
@@ -393,6 +409,29 @@
     document.addEventListener("click", (e) => {
       if (!picker.contains(e.target)) closePicker();
     });
+  });
+
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-delete-campaign]");
+    if (!btn) return;
+    const id = btn.dataset.deleteCampaign;
+    const name = btn.dataset.campaignName;
+    if (!confirm(`Delete "${name}"?\n\nThis cannot be undone. Characters in this campaign will be returned to your roster.`)) return;
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/api/campaigns/${id}`, { method: "DELETE", credentials: "same-origin" });
+      if (!res.ok) {
+        let detail = "Could not delete — try again.";
+        try { detail = (await res.json()).detail || detail; } catch (err) { /* ignore */ }
+        alert(detail);
+        btn.disabled = false;
+        return;
+      }
+      window.location.reload();
+    } catch {
+      alert("Network error — try again.");
+      btn.disabled = false;
+    }
   });
 
   document.querySelectorAll("form[data-on-success]").forEach((form) => {

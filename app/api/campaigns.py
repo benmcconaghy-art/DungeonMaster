@@ -347,6 +347,24 @@ async def _campaign_last_played(db: DbSession, *, campaign_id: str) -> tuple[str
 # ---------------------------------------------------------------------------
 
 
+@router.delete("/{campaign_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_campaign(
+    campaign_id: str,
+    user: CurrentUser,
+    db: DbSession,
+) -> Response:
+    """Delete a campaign. Owner only. FK cascades wipe dependent rows;
+    characters return to the roster via SET NULL on campaign_id."""
+    campaign = await db.get(models.Campaign, campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=404, detail="campaign not found")
+    if campaign.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="only the campaign owner can delete it")
+    await db.delete(campaign)
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.post("", response_model=CampaignResponse, status_code=status.HTTP_201_CREATED)
 async def create_campaign(
     payload: CreateCampaignRequest,
