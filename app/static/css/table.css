@@ -991,3 +991,77 @@
   border-left: 1px solid var(--rule-soft);
   border-right: 1px solid var(--rule-soft);
 }
+
+/* ---------- OOC (out-of-character) chat messages ---------- */
+.message-ooc {
+  padding-left: var(--s-5);
+  border-left: 1px dashed var(--rule-strong);
+  margin-left: var(--s-2);
+  opacity: 0.72;
+}
+.message-ooc .who {
+  color: var(--parchment-mute);
+  letter-spacing: 0.18em;
+}
+.message-ooc .who::before {
+  content: "[ooc] ";
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  color: var(--parchment-mute);
+}
+.message-ooc > p {
+  font-style: italic;
+  color: var(--parchment-dim);
+  font-size: 15px;
+}
+
+/* Outbound whisper to DM — rendered locally only, not broadcast */
+.message-whisper-out {
+  padding: var(--s-3) var(--s-4) var(--s-3) var(--s-5);
+  margin: 0 0 var(--s-6) var(--s-2);
+  background: linear-gradient(to right, rgba(58,90,122,0.06), transparent);
+  border-left: 1px dashed rgba(58,90,122,0.4);
+  max-width: 70ch;
+  opacity: 0.6;
+}
+.message-whisper-out .who {
+  color: var(--inkblue);
+  letter-spacing: 0.22em;
+}
+.message-whisper-out > p {
+  font-style: italic;
+  color: var(--parchment-dim);
+  font-size: 15px;
+  margin: 0;
+}
+
+/* ---------- Mode toggle buttons (OOC / Whisper DM) ---------- */
+.action-mode-btns {
+  display: flex;
+  gap: var(--s-2);
+}
+.mode-btn {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  color: var(--parchment-mute);
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+.mode-btn:hover { color: var(--parchment); border-color: var(--ember-deep); }
+.mode-btn.active,
+.mode-btn[aria-pressed="true"] {
+  background: rgba(201,147,62,0.08);
+  color: var(--ember);
+  border-color: var(--ember-deep);
+}
+
+/* Textarea border tint when a non-action mode is active */
+.action[data-mode="ooc"] textarea:not(:focus) { border-color: var(--rule-strong); opacity: 0.85; }
+.action[data-mode="whisper"] textarea:not(:focus) { border-color: rgba(58,90,122,0.5); }
+.action[data-mode="whisper"] textarea:focus { border-color: var(--inkblue); box-shadow: 0 0 0 2px rgba(58,90,122,0.2); }

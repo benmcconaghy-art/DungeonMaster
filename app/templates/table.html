@@ -79,11 +79,18 @@
       <span id="turn-badge" class="turn-badge" hidden></span>
       <span id="action-notice" class="action-notice" hidden role="status"></span>
 
+      <div class="action-mode-btns">
+        <button type="button" id="ooc-btn" class="mode-btn" aria-pressed="false">OOC</button>
+        <button type="button" id="whisper-dm-btn" class="mode-btn" aria-pressed="false">Whisper DM</button>
+      </div>
+
       <div class="help-tip" id="help-tip">
         <button type="button" aria-expanded="false" aria-label="Keyboard shortcuts">?</button>
         <div class="tip-bubble" role="tooltip">
           <kbd>Enter</kbd> sends · <kbd>Shift</kbd>+<kbd>Enter</kbd> newline<br/>
-          <kbd>Esc</kbd> closes a whisper
+          <kbd>Esc</kbd> closes a whisper<br/>
+          <strong>OOC</strong> — table chat, no DM turn<br/>
+          <strong>Whisper DM</strong> — private to the DM
         </div>
       </div>
     </div>
@@ -210,6 +217,7 @@
 
   const sessionId = {{ session_id|tojson }};
   const selfUserId = {{ user.id|tojson }};
+  const selfUsername = {{ user.username|tojson }};
   // ownedCharacterIds lights up the "your turn" hint when the current
   // initiative slot is one of our PCs.
   const ownedCharacterIds = new Set({{ characters|map(attribute="id")|list|tojson }});
@@ -252,6 +260,8 @@
   let charactersById = {};        // {id: {id, name}}
   let whispersLog = [];           // [{id, content, time}]
   let whisperSeq = 0;
+  let currentMode = "action"; // "action" | "ooc" | "whisper"
+
   // Phase 8 NPC roster: accumulated from npc_introduced events.
   // portraitPending maps portrait_image_id → npc_id so image_ready
   // can update the right NPC card without appending to narration.
@@ -797,8 +807,14 @@
     },
     pc_action(msg) {
       // De-dupe: the local user already optimistically rendered
-      // their own action.
+      // their own action (including OOC).
       if (msg.user_id && msg.user_id === selfUserId) return;
+      // character_id=null means OOC chat broadcast from another player.
+      if (msg.character_id === null || msg.character_id === undefined) {
+        const who = presenceRoster.find(e => e.user_id === msg.user_id)?.username || "Player";
+        appendMessage("ooc", who, msg.content, formatNow());
+        return;
+      }
       const who = senderLabel("player", msg.character_id);
       appendMessage("player", who, msg.content, formatNow());
     },
@@ -1048,8 +1064,30 @@
     event.preventDefault();
     const content = input.value.trim();
     if (!content) return;
+
+    if (currentMode === "ooc") {
+      if (!sendFrame({ type: "out_of_band_chat", content })) {
+        showActionNotice("Not connected — message not sent.");
+        return;
+      }
+      input.value = "";
+      appendMessage("ooc", selfUsername, content, formatNow());
+      return;
+    }
+
     const characterEl = form.querySelector('[name="character_id"]');
     const characterId = characterEl ? characterEl.value : null;
+
+    if (currentMode === "whisper") {
+      if (!sendFrame({ type: "whisper_to_dm", character_id: characterId, content })) {
+        showActionNotice("Not connected — message not sent.");
+        return;
+      }
+      input.value = "";
+      appendOutboundWhisper(content);
+      showActionNotice("Whispered to DM.");
+      return;
+    }
 
     let kind = "other";
     if (
@@ -1061,14 +1099,7 @@
       kind = "combat";
     }
 
-    const frame = {
-      type: "pc_action",
-      character_id: characterId,
-      content,
-      kind,
-    };
-
-    if (!sendFrame(frame)) {
+    if (!sendFrame({ type: "pc_action", character_id: characterId, content, kind })) {
       showActionNotice("Not connected — message not sent.");
       return;
     }
@@ -1079,6 +1110,50 @@
       : "You";
     appendMessage("player", who, content, formatNow());
   });
+
+  // ---- OOC / whisper mode toggle ---------------------------------------
+  const oocBtn = document.getElementById("ooc-btn");
+  const whisperDmBtn = document.getElementById("whisper-dm-btn");
+
+  function setMode(mode) {
+    currentMode = mode;
+    oocBtn.setAttribute("aria-pressed", String(mode === "ooc"));
+    oocBtn.classList.toggle("active", mode === "ooc");
+    whisperDmBtn.setAttribute("aria-pressed", String(mode === "whisper"));
+    whisperDmBtn.classList.toggle("active", mode === "whisper");
+    form.dataset.mode = mode;
+    if (mode === "ooc") {
+      input.placeholder = "(speaking out of character…)";
+    } else if (mode === "whisper") {
+      input.placeholder = "(whisper to DM — others can't hear this…)";
+    } else {
+      input.placeholder = "What do you do?";
+    }
+    input.focus();
+  }
+
+  oocBtn.addEventListener("click", () => setMode(currentMode === "ooc" ? "action" : "ooc"));
+  whisperDmBtn.addEventListener("click", () => setMode(currentMode === "whisper" ? "action" : "whisper"));
+
+  function appendOutboundWhisper(content) {
+    dropEmptyLog();
+    const article = document.createElement("article");
+    article.className = "message message-whisper-out";
+    const header = document.createElement("header");
+    const who = document.createElement("span");
+    who.className = "who";
+    who.textContent = "Whisper · you → DM";
+    const time = document.createElement("time");
+    time.textContent = formatNow();
+    header.appendChild(who);
+    header.appendChild(time);
+    article.appendChild(header);
+    const p = document.createElement("p");
+    p.textContent = content;
+    article.appendChild(p);
+    narration.appendChild(article);
+    narration.scrollTop = narration.scrollHeight;
+  }
 
   // ---- Cleanup on navigation -------------------------------------------
   window.addEventListener("beforeunload", () => {
