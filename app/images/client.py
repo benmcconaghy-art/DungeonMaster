@@ -1,7 +1,7 @@
 """FLUX HTTP client.
 
 Async wrapper around the FLUX.1 [dev] / FLUX.1 Kontext [dev] service running
-on ``svrai01:11437`` (spec §8). Exposes four operations:
+on ``YOUR_AI_SERVER:11437`` (spec §8). Exposes four operations:
 
 - ``health()`` — GET ``/health``. Cheap reachability probe; kept for
   app-startup wiring checks. NOT used by the watchdog (see ``probe``).

@@ -24,7 +24,7 @@
 
 set -uo pipefail
 
-FLUX_BASE_URL="${FLUX_BASE_URL:-http://svrai01.mcconaghygroup.internal:11437}"
+FLUX_BASE_URL="${FLUX_BASE_URL:?FLUX_BASE_URL must be set}"
 STATE_DIR="${STATE_DIR:-/var/lib/dungeon-master/watchdog-state}"
 STATE_FILE="${STATE_FILE:-${STATE_DIR}/flux-health}"
 ALERT_HOOK="${ALERT_HOOK:-/opt/dungeon-master/deploy/alerts/notify.sh}"

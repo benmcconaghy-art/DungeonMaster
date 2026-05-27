@@ -13,7 +13,7 @@ You implement the LLM orchestration layer in `app/llm/` and `app/orchestrator/`.
 
 ## Configuration facts
 
-- **vLLM endpoint:** `http://svrai01.mcconaghygroup.internal:8000/v1` (OpenAI-compatible).
+- **vLLM endpoint:** `http://YOUR_AI_SERVER:8000/v1` (OpenAI-compatible).
 - **Model id:** check `client.models.list()` once at startup; current deployment serves Nemotron 3 Super.
 - **Tool parser flag (server-side):** `--enable-auto-tool-choice --tool-call-parser qwen3_coder`.
 - **GPU:** Pro 6000 Blackwell, 96 GB VRAM. Generous KV cache headroom — verbatim turn budget can exceed N=20 in practice.

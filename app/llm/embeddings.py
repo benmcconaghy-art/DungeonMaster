@@ -4,7 +4,7 @@ Two backends behind a common protocol:
 
   - :class:`OpenAIEmbeddings` calls an OpenAI-compatible
     ``POST /v1/embeddings`` endpoint. Works against Ollama (the
-    ``svrai01:11436`` deployment), vLLM-with-embeddings-enabled,
+    ``YOUR_AI_SERVER:11436`` deployment), vLLM-with-embeddings-enabled,
     and OpenAI itself unchanged.
   - :class:`LocalSentenceTransformersEmbeddings` loads a local
     sentence-transformers model. Heavy (~1.5GB resident with
@@ -85,7 +85,7 @@ def _l2_normalise(matrix: np.ndarray) -> np.ndarray:
 
 class OpenAIEmbeddings:
     """Async wrapper around an OpenAI-compatible ``/v1/embeddings``
-    endpoint. The endpoint may be Ollama (``svrai01:11436``), a
+    endpoint. The endpoint may be Ollama (``YOUR_AI_SERVER:11436``), a
     dedicated TEI server, or OpenAI itself — the request shape is
     identical."""
 

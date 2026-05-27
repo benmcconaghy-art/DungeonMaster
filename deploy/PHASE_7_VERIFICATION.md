@@ -95,7 +95,7 @@ does NOT verify alerts actually fire. Drill each one:
 
 ```bash
 # FLUX-health: temporarily block the FLUX service to force probe
-# failures. Either firewall it or stop it on svrai01.
+# failures. Either firewall it or stop it on YOUR_AI_SERVER.
 # Wait DEGRADED_THRESHOLD_S (120s default) plus one tick (5min)
 # and confirm an alert lands.
 sudo journalctl -t dungeon-master-alert --since "10 minutes ago"
@@ -195,11 +195,11 @@ gated to localhost-only. Verify both:
 
 ```bash
 # From the box itself (should succeed):
-curl -k -s https://dm.mcconaghygroup.internal/metrics | head
+curl -k -s https://dm.example.internal/metrics | head
 curl -s http://127.0.0.1:8001/metrics | head
 
 # From another LAN host (should be 403):
-curl -k https://dm.mcconaghygroup.internal/metrics
+curl -k https://dm.example.internal/metrics
 # → "403 Forbidden" from nginx
 ```
 

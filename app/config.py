@@ -2,13 +2,11 @@
 
 Single source of truth for runtime settings. Values are read from process
 environment variables; in dev a ``.env`` file at the repo root is also
-consulted. The production deployment passes them via the
-``EnvironmentFile=`` line in ``deploy/dungeon-master.service``.
+consulted (see ``.env.example``). The production deployment passes them via
+the ``EnvironmentFile=`` line in ``deploy/dungeon-master.service``.
 
-Defaults match the production layout described in spec §13:
-``/var/lib/dungeon-master/dm.db`` for the database file,
-``/var/lib/dungeon-master/images/`` for generated PNGs, the internal vLLM
-and FLUX endpoints on ``svrai01``, and the local Redis instance.
+Defaults are suitable for local development. Production deployments must
+set ``VLLM_BASE_URL``, ``FLUX_BASE_URL``, and ``SESSION_SECRET`` at minimum.
 """
 
 from __future__ import annotations
@@ -43,12 +41,12 @@ class Settings(BaseSettings):
         description="Directory holding generated PNGs served via X-Accel-Redirect.",
     )
     vllm_base_url: str = Field(
-        default="http://svrai01.mcconaghygroup.internal:8000",
-        description="Root URL of the internal vLLM endpoint (Nemotron 3 Super).",
+        default="http://localhost:8000",
+        description="Root URL of the vLLM endpoint (OpenAI-compatible). Set via VLLM_BASE_URL.",
     )
     flux_base_url: str = Field(
-        default="http://svrai01.mcconaghygroup.internal:11437",
-        description="Root URL of the FLUX.1 [dev] / Kontext image service.",
+        default="http://localhost:11437",
+        description="Root URL of the FLUX.1 image service. Set via FLUX_BASE_URL.",
     )
     redis_url: str = Field(
         default="redis://127.0.0.1:6379/0",
@@ -63,7 +61,7 @@ class Settings(BaseSettings):
         default=None,
         description=(
             "Optional URL of an OpenAI-compatible embedding endpoint, e.g."
-            " 'http://svrai01.mcconaghygroup.internal:11436/v1' (Ollama). When"
+            " 'http://YOUR_HOST:11436/v1' (Ollama). When"
             " unset, the local sentence-transformers backend is used."
         ),
     )

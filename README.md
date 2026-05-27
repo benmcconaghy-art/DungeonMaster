@@ -81,8 +81,8 @@ All settings are read from environment variables (or a `.env` file at the repo r
 |---|---|---|
 | `DB_PATH` | `/var/lib/dungeon-master/dm.db` | SQLite database path |
 | `IMAGE_STORAGE_PATH` | `/var/lib/dungeon-master/images` | Directory for generated PNGs |
-| `VLLM_BASE_URL` | `http://svrai01…:8000` | vLLM endpoint (OpenAI-compatible) |
-| `FLUX_BASE_URL` | `http://svrai01…:11437` | Image generation endpoint |
+| `VLLM_BASE_URL` | `http://YOUR_AI_SERVER…:8000` | vLLM endpoint (OpenAI-compatible) |
+| `FLUX_BASE_URL` | `http://YOUR_AI_SERVER…:11437` | Image generation endpoint |
 | `REDIS_URL` | `redis://127.0.0.1:6379/0` | Redis connection |
 | `SESSION_SECRET` | *(dev placeholder)* | Cookie signing secret — **change in production** |
 | `EMBEDDING_BASE_URL` | *(unset)* | Optional `/v1/embeddings` endpoint; falls back to local sentence-transformers |

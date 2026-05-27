@@ -11,7 +11,7 @@
 # Run as root.
 #
 # Usage:
-#   sudo ./deploy/bootstrap.sh [--server-name=dm.mcconaghygroup.internal] \
+#   sudo ./deploy/bootstrap.sh [--server-name=dm.example.internal] \
 #                              [--server-ip=<host-ip>] \
 #                              [--repo=<git-url>] \
 #                              [--ref=<branch-or-tag>]
@@ -20,7 +20,7 @@ set -euo pipefail
 
 # ---------- defaults / args ----------------------------------------------------
 
-SERVER_NAME="dm.mcconaghygroup.internal"
+SERVER_NAME="dm.example.internal"
 SERVER_IP=""
 REPO_URL=""
 REPO_REF="main"
@@ -173,15 +173,14 @@ if [[ ! -f "${ETC_DIR}/env" ]]; then
 
 DB_PATH=${DATA_DIR}/dm.db
 IMAGE_STORAGE_PATH=${DATA_DIR}/images
-VLLM_BASE_URL=http://svrai01.mcconaghygroup.internal:8000
-FLUX_BASE_URL=http://svrai01.mcconaghygroup.internal:11437
+VLLM_BASE_URL=http://YOUR_AI_SERVER:8000
+FLUX_BASE_URL=http://YOUR_AI_SERVER:11437
 REDIS_URL=redis://127.0.0.1:6379/0
 SESSION_SECRET=${session_secret}
 # Optional: if an operator has provisioned an Ollama embedding model
-# on svrai01:11436 (matching the embedding_dim — bge-large is 1024;
-# nomic-embed-text is 768), uncomment and point at it. Otherwise the
-# local sentence-transformers fallback in app/llm/memory.py loads.
-# EMBEDDING_BASE_URL=http://svrai01.mcconaghygroup.internal:11436/v1
+# (matching the embedding_dim — bge-large is 1024; nomic-embed-text is 768),
+# uncomment and point at it. Otherwise the local sentence-transformers fallback loads.
+# EMBEDDING_BASE_URL=http://YOUR_AI_SERVER:11436/v1
 # EMBEDDING_MODEL=bge-large
 EOF
 else

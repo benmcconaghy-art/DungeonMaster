@@ -2,8 +2,8 @@
 
 **Version:** 0.8
 **Target host:** AlmaLinux 10.1
-**LLM backend:** Nemotron 3 Super via vLLM at `http://svrai01.mcconaghygroup.internal:8000`
-**Image backend:** FLUX.1 [dev] (txt2img) + FLUX.1 Kontext [dev] (edit) at `http://svrai01.mcconaghygroup.internal:11437`
+**LLM backend:** Nemotron 3 Super via vLLM at `http://YOUR_AI_SERVER:8000`
+**Image backend:** FLUX.1 [dev] (txt2img) + FLUX.1 Kontext [dev] (edit) at `http://YOUR_AI_SERVER:11437`
 **Ruleset:** Basic Fantasy RPG (BFRPG) 4th edition — CC BY-SA
 **Audience:** 2–4 humans per table, mixed/new TTRPG experience
 **Tone:** Gritty & deadly (PCs can and do die)
@@ -56,13 +56,13 @@
                   │                            ▼
                   │                ┌──────────────────────────────┐
                   │                │  FLUX.1 [dev] + Kontext [dev]│
-                  │                │  @ svrai01:11437             │
+                  │                │  @ YOUR_AI_SERVER:11437             │
                   │                │  GPU 1: RTX 5090 (32GB)      │
                   │                │  shares w/ Ollama Gemma 3    │
                   │                └──────────────────────────────┘
                   │
         ┌─────────┴────────────────────────────────────────┐
-        │  vLLM @ svrai01.mcconaghygroup.internal:8000     │
+        │  vLLM @ YOUR_AI_SERVER:8000     │
         │  Nemotron 3 Super, OpenAI-compatible API         │
         │  GPU 0: RTX Pro 6000 Blackwell (96GB)            │
         └──────────────────────────────────────────────────┘
@@ -70,7 +70,7 @@
 
 ### Hardware topology
 
-Both AI services live on `svrai01` but on physically distinct GPUs:
+Both AI services live on `YOUR_AI_SERVER` but on physically distinct GPUs:
 
 | GPU | Card | VRAM | Resident workloads |
 |---|---|---|---|
@@ -438,7 +438,7 @@ It never decides if the dice succeeded.
 from openai import AsyncOpenAI
 
 client = AsyncOpenAI(
-    base_url="http://svrai01.mcconaghygroup.internal:8000/v1",
+    base_url="http://YOUR_AI_SERVER:8000/v1",
     api_key="not-needed",  # vLLM accepts any string
 )
 
@@ -592,9 +592,9 @@ Comfortably inside any reasonable Nemotron context window with headroom for comb
 
 ## 8. Image generation
 
-### Backend: FLUX.1 [dev] + FLUX.1 Kontext [dev] @ svrai01:11437
+### Backend: FLUX.1 [dev] + FLUX.1 Kontext [dev] @ YOUR_AI_SERVER:11437
 
-The image service running on `svrai01` exposes two endpoints — text-to-image (FLUX.1 [dev]) and instruction-based image editing (FLUX.1 Kontext [dev]) — pinned to GPU 1 (RTX 5090, 32GB) via `CUDA_VISIBLE_DEVICES=1`.
+The image service running on `YOUR_AI_SERVER` exposes two endpoints — text-to-image (FLUX.1 [dev]) and instruction-based image editing (FLUX.1 Kontext [dev]) — pinned to GPU 1 (RTX 5090, 32GB) via `CUDA_VISIBLE_DEVICES=1`.
 
 > **Naming note.** The systemd unit description and the service docstring both refer to the model as "FLUX.2 Dev", but the model constants in `flux_service.py` are `black-forest-labs/FLUX.1-dev` and `black-forest-labs/FLUX.1-Kontext-dev`. The constants are authoritative — that's what `diffusers` actually pulls from HuggingFace. This spec assumes FLUX.1; if you elect to upgrade to FLUX.2, see §14.
 
@@ -678,7 +678,7 @@ from app.config import settings
 
 class FluxClient:
     def __init__(self):
-        self.base = settings.flux_base_url   # http://svrai01.mcconaghygroup.internal:11437
+        self.base = settings.flux_base_url   # http://YOUR_AI_SERVER:11437
         # Generous timeout: cold pipeline load + generation can run to a minute.
         self.timeout = httpx.Timeout(connect=10.0, read=180.0, write=30.0, pool=10.0)
 
@@ -779,7 +779,7 @@ A consequence worth designing around: the Pro 6000's headroom means we can be ge
 
 ### Storage & serving
 
-- Files on disk under `/var/lib/dungeon-master/images/` on the *web app host* (chown app user, mode 0750). Note the FLUX service also writes to its own `/opt/svrai/generated_images/` on `svrai01` — that's the service's local cache and is not what we serve. We pull base64 over the wire and persist locally.
+- Files on disk under `/var/lib/dungeon-master/images/` on the *web app host* (chown app user, mode 0750). Note the FLUX service also writes to its own `/opt/svrai/generated_images/` on `YOUR_AI_SERVER` — that's the service's local cache and is not what we serve. We pull base64 over the wire and persist locally.
 - Served by nginx via an `internal` location with `X-Accel-Redirect`, so the FastAPI app authorises access (only campaign members see a campaign's images).
 - `generated_images` rows include the prompt, parameters, seed, and source image (for edits) — enough to "regenerate this scene with a different seed" or trace provenance.
 
@@ -1196,7 +1196,7 @@ Dungeon Master is deployed on a **trusted internal LAN** with no public-internet
 - **Auth** is a simple username + bcrypt-hashed-password store in the `users` table. No SSO, no OAuth, no MFA, no aggressive password policy. Session cookies signed with a server-side secret; default 30-day TTL.
 - **TLS** uses a self-signed certificate (see below). Browsers warn on first connect; players accept once.
 - **Inter-service auth** is not enforced. The DM app talks to vLLM (`:8000`) and FLUX (`:11437`) over plain HTTP without API tokens. firewalld restricts those ports to the internal interface only.
-- **The FLUX service on `svrai01`** is left as currently configured (no auth, HF token in unit file). Out of scope for this project. If posture changes later, both can be hardened independently.
+- **The FLUX service on `YOUR_AI_SERVER`** is left as currently configured (no auth, HF token in unit file). Out of scope for this project. If posture changes later, both can be hardened independently.
 
 If the deployment surface ever expands beyond the trusted LAN, all four of these need revisiting. Flagging here so the assumption is explicit.
 
@@ -1289,8 +1289,8 @@ sudo openssl req -x509 -nodes -newkey rsa:4096 \
     -keyout /etc/pki/tls/private/dm.key \
     -out    /etc/pki/tls/certs/dm.crt \
     -days 1825 \
-    -subj "/CN=dm.mcconaghygroup.internal" \
-    -addext "subjectAltName=DNS:dm.mcconaghygroup.internal,DNS:dm,IP:<server-ip>"
+    -subj "/CN=dm.example.internal" \
+    -addext "subjectAltName=DNS:dm.example.internal,DNS:dm,IP:<server-ip>"
 sudo chmod 600 /etc/pki/tls/private/dm.key
 sudo chown root:nginx /etc/pki/tls/private/dm.key
 ```
@@ -1306,7 +1306,7 @@ upstream dm_app { server 127.0.0.1:8001; }
 
 server {
     listen 443 ssl http2;
-    server_name dm.mcconaghygroup.internal;
+    server_name dm.example.internal;
     ssl_certificate     /etc/pki/tls/certs/dm.crt;
     ssl_certificate_key /etc/pki/tls/private/dm.key;
 

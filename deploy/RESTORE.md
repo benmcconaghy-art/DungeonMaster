@@ -77,7 +77,7 @@ domain, restore from off-box copies first (operator's responsibility).
 8. **Smoke-test**:
 
    ```bash
-   curl -k https://dm.mcconaghygroup.internal/health
+   curl -k https://dm.example.internal/health
    # Expected: {"status":"ok","db":"ok"}
    ```
 

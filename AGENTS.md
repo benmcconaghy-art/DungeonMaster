@@ -12,8 +12,8 @@ Dungeon Master narrating, adjudicating, and running encounters. AI-generated
 scene images. Persistent campaigns with long-term memory. Reusable adventure
 modules. Single-server deployment on AlmaLinux 10.1, trusted internal LAN.
 
-- **LLM:** Nemotron 3 Super on internal vLLM at `http://svrai01.mcconaghygroup.internal:8000` (OpenAI-compatible)
-- **Image gen:** FLUX.1 [dev] + FLUX.1 Kontext [dev] at `http://svrai01.mcconaghygroup.internal:11437`
+- **LLM:** Nemotron 3 Super on internal vLLM at `http://YOUR_AI_SERVER:8000` (OpenAI-compatible)
+- **Image gen:** FLUX.1 [dev] + FLUX.1 Kontext [dev] at `http://YOUR_AI_SERVER:11437`
 - **Database:** SQLite 3 with WAL mode, single file at `/var/lib/dungeon-master/dm.db`
 
 ## Critical invariants — never violate these
@@ -74,7 +74,7 @@ modules. Single-server deployment on AlmaLinux 10.1, trusted internal LAN.
    time; you'll lose context the DM needs for consistency on later turns.
 
 10. **Image worker uses /generate as its watchdog probe, not /health.** The
-    FLUX service at svrai01:11437 has been observed returning 200 OK from
+    FLUX service at YOUR_AI_SERVER:11437 has been observed returning 200 OK from
     /health while /generate returns 500 (a non-FLUX process held VRAM
     above the threshold). Watchdog liveness is a 256x256/1-step
     /generate every 30s — a real inference is the only definitive signal.
@@ -611,7 +611,7 @@ up. Promote to a real issue / phase task when its trigger fires.
   Pulls torch as a transitive dep (~2GB), loads ~1.5GB of weights into
   RAM. Production should set `EMBEDDING_BASE_URL` pointing at Ollama
   once an operator runs `ollama pull <embedding-model>` on
-  `svrai01:11436` (currently no embedding model is loaded there;
+  `YOUR_AI_SERVER:11436` (currently no embedding model is loaded there;
   `nomic-embed-text` is 768-dim, `bge-large` is 1024-dim — match
   `embedding_dim`). After the swap, drop `sentence-transformers` from
   required deps to optional. **Trigger:** start of Phase 7 hardening,
@@ -718,7 +718,7 @@ up. Promote to a real issue / phase task when its trigger fires.
 - **FLUX cold-load measurement vs spec estimate** (added 2026-05-01,
   Phase 5 step 6 close-out). Spec §8 estimated "cold pipeline load
   ~15-30s plus 28-step inference ~8-18s, ~25-45s end-to-end". Live
-  measurement on `svrai01:11437` against FLUX.1 [dev] on a 5090:
+  measurement on `YOUR_AI_SERVER:11437` against FLUX.1 [dev] on a 5090:
   256x256/1-step = 4.85s, 1280x768/28-steps cold = 16.95s, warm =
   17.02s (no cold-load tax detected — model stayed resident or there
   is no real cold-load on warm hardware). The service-reported
@@ -781,7 +781,7 @@ up. Promote to a real issue / phase task when its trigger fires.
   /generate probe (256x256/1-step) so this state surfaces as
   "degraded" within ~120s. **Operator runbook:** if the worker logs
   show `image:status -> degraded` and the FLUX service is reachable
-  on /health, run `nvidia-smi` on `svrai01` and look for non-FLUX
+  on /health, run `nvidia-smi` on `YOUR_AI_SERVER` and look for non-FLUX
   PIDs holding VRAM. **Trigger:** add this to deploy docs the first
   time anyone writes them. **Context:** Step 6 commits, the
   `_watchdog` docstring in `app/images/worker.py`.
