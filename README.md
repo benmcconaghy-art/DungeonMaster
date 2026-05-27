@@ -171,3 +171,9 @@ Short version: single AlmaLinux 10.1 host, gunicorn + uvicorn workers behind ngi
 MIT — see [`LICENSE`](LICENSE).
 
 Module content (`data/bfrpg/modules/`) is released under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), derived from the Basic Fantasy RPG core rules.
+
+---
+
+## Built with Claude
+
+This project was designed and built with [Claude](https://claude.ai) (Anthropic) acting as the primary developer — architecture, backend, frontend, game rules engine, and deployment config. The human author directed the design, made product decisions, and runs the table.
