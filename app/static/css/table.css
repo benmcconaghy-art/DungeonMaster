@@ -61,19 +61,7 @@
   overflow-y: auto;
   padding: var(--s-7) clamp(var(--s-6), 6vw, var(--s-8));
   position: relative;
-}
-
-.narration::before {
-  /* Top fade — old-book gilded edge */
-  content: "";
-  position: sticky;
-  top: 0;
-  display: block;
-  height: 32px;
-  margin: -32px 0 -32px 0;
-  background: linear-gradient(to bottom, var(--ink-bg), transparent);
-  pointer-events: none;
-  z-index: 3;
+  cursor: text;
 }
 
 .narration .scene-marker {
