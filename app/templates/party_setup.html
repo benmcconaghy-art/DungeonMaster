@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}Set up your party &mdash; {{ campaign.name }} &mdash; Dungeon Master{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/dashboard.css" />
+<style>
+  .party-shell {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: var(--s-6) var(--s-4);
+  }
+  .party-banner {
+    margin-bottom: var(--s-5);
+  }
+  .party-banner h1 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ember);
+    margin: 0 0 var(--s-2);
+  }
+  .party-banner p {
+    color: var(--parchment-dim);
+    font-size: var(--fs-sm);
+    margin: 0;
+  }
+  .party-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--s-5);
+  }
+  @media (max-width: 680px) { .party-cols { grid-template-columns: 1fr; } }
+
+  .party-panel {
+    background: var(--vellum-1);
+    border: 1px solid var(--rule-soft);
+    border-radius: var(--radius-md);
+    padding: var(--s-4);
+  }
+  .party-panel h2 {
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--parchment-mute);
+    margin: 0 0 var(--s-3);
+    padding-bottom: var(--s-2);
+    border-bottom: 1px dotted var(--rule-soft);
+  }
+  .pc-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    min-height: 72px;
+  }
+  .pc-row {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    padding: var(--s-2) var(--s-3);
+    background: var(--vellum-2);
+    border: 1px solid var(--rule-soft);
+    border-radius: var(--radius-sm);
+  }
+  .pc-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    background: var(--vellum-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .pc-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pc-avatar .initial {
+    font-family: var(--font-display);
+    font-size: 16px;
+    color: var(--parchment-dim);
+  }
+  .pc-body { flex: 1; min-width: 0; }
+  .pc-name {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: var(--fs-md);
+    color: var(--parchment);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pc-titles {
+    font-size: var(--fs-xs);
+    color: var(--parchment-dim);
+    letter-spacing: 0.04em;
+  }
+  .pc-action {
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid var(--ember-deep);
+    color: var(--ember);
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+  .pc-action:hover:not(:disabled) { border-color: var(--ember); }
+  .pc-action:disabled { opacity: 0.4; cursor: default; }
+  .pc-other {
+    flex-shrink: 0;
+    font-size: var(--fs-xs);
+    color: var(--parchment-mute);
+    font-style: italic;
+  }
+  .party-empty {
+    color: var(--parchment-mute);
+    font-style: italic;
+    font-size: var(--fs-sm);
+    padding: var(--s-2) 0;
+    text-align: center;
+  }
+  .party-footer {
+    margin-top: var(--s-5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: var(--s-4);
+    border-top: 1px dotted var(--rule-soft);
+  }
+  .btn-done {
+    display: inline-block;
+    background: var(--ember);
+    color: var(--ink-black);
+    font-family: var(--font-display);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: var(--s-2) var(--s-5);
+    border-radius: var(--radius-sm);
+  }
+  .btn-done:hover { background: var(--ember-bright); }
+</style>
+{% endblock %}
+
+{% block body_class %}dash-screen{% endblock %}
+
+{% block header_campaign_name %}<span class="name" style="font-size: 15px;">Set up your party</span>{% endblock %}
+{% block header_campaign_meta %}{{ campaign.name|lower }} &middot; who rides with you?{% endblock %}
+
+{% block content %}
+<div class="party-shell">
+
+  <div class="party-banner">
+    <h1>Your party</h1>
+    <p>Add characters from your roster, or roll a new one for this campaign.</p>
+  </div>
+
+  <div class="party-cols">
+
+    <div class="party-panel">
+      <h2>Your roster <span id="roster-count"></span></h2>
+      <div class="pc-list" id="roster-list">
+        <p class="party-empty">Loading&hellip;</p>
+      </div>
+      <a href="/campaigns/{{ campaign.id }}/chargen"
+         class="char-roll"
+         style="margin-top: var(--s-4); display: flex;"
+         aria-label="Roll a new character for {{ campaign.name }}">
+        <span class="glyph">+</span> Roll a new character
+      </a>
+    </div>
+
+    <div class="party-panel">
+      <h2>In this campaign <span id="party-count"></span></h2>
+      <div class="pc-list" id="party-list">
+        <p class="party-empty">Loading&hellip;</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="party-footer">
+    <a href="/dashboard" class="btn-done">Done &rarr;</a>
+  </div>
+
+</div>
+
+<script>
+  const CAMPAIGN_ID = "{{ campaign.id }}";
+
+  function avatar(char) {
+    if (char.canonical_image_id) {
+      return `<div class="pc-avatar"><img src="/api/images/${char.canonical_image_id}.png" alt="" loading="lazy"></div>`;
+    }
+    return `<div class="pc-avatar"><span class="initial">${(char.name || "?")[0].toUpperCase()}</span></div>`;
+  }
+
+  function rosterRow(c) {
+    return `<div class="pc-row" data-id="${c.id}">
+      ${avatar(c)}
+      <div class="pc-body">
+        <div class="pc-name">${c.name}</div>
+        <div class="pc-titles">${c.race.toLowerCase()} · ${c.class_name.toLowerCase()} · lvl ${c.level}</div>
+      </div>
+      <button class="pc-action" data-action="enroll" data-id="${c.id}" aria-label="Add ${c.name} to party">Add</button>
+    </div>`;
+  }
+
+  function partyRow(c) {
+    const action = c.is_mine
+      ? `<button class="pc-action" data-action="roster" data-id="${c.id}" aria-label="Save ${c.name} to roster">Save to roster</button>`
+      : `<span class="pc-other">another player's</span>`;
+    return `<div class="pc-row" data-id="${c.id}">
+      ${avatar(c)}
+      <div class="pc-body">
+        <div class="pc-name">${c.name}</div>
+        <div class="pc-titles">${c.race.toLowerCase()} · ${c.class_name.toLowerCase()} · lvl ${c.level}</div>
+      </div>
+      ${action}
+    </div>`;
+  }
+
+  async function loadRoster() {
+    const el = document.getElementById('roster-list');
+    const count = document.getElementById('roster-count');
+    try {
+      const res = await fetch('/api/characters', { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(res.status);
+      const chars = await res.json();
+      count.textContent = chars.length ? `· ${chars.length}` : '';
+      el.innerHTML = chars.length
+        ? chars.map(rosterRow).join('')
+        : '<p class="party-empty">No roster characters — roll one below.</p>';
+    } catch {
+      el.innerHTML = '<p class="party-empty">Could not load roster.</p>';
+    }
+  }
+
+  async function loadParty() {
+    const el = document.getElementById('party-list');
+    const count = document.getElementById('party-count');
+    try {
+      const res = await fetch(`/api/campaigns/${CAMPAIGN_ID}`, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      const chars = data.characters || [];
+      count.textContent = chars.length ? `· ${chars.length}` : '';
+      el.innerHTML = chars.length
+        ? chars.map(partyRow).join('')
+        : '<p class="party-empty">No characters in this campaign yet.</p>';
+    } catch {
+      el.innerHTML = '<p class="party-empty">Could not load campaign.</p>';
+    }
+  }
+
+  async function refresh() {
+    await Promise.all([loadRoster(), loadParty()]);
+  }
+
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const { action, id } = btn.dataset;
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      if (action === 'enroll') {
+        const res = await fetch(`/api/characters/${id}/enroll`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ campaign_id: CAMPAIGN_ID }),
+        });
+        if (!res.ok) throw new Error(res.status);
+      } else if (action === 'roster') {
+        const res = await fetch(`/api/characters/${id}/roster`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+        });
+        if (!res.ok) throw new Error(res.status);
+      }
+      await refresh();
+    } catch {
+      await refresh();
+    }
+  });
+
+  refresh();
+</script>
+{% endblock %}

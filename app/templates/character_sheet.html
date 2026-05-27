@@ -35,6 +35,12 @@
     {%- else -%}{{ character.status|capitalize }}
     {%- endif -%}
   </div>
+  {% if character.is_mine %}
+  <div style="margin-top: var(--s-3); display: flex; align-items: center; gap: var(--s-3);">
+    <button type="button" class="regen" id="save-to-roster-btn">&#8617; Save to roster</button>
+    <span class="notes-status" id="roster-status"></span>
+  </div>
+  {% endif %}
 </section>
 
 <main class="sheet-grid">
@@ -397,6 +403,32 @@
         chip.classList.toggle('is-selected', chip.dataset.pronouns === val);
       });
     });
+
+  const rosterBtn = document.getElementById('save-to-roster-btn');
+  if (rosterBtn) {
+    rosterBtn.addEventListener('click', async () => {
+      const statusEl = document.getElementById('roster-status');
+      rosterBtn.disabled = true;
+      rosterBtn.textContent = '↩ saving…';
+      statusEl.textContent = '';
+      try {
+        const res = await fetch('/api/characters/{{ character.id }}/roster', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+        });
+        if (!res.ok) throw new Error(res.status);
+        statusEl.textContent = 'saved to roster';
+        statusEl.className = 'notes-status ok';
+        setTimeout(() => { window.location.href = '/dashboard'; }, 1200);
+      } catch {
+        statusEl.textContent = 'failed — try again';
+        statusEl.className = 'notes-status err';
+        rosterBtn.textContent = '↩ Save to roster';
+        rosterBtn.disabled = false;
+      }
+    });
+  }
 
     apSaveBtn.addEventListener('click', async () => {
       const statusEl = document.getElementById('appearance-status');

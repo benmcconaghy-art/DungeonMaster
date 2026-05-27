@@ -210,6 +210,25 @@ def create_app() -> FastAPI:
         ctx = await dashboard_view.build_context(db, user=user)
         return _TEMPLATES.TemplateResponse(request, "campaign_dashboard.html", ctx)
 
+    @app.get("/campaigns/{campaign_id}/party", response_class=HTMLResponse)
+    async def party_setup(
+        request: Request,
+        campaign_id: str,
+        user: CurrentUser,
+        db: DbSession,
+    ) -> HTMLResponse:
+        campaign = await db.get(models.Campaign, campaign_id)
+        if campaign is None:
+            raise HTTPException(status_code=404, detail="campaign not found")
+        membership = await db.get(models.CampaignMember, (campaign_id, user.id))
+        if membership is None:
+            raise HTTPException(status_code=403, detail="not a member of this campaign")
+        return _TEMPLATES.TemplateResponse(
+            request,
+            "party_setup.html",
+            {"user": user, "campaign": campaign},
+        )
+
     @app.get("/campaigns/{campaign_id}/chargen", response_class=HTMLResponse)
     async def chargen_page(
         request: Request,

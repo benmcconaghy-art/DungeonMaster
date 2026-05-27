@@ -231,10 +231,10 @@ class Character(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_new_uuid)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
-    campaign_id: Mapped[str] = mapped_column(
+    campaign_id: Mapped[str | None] = mapped_column(
         String(36),
-        ForeignKey("campaigns.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("campaigns.id", ondelete="SET NULL"),
+        nullable=True,
     )
     name: Mapped[str] = mapped_column(Text, nullable=False)
     race: Mapped[str] = mapped_column(Text, nullable=False)

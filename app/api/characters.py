@@ -354,14 +354,21 @@ async def _require_character_visibility(
 ) -> models.Character:
     """Resolve a character and verify the current user can see it.
 
-    Visible iff the user is a member of the character's parent
-    campaign — players see each other's sheets within the same table.
+    Roster characters (no campaign_id) are visible only to their owner.
+    Campaign characters are visible to any member of that campaign.
     Editing is gated separately by ``is_mine``.
     """
 
     character = await db.get(models.Character, character_id)
     if character is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="character not found")
+    if character.campaign_id is None:
+        if character.user_id != user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="not your character",
+            )
+        return character
     membership = await db.get(models.CampaignMember, (character.campaign_id, user.id))
     if membership is None:
         raise HTTPException(
@@ -569,12 +576,118 @@ async def update_appearance(
     return _detail_response(character, viewer_id=user.id, inventory=inventory, spells=spells)
 
 
+class RosterCharacterSummary(BaseModel):
+    id: str
+    name: str
+    race: str
+    class_name: str
+    level: int
+    hp_current: int
+    hp_max: int
+    ac: int
+    xp: int
+    status: str
+    canonical_image_id: str | None
+
+
+class EnrollRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    campaign_id: str
+
+
+def _to_roster_summary(c: models.Character) -> RosterCharacterSummary:
+    return RosterCharacterSummary(
+        id=c.id,
+        name=c.name,
+        race=c.race,
+        class_name=c.class_name,
+        level=c.level,
+        hp_current=c.hp_current,
+        hp_max=c.hp_max,
+        ac=c.ac,
+        xp=c.xp,
+        status=c.status,
+        canonical_image_id=c.canonical_image_id,
+    )
+
+
+@router.get("/api/characters", response_model=list[RosterCharacterSummary])
+async def list_roster(
+    user: CurrentUser,
+    db: DbSession,
+) -> list[RosterCharacterSummary]:
+    """Return the current user's roster — characters not enrolled in any campaign."""
+    rows = list(
+        (
+            await db.execute(
+                select(models.Character)
+                .where(models.Character.user_id == user.id)
+                .where(models.Character.campaign_id.is_(None))
+                .order_by(models.Character.name)
+            )
+        ).scalars()
+    )
+    return [_to_roster_summary(c) for c in rows]
+
+
+@router.post("/api/characters/{character_id}/enroll", response_model=RosterCharacterSummary)
+async def enroll_character(
+    character_id: str,
+    payload: EnrollRequest,
+    user: CurrentUser,
+    db: DbSession,
+) -> RosterCharacterSummary:
+    """Owner-only: enroll a character into a campaign.
+
+    The user must own the character and be a member of the target campaign.
+    A character already enrolled somewhere is moved to the new campaign.
+    """
+    character = await db.get(models.Character, character_id)
+    if character is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="character not found")
+    if character.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not your character")
+    membership = await db.get(models.CampaignMember, (payload.campaign_id, user.id))
+    if membership is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="not a member of that campaign",
+        )
+    character.campaign_id = payload.campaign_id
+    await db.commit()
+    await db.refresh(character)
+    return _to_roster_summary(character)
+
+
+@router.post("/api/characters/{character_id}/roster", response_model=RosterCharacterSummary)
+async def return_to_roster(
+    character_id: str,
+    user: CurrentUser,
+    db: DbSession,
+) -> RosterCharacterSummary:
+    """Owner-only: remove a character from its campaign (set campaign_id=NULL).
+
+    The character returns to the roster for re-enrollment in a future campaign.
+    """
+    character = await db.get(models.Character, character_id)
+    if character is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="character not found")
+    if character.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not your character")
+    character.campaign_id = None
+    await db.commit()
+    await db.refresh(character)
+    return _to_roster_summary(character)
+
+
 __all__ = [
     "AbilityDetail",
     "CharacterDetailResponse",
     "CharacterResponse",
     "CreateCharacterRequest",
+    "EnrollRequest",
     "InventoryItemResponse",
+    "RosterCharacterSummary",
     "SaveDetail",
     "SpellResponse",
     "UpdateAppearanceRequest",

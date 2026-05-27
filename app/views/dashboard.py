@@ -68,6 +68,7 @@ async def build_context(db: DbSession, *, user: models.User) -> dict[str, Any]:
     total_my_chars = sum(e.my_character_count for e in listing)
     last_played_relative = _relative_time(listing[0].last_played_at if listing else None)
     public_modules = await _list_public_modules(db)
+    all_characters = await _list_all_characters(db, user=user)
 
     return {
         "user": user,
@@ -78,6 +79,7 @@ async def build_context(db: DbSession, *, user: models.User) -> dict[str, Any]:
         "total_my_characters": total_my_chars,
         "last_played_relative": last_played_relative,
         "modules": public_modules,
+        "all_characters": all_characters,
     }
 
 
@@ -368,6 +370,65 @@ async def _list_public_modules(db: DbSession) -> list[dict[str, Any]]:
                 "level_label": level_label,
                 "sessions_label": sessions_label,
                 "description": m.description,
+            }
+        )
+    return result
+
+
+async def _list_all_characters(db: DbSession, *, user: models.User) -> list[dict[str, Any]]:
+    """All characters owned by the user, with their campaign name resolved.
+
+    Ordered: active (in a campaign) first by campaign name then character
+    name, then roster characters (no campaign) at the end.
+    """
+    char_rows = list(
+        (
+            await db.execute(
+                select(models.Character)
+                .where(models.Character.user_id == user.id)
+                .order_by(models.Character.campaign_id.is_(None), models.Character.name)
+            )
+        ).scalars()
+    )
+    if not char_rows:
+        return []
+
+    campaign_ids = list({c.campaign_id for c in char_rows if c.campaign_id})
+    campaign_names: dict[str, str] = {}
+    if campaign_ids:
+        campaign_rows = list(
+            (
+                await db.execute(
+                    select(models.Campaign.id, models.Campaign.name).where(
+                        models.Campaign.id.in_(campaign_ids)
+                    )
+                )
+            ).all()
+        )
+        campaign_names = {cid: name for cid, name in campaign_rows}
+
+    result = []
+    for c in char_rows:
+        hp_max = c.hp_max or 1
+        hp_pct = int(c.hp_current / hp_max * 100)
+        hp_low = (c.hp_current * 3) <= hp_max
+        result.append(
+            {
+                "id": c.id,
+                "name": c.name,
+                "race": c.race,
+                "class_name": c.class_name,
+                "level": c.level,
+                "hp_current": c.hp_current,
+                "hp_max": c.hp_max,
+                "hp_pct": hp_pct,
+                "hp_low": hp_low,
+                "ac": c.ac,
+                "xp": c.xp,
+                "status": c.status,
+                "canonical_image_id": c.canonical_image_id,
+                "campaign_id": c.campaign_id,
+                "campaign_name": campaign_names.get(c.campaign_id, "") if c.campaign_id else None,
             }
         )
     return result
